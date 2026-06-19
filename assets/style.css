@@ -1,0 +1,375 @@
+/* ═══════════════════════════════════════════════════════════
+   SURM TOOLKIT — Global Stylesheet
+   Calibri-first, Excel-inspired, PETRONAS green accent
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 1. Fonts & Reset ────────────────────────────────────── */
+html, body, [class*="css"], .stApp {
+    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif !important;
+    font-size: 14px;
+    color: #1A1A1A;
+}
+
+/* ── 2. App Shell ────────────────────────────────────────── */
+.stApp { background-color: #F5F5F5; }
+
+/* Hide default Streamlit hamburger & footer */
+#MainMenu, footer, header { visibility: hidden; }
+
+/* ── 3. Main content area ────────────────────────────────── */
+.main .block-container {
+    padding: 1rem 2rem 4rem 2rem !important;
+    max-width: 1400px !important;
+}
+
+/* ── 4. Sidebar ──────────────────────────────────────────── */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1A5C32 0%, #1F6B3A 40%, #2E7D52 100%);
+    border-right: none;
+    min-width: 260px !important;
+}
+section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
+section[data-testid="stSidebar"] .stMarkdown p,
+section[data-testid="stSidebar"] .stMarkdown li { color: #D4EDE1 !important; font-size: 12px; }
+section[data-testid="stSidebar"] hr {
+    border-top: 1px solid rgba(255,255,255,0.2) !important;
+    margin: 8px 0 !important;
+}
+section[data-testid="stSidebar"] .stMetric {
+    background: rgba(255,255,255,0.12);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+}
+section[data-testid="stSidebar"] .stMetric label { color: #A8D5BC !important; font-size: 11px !important; }
+section[data-testid="stSidebar"] .stMetric [data-testid="metric-container"] div { color: #FFFFFF !important; font-size: 18px !important; font-weight: 700; }
+
+/* ── 5. Tab Bar — Scrollable, full text always visible ──── */
+div[data-testid="stTabs"] > div:first-child,
+div[data-testid="stTabs"] > div[role="tablist"] {
+    background-color: #ECECEC !important;
+    border-bottom: 2px solid #1F6B3A !important;
+    padding: 0 4px 0 4px !important;
+    gap: 1px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    flex-wrap: nowrap !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: #1F6B3A #E8E8E8 !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-behavior: smooth !important;
+}
+div[data-testid="stTabs"] > div:first-child::-webkit-scrollbar,
+div[data-testid="stTabs"] > div[role="tablist"]::-webkit-scrollbar { height: 3px !important; }
+div[data-testid="stTabs"] > div:first-child::-webkit-scrollbar-thumb,
+div[data-testid="stTabs"] > div[role="tablist"]::-webkit-scrollbar-thumb {
+    background: #1F6B3A !important; border-radius: 2px !important;
+}
+
+button[data-baseweb="tab"] {
+    background-color: #DCDCDC !important;
+    border: 1px solid #BFBFBF !important;
+    border-bottom: none !important;
+    border-radius: 4px 4px 0 0 !important;
+    padding: 7px 16px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: #555 !important;
+    margin-right: 1px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    min-width: fit-content !important;
+    transition: background 0.15s, color 0.15s !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    background-color: #FFFFFF !important;
+    border-top: 2px solid #1F6B3A !important;
+    color: #1F6B3A !important;
+    font-weight: 700 !important;
+}
+button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
+    background-color: #F0F0F0 !important;
+    color: #1F6B3A !important;
+}
+
+/* ── 5b. Sidebar collapse toggle — always visible & styled ─ */
+section[data-testid="stSidebar"] > div:first-child {
+    transition: width 0.3s cubic-bezier(0.4,0,0.2,1),
+                transform 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+}
+[data-testid="collapsedControl"] {
+    background-color: #1F6B3A !important;
+    border-radius: 0 8px 8px 0 !important;
+    padding: 20px 7px !important;
+    margin-top: 70px !important;
+    box-shadow: 3px 0 10px rgba(0,0,0,0.2) !important;
+    transition: all 0.25s ease !important;
+    cursor: pointer !important;
+}
+[data-testid="collapsedControl"]:hover {
+    background-color: #174F2B !important;
+    padding-right: 12px !important;
+    box-shadow: 4px 0 14px rgba(0,0,0,0.3) !important;
+}
+[data-testid="collapsedControl"] svg {
+    fill: white !important;
+    color: white !important;
+}
+
+/* ── 6. Cards ────────────────────────────────────────────── */
+.surm-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.surm-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1F6B3A;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #E8F5E9;
+}
+
+/* ── 7. Section Headers ──────────────────────────────────── */
+.surm-section-header {
+    background: #1F6B3A;
+    color: #FFFFFF;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    border-radius: 3px;
+    margin: 18px 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ── 8. Instruction Banner ───────────────────────────────── */
+.surm-instruction {
+    background: #FFFDE7;
+    border-left: 4px solid #F9A825;
+    padding: 9px 14px;
+    font-size: 12px;
+    color: #5D4037;
+    border-radius: 0 3px 3px 0;
+    margin-bottom: 14px;
+    line-height: 1.5;
+}
+
+/* ── 9. Status Badges ────────────────────────────────────── */
+.badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; letter-spacing:0.3px; }
+.badge-H  { background:#C8E6C9; color:#1B5E20; }
+.badge-M  { background:#FFF9C4; color:#F57F17; }
+.badge-L  { background:#FFCDD2; color:#B71C1C; }
+.badge-HH { background:#C00000; color:#FFFFFF; }
+.badge-HM { background:#FF4500; color:#FFFFFF; }
+.badge-HL { background:#FFA500; color:#3E2000; }
+.badge-MH { background:#FF8C00; color:#FFFFFF; }
+.badge-MM { background:#FFD700; color:#3E2000; }
+.badge-ML { background:#A5D6A7; color:#1B5E20; }
+.badge-LH { background:#FFC107; color:#3E2000; }
+.badge-LM { background:#C8E6C9; color:#1B5E20; }
+.badge-LL { background:#00B050; color:#FFFFFF; }
+
+.badge-open      { background:#BBDEFB; color:#0D47A1; }
+.badge-progress  { background:#FFF9C4; color:#F57F17; }
+.badge-closed    { background:#C8E6C9; color:#1B5E20; }
+.badge-hold      { background:#F5F5F5; color:#757575; }
+.badge-extreme   { background:#C00000; color:#FFFFFF; }
+.badge-high      { background:#FF5722; color:#FFFFFF; }
+.badge-medium    { background:#FFD700; color:#3E2000; }
+.badge-low       { background:#00B050; color:#FFFFFF; }
+
+/* ── 10. Data Tables ─────────────────────────────────────── */
+.stDataFrame, .stDataEditor {
+    border: 1px solid #D0D0D0 !important;
+    border-radius: 3px;
+}
+.stDataFrame thead th, .stDataEditor thead th {
+    background-color: #1F6B3A !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+}
+
+/* ── 11. Buttons ─────────────────────────────────────────── */
+.stButton > button {
+    border-radius: 3px;
+    font-size: 13px;
+    font-family: 'Calibri', sans-serif;
+    transition: all 0.15s;
+}
+.stButton > button[kind="primary"] {
+    background-color: #1F6B3A !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    font-weight: 600;
+    padding: 6px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.stButton > button[kind="primary"]:hover {
+    background-color: #174F2B !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transform: translateY(-1px);
+}
+.stButton > button[kind="primary"]:active { transform: translateY(0); }
+.stButton > button:not([kind="primary"]):hover {
+    border-color: #1F6B3A !important;
+    color: #1F6B3A !important;
+}
+
+/* ── 12. Download Button ─────────────────────────────────── */
+.stDownloadButton > button {
+    background-color: #217346 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 7px 18px;
+}
+.stDownloadButton > button:hover { background-color: #185730 !important; }
+
+/* ── 13. Selectbox & Inputs ──────────────────────────────── */
+.stSelectbox [data-baseweb="select"] > div,
+.stTextInput > div > div {
+    border-radius: 3px !important;
+    border-color: #C0C0C0 !important;
+    font-size: 13px !important;
+}
+.stSelectbox [data-baseweb="select"]:focus-within > div,
+.stTextInput > div > div:focus-within {
+    border-color: #1F6B3A !important;
+    box-shadow: 0 0 0 2px rgba(31,107,58,0.15) !important;
+}
+
+/* ── 14. Metrics ─────────────────────────────────────────── */
+.stMetric {
+    background: #FFFFFF;
+    border: 1px solid #E8E8E8;
+    border-radius: 4px;
+    padding: 12px 16px;
+    border-top: 3px solid #1F6B3A;
+}
+.stMetric label { font-size: 11px !important; color: #666 !important; text-transform: uppercase; letter-spacing: 0.5px; }
+.stMetric [data-testid="metric-container"] > div:nth-child(2) { font-size: 22px !important; font-weight: 700 !important; color: #1A1A1A !important; }
+
+/* ── 15. Progress Bar ────────────────────────────────────── */
+.stProgress > div > div > div { background-color: #1F6B3A !important; }
+
+/* ── 16. Info / Warning / Error banners ─────────────────── */
+.stAlert { border-radius: 3px; font-size: 13px; }
+div[data-testid="stNotification"] { font-size: 13px; }
+
+/* ── 17. Expander ────────────────────────────────────────── */
+details summary {
+    background: #F8F8F8;
+    border: 1px solid #E0E0E0;
+    border-radius: 3px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+}
+details summary:hover { background: #EFF7F2; color: #1F6B3A; }
+details[open] summary { border-bottom-radius: 0; border-color: #1F6B3A; color: #1F6B3A; }
+
+/* ── 18. Dividers ────────────────────────────────────────── */
+hr { border: none; border-top: 1px solid #E8E8E8; margin: 16px 0; }
+
+/* ── 19. Form containers ─────────────────────────────────── */
+[data-testid="stForm"] {
+    background: #FAFAFA;
+    border: 1px dashed #C0C0C0;
+    border-radius: 4px;
+    padding: 14px 16px;
+}
+
+/* ── 20. Sign-off boxes ──────────────────────────────────── */
+.signoff-box {
+    background: #FAFAFA;
+    border: 1px solid #D0D0D0;
+    border-left: 4px solid #1F6B3A;
+    border-radius: 0 4px 4px 0;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+}
+.signoff-label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 3px; }
+.signoff-name  { font-size: 14px; font-weight: 600; color: #1A1A1A; }
+.signoff-line  { height: 1px; background: #E0E0E0; margin: 6px 0; }
+
+/* ── 21. Progress tracker rows ───────────────────────────── */
+.progress-row {
+    display: flex;
+    align-items: center;
+    margin: 6px 0;
+    gap: 10px;
+}
+.progress-label { font-size: 12px; color: #333; min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.progress-track { flex: 0 0 160px; background: #E8E8E8; border-radius: 4px; height: 10px; }
+.progress-fill  { height: 10px; border-radius: 4px; transition: width 0.3s ease; }
+.progress-pct   { font-size: 11px; color: #666; min-width: 34px; text-align: right; }
+
+/* ── 22. Help text ───────────────────────────────────────── */
+.help-text { font-size: 11px; color: #888; font-style: italic; margin-top: -4px; margin-bottom: 8px; }
+
+/* ── 23. Risk rating colors in tables ───────────────────── */
+.risk-extreme { background:#FFEBEE !important; color:#C00000 !important; font-weight:700 !important; }
+.risk-high    { background:#FFF3E0 !important; color:#E64A19 !important; font-weight:700 !important; }
+.risk-medium  { background:#FFFDE7 !important; color:#F57F17 !important; font-weight:700 !important; }
+.risk-low     { background:#E8F5E9 !important; color:#2E7D32 !important; font-weight:700 !important; }
+
+/* ── 24. Footer ──────────────────────────────────────────── */
+.surm-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #1A5C32;
+    color: rgba(255,255,255,0.85);
+    text-align: center;
+    font-size: 11px;
+    padding: 5px 0;
+    z-index: 999;
+    letter-spacing: 0.3px;
+}
+
+/* ── 25. Scroll to top button ────────────────────────────── */
+.scroll-top {
+    position: fixed;
+    bottom: 36px;
+    right: 20px;
+    background: #1F6B3A;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    font-size: 16px;
+    cursor: pointer;
+    z-index: 998;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+/* ── 26. Checkbox alignment fix ──────────────────────────── */
+.stCheckbox { display: flex; align-items: center; }
+.stCheckbox label { font-size: 13px !important; }
+
+/* ── 27. Number input ────────────────────────────────────── */
+.stNumberInput input { font-size: 13px !important; border-radius: 3px !important; }
+
+/* ── 28. Tooltip ─────────────────────────────────────────── */
+[data-testid="tooltipHoverTarget"] { color: #1F6B3A; }
+
+/* ── 29. Plotly chart containers ─────────────────────────── */
+.js-plotly-plot { border: 1px solid #E8E8E8; border-radius: 4px; }
+
+/* ── 30. Mobile responsiveness ───────────────────────────── */
+@media (max-width: 768px) {
+    .main .block-container { padding: 0.5rem 0.75rem 4rem 0.75rem !important; }
+    button[data-baseweb="tab"] { padding: 5px 8px; font-size: 11px; }
+    .surm-section-header { font-size: 11px; padding: 6px 10px; }
+}

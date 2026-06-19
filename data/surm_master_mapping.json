@@ -1,0 +1,85 @@
+{
+  "uncertainties": [
+    {"id": 1,  "discipline": "Geology",       "name": "Reservoir presence",                                                                          "risks": ["Low in place volume", "Low production rates/well deliverability", "Poor reservoir connectivity", "Production shortfall", "Poor well placement/outcome (deviation from prognosis)", "Ineffective water/gas injection", "Inter-field communication"]},
+    {"id": 2,  "discipline": "Geology",       "name": "Reservoir quality (porosity, permeability, NTG, bioturbation)",                               "risks": ["Low in place volume", "Low production rates/well deliverability", "Poor reservoir connectivity", "Production shortfall", "Poor well placement/outcome (deviation from prognosis)", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production", "Condensate banking"]},
+    {"id": 3,  "discipline": "Geology",       "name": "Reservoir continuity (lateral & vertical connectivity)",                                       "risks": ["Low in place volume", "Low production rates/well deliverability", "Poor reservoir connectivity", "Production shortfall", "Poor well placement/outcome (deviation from prognosis)", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production", "Inter-field communication"]},
+    {"id": 4,  "discipline": "Geology",       "name": "Reservoir compartmentalization",                                                               "risks": ["Low in place volume", "Low production rates/well deliverability", "Poor reservoir connectivity", "Production shortfall", "Poor well placement/outcome (deviation from prognosis)", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production", "Inter-field communication"]},
+    {"id": 5,  "discipline": "Geology",       "name": "Reservoir depth (structure)",                                                                  "risks": ["Low in place volume", "Poor reservoir connectivity", "Poor well placement/outcome (deviation from prognosis)", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production"]},
+    {"id": 6,  "discipline": "Geology",       "name": "Initial fluid contacts",                                                                       "risks": ["Low in place volume", "Early water/gas breakthrough / Excessive water/gas production"]},
+    {"id": 7,  "discipline": "Geophysics",    "name": "Fault properties (locations, transmissibility, throw, length etc)",                            "risks": ["Poor reservoir connectivity", "Production shortfall", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production"]},
+    {"id": 8,  "discipline": "Geophysics",    "name": "Seismic imaging & resolution",                                                                 "risks": ["Low in place volume", "Poor reservoir connectivity", "Inter-field communication"]},
+    {"id": 9,  "discipline": "Geophysics",    "name": "Time-to-depth / velocity model",                                                               "risks": ["Low in place volume", "Poor reservoir connectivity", "Poor well placement/outcome (deviation from prognosis)"]},
+    {"id": 10, "discipline": "Geophysics",    "name": "Structural framework & fault behavior",                                                         "risks": ["Low in place volume", "Poor reservoir connectivity", "Production shortfall", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production"]},
+    {"id": 11, "discipline": "Geophysics",    "name": "Reservoir heterogeneity",                                                                       "risks": ["Low in place volume", "Low production rates/well deliverability", "Poor reservoir connectivity", "Production shortfall", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production", "Condensate banking"]},
+    {"id": 12, "discipline": "Geophysics",    "name": "Reservoir pressure regime",                                                                     "risks": ["Low in place volume"]},
+    {"id": 13, "discipline": "Geomechanics",  "name": "Geomechanics parameters (stresses, pore pressure, fracture pressure)",                          "risks": ["Well issues (sand prod etc)", "Drilling operational issues"]},
+    {"id": 14, "discipline": "PP",            "name": "Rock types, facies",                                                                            "risks": ["Low in place volume", "Low production rates/well deliverability", "Poor reservoir connectivity", "Production shortfall", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production", "Condensate banking"]},
+    {"id": 15, "discipline": "PP",            "name": "Initial Sw (SHF, J-function, Pc)",                                                              "risks": ["Low in place volume"]},
+    {"id": 16, "discipline": "PP",            "name": "Fluid types",                                                                                   "risks": ["Low in place volume", "Low production rates/well deliverability", "Condensate banking", "Flow assurance issues"]},
+    {"id": 17, "discipline": "PP",            "name": "Depth uncertainties",                                                                           "risks": ["Poor well placement/outcome (deviation from prognosis)"]},
+    {"id": 18, "discipline": "RE",            "name": "Reservoir fluid properties (FVF, viscosity, Psat, Rs)",                                         "risks": ["Low in place volume", "Low production rates/well deliverability", "Production shortfall", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production"]},
+    {"id": 19, "discipline": "RE",            "name": "Rel-perm parameters (saturation end points, rel-perm end points and shape of curves)",          "risks": ["Low production rates/well deliverability", "Early water/gas breakthrough / Excessive water/gas production", "Condensate banking"]},
+    {"id": 20, "discipline": "RE",            "name": "Current saturation distribution / WAG injection",                                               "risks": ["Poor well placement/outcome (deviation from prognosis)", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production"]},
+    {"id": 21, "discipline": "RE",            "name": "Reservoir pressure",                                                                            "risks": ["Low in place volume", "Low production rates/well deliverability", "Poor reservoir connectivity", "Production shortfall", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production", "Well issues (sand prod etc)"]},
+    {"id": 22, "discipline": "RE",            "name": "Reservoir temperature",                                                                         "risks": ["Flow assurance issues", "Condensate banking"]},
+    {"id": 23, "discipline": "RE",            "name": "Aquifer properties",                                                                            "risks": ["Low in place volume", "Early water/gas breakthrough / Excessive water/gas production", "Ineffective water/gas injection"]},
+    {"id": 24, "discipline": "RE",            "name": "Drive mechanisms",                                                                              "risks": ["Low production rates/well deliverability", "Production shortfall"]},
+    {"id": 25, "discipline": "PT",            "name": "Well hydrate potential",                                                                        "risks": ["Flow assurance issues", "Well issues (sand prod etc)", "Low production rates/well deliverability", "Production shortfall"]},
+    {"id": 26, "discipline": "PT",            "name": "Well Productivity Index / skin factor",                                                         "risks": ["Low production rates/well deliverability", "Production shortfall", "Ineffective water/gas injection", "Well issues (sand prod etc)"]},
+    {"id": 27, "discipline": "PT",            "name": "Outflow / Vertical Lift Performance (Rates, FTHP/T, SITHP/T)",                                  "risks": ["Low production rates/well deliverability", "Production shortfall", "Flow assurance issues"]},
+    {"id": 28, "discipline": "PT",            "name": "Well sanding tendency",                                                                         "risks": ["Well issues (sand prod etc)", "Low production rates/well deliverability", "Production shortfall"]},
+    {"id": 29, "discipline": "PT",            "name": "Well organic/inorganic scaling tendency",                                                       "risks": ["Well issues (sand prod etc)", "Flow assurance issues", "Low production rates/well deliverability", "Production shortfall", "Ineffective water/gas injection"]},
+    {"id": 30, "discipline": "PT",            "name": "Well corrosion & erosion tendency",                                                             "risks": ["Well issues (sand prod etc)", "Flow assurance issues", "Low production rates/well deliverability", "Production shortfall"]},
+    {"id": 31, "discipline": "PT",            "name": "Presence and magnitude of contaminants",                                                        "risks": ["Flow assurance issues", "Well issues (sand prod etc)", "Low production rates/well deliverability"]},
+    {"id": 32, "discipline": "PT",            "name": "Well Injectivity Index",                                                                        "risks": ["Ineffective water/gas injection", "Low production rates/well deliverability", "Production shortfall", "Well issues (sand prod etc)"]},
+    {"id": 33, "discipline": "PT/PP",         "name": "Zonal isolation (cement quality behind casing, cross-flow from cement channels)",               "risks": ["Well issues (sand prod etc)", "Ineffective water/gas injection", "Production shortfall"]},
+    {"id": 34, "discipline": "PT/RE",         "name": "Production allocation (vertical communication due to well integrity & commingled production)",  "risks": ["Well issues (sand prod etc)", "Low production rates/well deliverability", "Production shortfall", "Ineffective water/gas injection", "Early water/gas breakthrough / Excessive water/gas production"]}
+  ],
+
+  "risks": [
+    "Low in place volume",
+    "Low production rates/well deliverability",
+    "Poor reservoir connectivity",
+    "Production shortfall",
+    "Poor well placement/outcome (deviation from prognosis)",
+    "Ineffective water/gas injection",
+    "Early water/gas breakthrough / Excessive water/gas production",
+    "Inter-field communication",
+    "Well issues (sand prod etc)",
+    "Condensate banking",
+    "Drilling operational issues",
+    "Flow assurance issues"
+  ],
+
+  "resolution_options": [
+    "Analogue Study",
+    "3D Modeling (deterministic, integrated probabilistic)",
+    "Analytical studies (MBAL, RTA, PTA, well modeling)",
+    "Data acquisition & analysis (core sample/coreflood, fluid sample, saturation logs, PLT, tracer, cased hole pressure, noise log, CBL, USIT, MIT)",
+    "Seismic acquisition, (re)processing & (re)interpretation",
+    "Drill appraisal well + DST",
+    "Fault Seal Analysis",
+    "Integrated Reservoir Connectivity Studies",
+    "Well work / stimulation / intervention (TTSS etc)"
+  ],
+
+  "disciplines": ["Geology", "Geophysics", "Geomechanics", "PP", "RE", "PT", "PT/PP", "PT/RE"],
+
+  "rating_rank": {
+    "HH": 1, "HM": 2, "HL": 3,
+    "MH": 4, "MM": 5, "ML": 6,
+    "LH": 7, "LM": 8, "LL": 9
+  },
+
+  "rating_colors": {
+    "HH": "#FF4C4C",
+    "HM": "#FF8C00",
+    "HL": "#FFA500",
+    "MH": "#FF8C00",
+    "MM": "#FFD700",
+    "ML": "#90EE90",
+    "LH": "#FFA500",
+    "LM": "#90EE90",
+    "LL": "#32CD32"
+  }
+}
