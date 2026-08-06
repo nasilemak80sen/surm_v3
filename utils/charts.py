@@ -68,9 +68,11 @@ def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
             short  = label[:30] + "…" if len(label) > 32 else label
 
             fig.add_trace(go.Scatter(
-                x=[x], y=[y], mode="markers",
-                marker=dict(size=26, color="white",
+                x=[x], y=[y], mode="markers+text",
+                marker=dict(size=28, color="white",
                             line=dict(color=color, width=3), symbol="circle"),
+                text=[short], textposition="bottom center",
+                textfont=dict(size=11, color=color, family=FONT_FAMILY),
                 name=label,
                 hovertemplate=(
                     f"<b>{label}</b><br>Degree: {deg}  |  Impact: {imp}<br>"
@@ -78,11 +80,6 @@ def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
                 ),
                 showlegend=False,
             ))
-            fig.add_annotation(
-                x=x, y=y - 0.30, text=short, showarrow=False,
-                xanchor="center", yanchor="top",
-                font=dict(size=11, color=color, family=FONT_FAMILY),
-            )
 
     zone_labels = [
         (0.78, 3.25, "HIGH RISK",   "#C00000"),
@@ -97,7 +94,7 @@ def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         title=dict(text="Uncertainty Matrix",
-                   font=dict(size=16, color="#1F6B3A", family=FONT_FAMILY), x=0.5),
+                   font=dict(size=18, color="#1F6B3A", family=FONT_FAMILY), x=0.5),
         xaxis=dict(
             title=dict(text="Degree of Uncertainty",
                        font=dict(size=14, family=FONT_FAMILY)),
@@ -115,8 +112,8 @@ def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
             linecolor="#AAAAAA", linewidth=1,
         ),
         plot_bgcolor="white", paper_bgcolor="white",
-        height=530,
-        margin=dict(l=90, r=40, t=70, b=90),
+        height=560,
+        margin=dict(l=90, r=60, t=90, b=90),
         font=dict(family=FONT_FAMILY, size=13),
         hoverlabel=dict(font_size=13, font_family=FONT_FAMILY),
     )
@@ -144,18 +141,20 @@ def build_tornado_chart(key_unc_df: pd.DataFrame) -> go.Figure:
     ))
     fig.update_layout(
         title=dict(text="Tornado Chart — Impact on Key Decisions (Weighted)",
-                   font=dict(size=15, color="#1F6B3A", family=FONT_FAMILY), x=0.5),
+                   font=dict(size=17, color="#1F6B3A", family=FONT_FAMILY), x=0.5),
         xaxis=dict(title=dict(text="Weighted Score",
-                              font=dict(size=13, family=FONT_FAMILY)),
-                   range=[0.8, 3.4], gridcolor="#E0E0E0",
-                   tickfont=dict(size=12, family=FONT_FAMILY)),
+                              font=dict(size=14, family=FONT_FAMILY)),
+                   range=[0.6, 3.4], gridcolor="#E0E0E0",
+                   tickfont=dict(size=12, family=FONT_FAMILY), dtick=0.4),
         yaxis=dict(title="", automargin=True,
                    tickfont=dict(size=12, family=FONT_FAMILY)),
         plot_bgcolor="white", paper_bgcolor="white",
-        height=max(360, len(df) * 50 + 120),
-        margin=dict(l=20, r=90, t=70, b=60),
+        height=max(420, len(df) * 42 + 120),
+        margin=dict(l=220, r=90, t=90, b=60),
         font=dict(family=FONT_FAMILY, size=13),
     )
+    fig.update_yaxes(tickfont=dict(size=12), automargin=True)
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor="#ECECEC")
     return fig
 
 

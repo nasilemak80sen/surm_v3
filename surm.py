@@ -16,12 +16,14 @@ st.set_page_config(
 
 # ── Load CSS ──────────────────────────────────────────────────────────
 _css_path = os.path.join(os.path.dirname(__file__), "assets", "style.css")
-with open(_css_path) as _f:
+with open(_css_path, "r", encoding="utf-8") as _f:
     st.markdown(f"<style>{_f.read()}</style>", unsafe_allow_html=True)
 
 # ── Session state init ────────────────────────────────────────────────
 from utils.session import init_session
+from utils.persistence import resume_latest_session
 init_session()
+resume_latest_session()
 
 # ── Import tab modules ────────────────────────────────────────────────
 from modules.tab_frontpage           import render as render_frontpage
@@ -198,23 +200,29 @@ if field: _subtitle += f" — {field}"
 if proj and proj != field: _subtitle += f" ({proj})"
 
 st.markdown(f"""
-    <div style="background:#FFFFFF;border:1px solid #E0E0E0;border-radius:6px;
-    padding:14px 20px;margin-bottom:12px;display:flex;align-items:center;
-    justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-        <div style="display:flex;align-items:center;gap:14px;">
-            <div style="font-size:32px;line-height:1;">🛢️</div>
-            <div>
-                <div style="font-size:17px;font-weight:700;color:#1F6B3A;line-height:1.2;">
-                    Subsurface Uncertainty &amp; Risk Management Plan{_subtitle}
-                </div>
-                <div style="font-size:11px;color:#888;margin-top:3px;letter-spacing:0.3px;">
-                    PETRONAS Carigali &nbsp;|&nbsp; SURM Toolkit v1.0
+    <div class="surm-card" style="margin-bottom:12px;padding:16px 18px;background:linear-gradient(90deg,#F8FCF8 0%,#F1F8F2 100%);border:1px solid #DCE9DD;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="font-size:34px;line-height:1;">🛢️</div>
+                <div>
+                    <div style="font-size:17px;font-weight:700;color:#1F6B3A;line-height:1.2;">
+                        Subsurface Uncertainty &amp; Risk Management Plan{_subtitle}
+                    </div>
+                    <div style="font-size:11px;color:#6B7A6E;margin-top:3px;letter-spacing:0.3px;">
+                        PETRONAS Carigali &nbsp;|&nbsp; SURM Toolkit v1.0
+                    </div>
                 </div>
             </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span class="surm-pill subtle">{field or 'Field pending'}</span>
+                <span class="surm-pill subtle">{proj or 'Project pending'}</span>
+                <span class="surm-pill">{phase or 'Phase pending'}</span>
+                <span class="surm-pill success">{'Saved' if ss.get('_last_saved') else 'Draft'}</span>
+            </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-            {'<span style="background:#1F6B3A;color:white;padding:4px 14px;border-radius:12px;font-size:12px;font-weight:700;">' + phase + '</span>' if phase else ''}
-            <span style="font-size:11px;color:#AAA;font-style:italic;">Session not saved</span>
+        <div class="surm-helper" style="margin-top:10px;margin-bottom:0;">
+            <span>💡</span>
+            <span>Follow the tabs in order, save often, and keep your project details consistent so your study is easy to resume later.</span>
         </div>
     </div>
 """, unsafe_allow_html=True)

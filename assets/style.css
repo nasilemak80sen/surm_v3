@@ -18,8 +18,8 @@ html, body, [class*="css"], .stApp {
 
 /* ── 3. Main content area ────────────────────────────────── */
 .main .block-container {
-    padding: 1rem 2rem 4rem 2rem !important;
-    max-width: 1400px !important;
+    padding: 1rem 2rem 5rem 2rem !important;
+    max-width: 1500px !important;
 }
 
 /* ── 4. Sidebar ──────────────────────────────────────────── */
@@ -120,7 +120,7 @@ section[data-testid="stSidebar"] > div:first-child {
 .surm-card {
     background: #FFFFFF;
     border: 1px solid #E0E0E0;
-    border-radius: 4px;
+    border-radius: 8px;
     padding: 16px 18px;
     margin-bottom: 14px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -136,29 +136,68 @@ section[data-testid="stSidebar"] > div:first-child {
 
 /* ── 7. Section Headers ──────────────────────────────────── */
 .surm-section-header {
-    background: #1F6B3A;
+    background: linear-gradient(90deg, #1F6B3A 0%, #2A7A45 100%);
     color: #FFFFFF;
-    padding: 7px 14px;
+    padding: 9px 14px;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.4px;
-    border-radius: 3px;
+    border-radius: 6px;
     margin: 18px 0 10px 0;
     display: flex;
     align-items: center;
     gap: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
 
 /* ── 8. Instruction Banner ───────────────────────────────── */
 .surm-instruction {
-    background: #FFFDE7;
-    border-left: 4px solid #F9A825;
-    padding: 9px 14px;
+    background: #F6FBF3;
+    border-left: 4px solid #1F6B3A;
+    padding: 10px 14px;
     font-size: 12px;
-    color: #5D4037;
-    border-radius: 0 3px 3px 0;
+    color: #36523E;
+    border-radius: 0 6px 6px 0;
     margin-bottom: 14px;
     line-height: 1.5;
+}
+
+.surm-helper {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: linear-gradient(90deg, #F4F9F2 0%, #EEF7EE 100%);
+    border: 1px solid #D8EAD8;
+    border-left: 4px solid #1F6B3A;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 10px 0 14px 0;
+    color: #35563F;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.surm-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1F6B3A;
+    color: #FFFFFF;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+.surm-pill.subtle {
+    background: #F2F7F3;
+    color: #35563F;
+    border: 1px solid #D8EAD8;
+}
+.surm-pill.success {
+    background: #E8F5E9;
+    color: #1B5E20;
+    border: 1px solid #B7D8BD;
 }
 
 /* ── 9. Status Badges ────────────────────────────────────── */
@@ -188,7 +227,8 @@ section[data-testid="stSidebar"] > div:first-child {
 /* ── 10. Data Tables ─────────────────────────────────────── */
 .stDataFrame, .stDataEditor {
     border: 1px solid #D0D0D0 !important;
-    border-radius: 3px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .stDataFrame thead th, .stDataEditor thead th {
     background-color: #1F6B3A !important;
@@ -196,13 +236,17 @@ section[data-testid="stSidebar"] > div:first-child {
     font-weight: 700 !important;
     font-size: 12px !important;
 }
+.stDataEditor [data-testid="stDataFrame"] {
+    border-radius: 8px;
+}
 
 /* ── 11. Buttons ─────────────────────────────────────────── */
 .stButton > button {
-    border-radius: 3px;
+    border-radius: 8px;
     font-size: 13px;
     font-family: 'Calibri', sans-serif;
     transition: all 0.15s;
+    min-height: 38px;
 }
 .stButton > button[kind="primary"] {
     background-color: #1F6B3A !important;
@@ -237,15 +281,26 @@ section[data-testid="stSidebar"] > div:first-child {
 
 /* ── 13. Selectbox & Inputs ──────────────────────────────── */
 .stSelectbox [data-baseweb="select"] > div,
-.stTextInput > div > div {
-    border-radius: 3px !important;
-    border-color: #C0C0C0 !important;
+.stTextInput > div > div,
+.stTextArea > div > div,
+.stNumberInput > div > div {
+    border-radius: 8px !important;
+    border: 1px solid #C7D8CD !important;
     font-size: 13px !important;
+    min-height: 42px;
+    background: #FFFFFF;
 }
 .stSelectbox [data-baseweb="select"]:focus-within > div,
-.stTextInput > div > div:focus-within {
+.stTextInput > div > div:focus-within,
+.stTextArea > div > div:focus-within,
+.stNumberInput > div > div:focus-within {
     border-color: #1F6B3A !important;
-    box-shadow: 0 0 0 2px rgba(31,107,58,0.15) !important;
+    box-shadow: 0 0 0 3px rgba(31,107,58,0.14) !important;
+}
+.stTextInput label, .stSelectbox label, .stTextArea label, .stNumberInput label {
+    font-size: 12px !important;
+    color: #35563F !important;
+    font-weight: 700 !important;
 }
 
 /* ── 14. Metrics ─────────────────────────────────────────── */
@@ -263,8 +318,15 @@ section[data-testid="stSidebar"] > div:first-child {
 .stProgress > div > div > div { background-color: #1F6B3A !important; }
 
 /* ── 16. Info / Warning / Error banners ─────────────────── */
-.stAlert { border-radius: 3px; font-size: 13px; }
-div[data-testid="stNotification"] { font-size: 13px; }
+.stAlert {
+    border-radius: 8px;
+    font-size: 13px;
+    border: 1px solid #D8EAD8;
+}
+div[data-testid="stNotification"] {
+    font-size: 13px;
+    border-radius: 8px;
+}
 
 /* ── 17. Expander ────────────────────────────────────────── */
 details summary {
