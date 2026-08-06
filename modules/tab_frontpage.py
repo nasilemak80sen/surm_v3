@@ -1,11 +1,14 @@
 """modules/tab_frontpage.py — Project info, sign-off, session manager"""
 import streamlit as st
+from datetime import date
 from utils.export_excel import build_excel_export
-from utils.persistence import save_session, list_sessions, load_session, delete_session
+from utils.persistence import save_session, list_sessions, load_session_record, delete_session
 
 _PHASES = ["","PGR0","PGR1","PGR2","PGR3/FID","ITR2a","ITR2b","SBS","SIR2a","SIR2b","PGR4"]
 
 def render():
+    st.markdown('<div class="surm-helper"><span>🧭</span><span>Start with the project details, then move through the tabs in sequence. This keeps the workflow clearer and makes each saved session easier to resume.</span></div>', unsafe_allow_html=True)
+
     # ── Saved sessions panel ─────────────────────────────────────────
     sessions = list_sessions()
     if sessions:
@@ -36,16 +39,17 @@ def render():
                     </div>
                 """, unsafe_allow_html=True)
             with col_load:
-                if st.button("📂 Load", key=f"load_{s['filename']}"):
-                    ok = load_session(s["filepath"])
+                if st.button("📂 Load", key=f"load_{s['project_name']}_{s['field_name']}"):
+                    ok = load_session_record(s)
                     if ok:
                         st.success(f"Loaded: {s['project_name']}")
+                        st.session_state["_resume_attempted"] = True
                         st.rerun()
                     else:
                         st.error("Load failed.")
             with col_del:
-                if st.button("🗑️", key=f"del_{s['filename']}", help="Delete this saved session"):
-                    delete_session(s["filepath"])
+                if st.button("🗑️", key=f"del_{s['project_name']}_{s['field_name']}", help="Delete this saved session"):
+                    delete_session(s["project_name"], s["field_name"])
                     st.rerun()
 
         st.divider()
@@ -54,26 +58,33 @@ def render():
     st.markdown('<div class="surm-section-header">📋 Project Information</div>', unsafe_allow_html=True)
     st.markdown('<div class="surm-instruction">ℹ️ Fill in the project details. These appear on the exported Excel cover page and identify your saved session.</div>', unsafe_allow_html=True)
 
+    st.session_state.setdefault("project_name", "")
+    st.session_state.setdefault("field_name", "")
+    st.session_state.setdefault("project_phase", "")
+
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.session_state["project_name"] = st.text_input(
-            "Project Name", value=st.session_state.get("project_name",""),
+        st.text_input(
+            "Project Name",
+            key="project_name",
             placeholder="e.g. Ledang FDP",
             help="Used as the saved session identifier")
     with c2:
-        st.session_state["field_name"] = st.text_input(
-            "Field Name", value=st.session_state.get("field_name",""),
+        st.text_input(
+            "Field Name",
+            key="field_name",
             placeholder="e.g. Ledang")
     with c3:
-        cur_phase = st.session_state.get("project_phase","")
+        cur_phase = st.session_state.get("project_phase", "")
         idx = _PHASES.index(cur_phase) if cur_phase in _PHASES else 0
-        st.session_state["project_phase"] = st.selectbox("Project Phase", _PHASES, index=idx)
+        st.selectbox("Project Phase", _PHASES, key="project_phase", index=idx)
 
     # ── Manual save on this page too ──────────────────────────────────
     col_save, col_hint = st.columns([1, 4])
     with col_save:
-        if st.button("💾 Save Session", type="primary", key="fp_save"):
-            if not st.session_state.get("project_name","").strip():
+        save_clicked = st.button("💾 Save Session", type="primary", key="fp_save")
+        if save_clicked:
+            if not st.session_state.get("project_name", "").strip():
                 st.warning("Enter a Project Name before saving.")
             else:
                 ok = save_session(auto=False)
@@ -92,14 +103,29 @@ def render():
         ("Reviewed By — PP",      "rev_pp"),
         ("Endorsed By (FDP Lead)","endorsed"),
     ]
-    cols = st.columns(5)
-    for col, (label, key) in zip(cols, signoffs):
-        with col:
-            st.markdown(f'<div class="signoff-box"><div class="signoff-label">{label}</div>', unsafe_allow_html=True)
-            st.session_state[f"{key}_name"] = st.text_input("Name",  key=f"si_{key}_n", value=st.session_state.get(f"{key}_name",""), placeholder="Full name",    label_visibility="collapsed")
-            st.session_state[f"{key}_role"] = st.text_input("Role",  key=f"si_{key}_r", value=st.session_state.get(f"{key}_role",""), placeholder="Designation", label_visibility="collapsed")
-            st.session_state[f"{key}_date"] = st.text_input("Date",  key=f"si_{key}_d", value=st.session_state.get(f"{key}_date",""), placeholder="DD/MM/YYYY",  label_visibility="collapsed")
-            st.markdown("</div>", unsafe_allow_html=True)
+
+    for label, key in signoffs:
+        with st.expander(label, expanded=False):
+            st.markdown('<div class="signoff-box">', unsafe_allow_html=True)
+            st.session_state.setdefault(f"{key}_name", "")
+            st.session_state.setdefault(f"{key}_role", "")
+            st.session_state.setdefault(f"{key}_date", date.today())
+            st.text_input(
+                "Name",
+                key=f"{key}_name",
+                placeholder="Full name",
+                label_visibility="collapsed")
+            st.text_input(
+                "Role",
+                key=f"{key}_role",
+                placeholder="Designation",
+                label_visibility="collapsed")
+            st.date_input(
+                "Date",
+                key=f"{key}_date",
+                value=st.session_state.get(f"{key}_date") or date.today(),
+                label_visibility="collapsed")
+            st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Export ────────────────────────────────────────────────────────
     st.markdown('<div class="surm-section-header">📥 Export Full SURM Workbook</div>', unsafe_allow_html=True)

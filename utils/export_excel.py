@@ -109,11 +109,11 @@ def build_excel_export() -> bytes:
     # Sign-off block
     signoff_headers = ["Role", "Name", "Date"]
     signoff_data    = [
-        ["Prepared By",  "", ""],
-        ["Reviewed By (G&G)", "", ""],
-        ["Reviewed By (RE)",  "", ""],
-        ["Reviewed By (PP)",  "", ""],
-        ["Endorsed By",  "", ""],
+        ["Prepared By",      ss.get("prep_name", ""),      ss.get("prep_date", "")],
+        ["Reviewed By (G&G)", ss.get("rev_gg_name", ""),    ss.get("rev_gg_date", "")],
+        ["Reviewed By (RE)",  ss.get("rev_re_name", ""),    ss.get("rev_re_date", "")],
+        ["Reviewed By (PP)",  ss.get("rev_pp_name", ""),    ss.get("rev_pp_date", "")],
+        ["Endorsed By",       ss.get("endorsed_name", ""), ss.get("endorsed_date", "")],
     ]
     ws.cell(row=7, column=1, value="Sign-Off").font = Font(name="Calibri", bold=True, size=12, color="FFFFFF")
     ws.cell(row=7, column=1).fill = PatternFill("solid", fgColor=GREEN_DARK)

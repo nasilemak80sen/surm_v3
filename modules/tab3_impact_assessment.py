@@ -94,6 +94,11 @@ def render():
                            "Impact Bin": imp, "Combined Rating": rated})
 
         st.session_state["impact_assessment"] = scored
+        st.session_state["key_uncertainties"] = []
+        st.session_state["resolution_list"] = {}
+        st.session_state["resolution_planner"] = []
+        st.session_state["risk_register"] = []
+        st.session_state["pra_output"] = []
         save_session(auto=True)
         st.rerun()
 

@@ -85,6 +85,10 @@ def render():
         elif btn_excl_all:
             full_ku["Include in Plan"] = False
         st.session_state["key_uncertainties"] = full_ku.to_dict("records")
+        st.session_state["resolution_list"] = {}
+        st.session_state["resolution_planner"] = []
+        st.session_state["risk_register"] = []
+        st.session_state["pra_output"] = []
         save_session(auto=True)
         st.rerun()
 

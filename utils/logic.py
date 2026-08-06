@@ -71,7 +71,10 @@ def build_impact_table() -> pd.DataFrame:
     for u in selected:
         name = u["name"]
         ex   = existing.get(name, {})
-        row  = {"Uncertainty": name, "Degree of Uncertainty (H/M/L)": ex.get("Degree of Uncertainty (H/M/L)", "L")}
+        row  = {
+            "Uncertainty": name,
+            "Degree of Uncertainty": ex.get("Degree of Uncertainty", ex.get("Degree of Uncertainty (H/M/L)", "L")),
+        }
         for dn in decision_names:
             row[dn] = ex.get(dn, "NA")
         rows.append(row)
@@ -87,9 +90,13 @@ def compute_key_uncertainties(impact_df: pd.DataFrame, decisions: list) -> pd.Da
     if impact_df.empty:
         return pd.DataFrame()
 
+    degree_col = "Degree of Uncertainty"
+    if degree_col not in impact_df.columns:
+        degree_col = "Degree of Uncertainty (H/M/L)"
+
     rows = []
     for _, r in impact_df.iterrows():
-        deg    = r.get("Degree of Uncertainty (H/M/L)", "L")
+        deg    = r.get(degree_col, "L")
         score  = compute_weighted_score(r.to_dict(), decisions)
         impact_bin = score_to_bin(score)
         rating = compute_combined_rating(deg, impact_bin)

@@ -1,36 +1,64 @@
 /* ═══════════════════════════════════════════════════════════
    SURM TOOLKIT — Global Stylesheet
-   Calibri-first, Excel-inspired, PETRONAS green accent
+   PETRONAS-inspired corporate theme with smooth UX polish
    ═══════════════════════════════════════════════════════════ */
 
 /* ── 1. Fonts & Reset ────────────────────────────────────── */
+@font-face {
+    font-family: 'Museo Sans';
+    src: url('https://fonts.cdnfonts.com/s/14814/MuseoSans_300.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Museo Sans';
+    src: url('https://fonts.cdnfonts.com/s/14814/MuseoSans_700.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Museo Sans';
+    src: url('https://fonts.cdnfonts.com/s/14814/MuseoSans_900.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
 html, body, [class*="css"], .stApp {
-    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif !important;
+    font-family: 'Museo Sans', 'Segoe UI', Arial, sans-serif !important;
     font-size: 14px;
-    color: #1A1A1A;
+    color: #0F172A;
+    background: #F8FBFC;
 }
 
 /* ── 2. App Shell ────────────────────────────────────────── */
-.stApp { background-color: #F5F5F5; }
+.stApp {
+    background:
+        radial-gradient(circle at top left, rgba(0, 161, 156, 0.08), transparent 22%),
+        linear-gradient(180deg, #FCFEFF 0%, #F6FAFB 100%);
+}
 
 /* Hide default Streamlit hamburger & footer */
 #MainMenu, footer, header { visibility: hidden; }
 
 /* ── 3. Main content area ────────────────────────────────── */
 .main .block-container {
-    padding: 1rem 2rem 4rem 2rem !important;
-    max-width: 1400px !important;
+    padding: 1rem 2rem 5rem 2rem !important;
+    max-width: 1500px !important;
 }
 
 /* ── 4. Sidebar ──────────────────────────────────────────── */
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #1A5C32 0%, #1F6B3A 40%, #2E7D52 100%);
+    background: linear-gradient(135deg, #00A19C 0%, #20419A 100%);
     border-right: none;
-    min-width: 260px !important;
+    min-width: 280px !important;
+    box-shadow: 6px 0 24px rgba(32, 65, 154, 0.16);
 }
 section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
 section[data-testid="stSidebar"] .stMarkdown p,
-section[data-testid="stSidebar"] .stMarkdown li { color: #D4EDE1 !important; font-size: 12px; }
+section[data-testid="stSidebar"] .stMarkdown li { color: #EFF8FF !important; font-size: 12px; }
 section[data-testid="stSidebar"] hr {
     border-top: 1px solid rgba(255,255,255,0.2) !important;
     margin: 8px 0 !important;
@@ -47,15 +75,15 @@ section[data-testid="stSidebar"] .stMetric [data-testid="metric-container"] div 
 /* ── 5. Tab Bar — Scrollable, full text always visible ──── */
 div[data-testid="stTabs"] > div:first-child,
 div[data-testid="stTabs"] > div[role="tablist"] {
-    background-color: #ECECEC !important;
-    border-bottom: 2px solid #1F6B3A !important;
-    padding: 0 4px 0 4px !important;
-    gap: 1px !important;
+    background: linear-gradient(90deg, rgba(0,161,156,0.06), rgba(32,65,154,0.04));
+    border-bottom: 2px solid rgba(0,161,156,0.16) !important;
+    padding: 6px 6px 0 6px !important;
+    gap: 4px !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
     flex-wrap: nowrap !important;
     scrollbar-width: thin !important;
-    scrollbar-color: #1F6B3A #E8E8E8 !important;
+    scrollbar-color: #00A19C #E8E8E8 !important;
     -webkit-overflow-scrolling: touch !important;
     scroll-behavior: smooth !important;
 }
@@ -67,29 +95,32 @@ div[data-testid="stTabs"] > div[role="tablist"]::-webkit-scrollbar-thumb {
 }
 
 button[data-baseweb="tab"] {
-    background-color: #DCDCDC !important;
-    border: 1px solid #BFBFBF !important;
+    background: #FFFFFF !important;
+    border: 1px solid #DCE6EA !important;
     border-bottom: none !important;
-    border-radius: 4px 4px 0 0 !important;
-    padding: 7px 16px !important;
+    border-radius: 10px 10px 0 0 !important;
+    padding: 8px 14px !important;
     font-size: 12px !important;
-    font-weight: 500 !important;
-    color: #555 !important;
-    margin-right: 1px !important;
+    font-weight: 700 !important;
+    color: #4C5D6B !important;
+    margin-right: 2px !important;
     white-space: nowrap !important;
     flex-shrink: 0 !important;
     min-width: fit-content !important;
-    transition: background 0.15s, color 0.15s !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 button[data-baseweb="tab"][aria-selected="true"] {
-    background-color: #FFFFFF !important;
-    border-top: 2px solid #1F6B3A !important;
-    color: #1F6B3A !important;
-    font-weight: 700 !important;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F4FCFB 100%) !important;
+    border-top: 2px solid #00A19C !important;
+    color: #00A19C !important;
+    font-weight: 900 !important;
+    box-shadow: 0 4px 10px rgba(0,161,156,0.10);
 }
 button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
-    background-color: #F0F0F0 !important;
-    color: #1F6B3A !important;
+    background: #F8FCFD !important;
+    color: #20419A !important;
+    transform: translateY(-1px);
 }
 
 /* ── 5b. Sidebar collapse toggle — always visible & styled ─ */
@@ -119,46 +150,90 @@ section[data-testid="stSidebar"] > div:first-child {
 /* ── 6. Cards ────────────────────────────────────────────── */
 .surm-card {
     background: #FFFFFF;
-    border: 1px solid #E0E0E0;
-    border-radius: 4px;
-    padding: 16px 18px;
-    margin-bottom: 14px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #E4EDF0;
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.surm-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
 }
 .surm-card-title {
     font-size: 13px;
     font-weight: 700;
-    color: #1F6B3A;
+    color: #00A19C;
     margin-bottom: 10px;
     padding-bottom: 6px;
-    border-bottom: 1px solid #E8F5E9;
+    border-bottom: 1px solid #E4F4F1;
 }
 
 /* ── 7. Section Headers ──────────────────────────────────── */
 .surm-section-header {
-    background: #1F6B3A;
+    background: linear-gradient(90deg, #00A19C 0%, #20419A 100%);
     color: #FFFFFF;
-    padding: 7px 14px;
+    padding: 10px 14px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 900;
     letter-spacing: 0.4px;
-    border-radius: 3px;
+    border-radius: 10px;
     margin: 18px 0 10px 0;
     display: flex;
     align-items: center;
     gap: 6px;
+    box-shadow: 0 6px 14px rgba(32, 65, 154, 0.12);
 }
 
 /* ── 8. Instruction Banner ───────────────────────────────── */
 .surm-instruction {
-    background: #FFFDE7;
-    border-left: 4px solid #F9A825;
-    padding: 9px 14px;
+    background: linear-gradient(90deg, rgba(0,161,156,0.08), rgba(32,65,154,0.04));
+    border-left: 4px solid #00A19C;
+    padding: 10px 14px;
     font-size: 12px;
-    color: #5D4037;
-    border-radius: 0 3px 3px 0;
+    color: #38516B;
+    border-radius: 0 10px 10px 0;
     margin-bottom: 14px;
     line-height: 1.5;
+}
+
+.surm-helper {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: linear-gradient(90deg, rgba(191, 215, 48, 0.14), rgba(0,161,156,0.08));
+    border: 1px solid rgba(0,161,156,0.14);
+    border-left: 4px solid #BFD730;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin: 10px 0 14px 0;
+    color: #35516A;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.surm-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1F6B3A;
+    color: #FFFFFF;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+.surm-pill.subtle {
+    background: #F2F7F3;
+    color: #35563F;
+    border: 1px solid #D8EAD8;
+}
+.surm-pill.success {
+    background: #E8F5E9;
+    color: #1B5E20;
+    border: 1px solid #B7D8BD;
 }
 
 /* ── 9. Status Badges ────────────────────────────────────── */
@@ -188,7 +263,8 @@ section[data-testid="stSidebar"] > div:first-child {
 /* ── 10. Data Tables ─────────────────────────────────────── */
 .stDataFrame, .stDataEditor {
     border: 1px solid #D0D0D0 !important;
-    border-radius: 3px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .stDataFrame thead th, .stDataEditor thead th {
     background-color: #1F6B3A !important;
@@ -196,25 +272,29 @@ section[data-testid="stSidebar"] > div:first-child {
     font-weight: 700 !important;
     font-size: 12px !important;
 }
+.stDataEditor [data-testid="stDataFrame"] {
+    border-radius: 8px;
+}
 
 /* ── 11. Buttons ─────────────────────────────────────────── */
 .stButton > button {
-    border-radius: 3px;
+    border-radius: 10px;
     font-size: 13px;
-    font-family: 'Calibri', sans-serif;
-    transition: all 0.15s;
+    font-family: 'Museo Sans', sans-serif;
+    transition: all 0.18s ease;
+    min-height: 38px;
 }
 .stButton > button[kind="primary"] {
-    background-color: #1F6B3A !important;
+    background: linear-gradient(135deg, #00A19C 0%, #20419A 100%) !important;
     color: #FFFFFF !important;
     border: none !important;
-    font-weight: 600;
-    padding: 6px 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    font-weight: 700;
+    padding: 7px 20px;
+    box-shadow: 0 8px 18px rgba(0,161,156,0.16);
 }
 .stButton > button[kind="primary"]:hover {
-    background-color: #174F2B !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    background: linear-gradient(135deg, #008C87 0%, #1A3787 100%) !important;
+    box-shadow: 0 10px 22px rgba(32,65,154,0.20);
     transform: translateY(-1px);
 }
 .stButton > button[kind="primary"]:active { transform: translateY(0); }
@@ -237,24 +317,38 @@ section[data-testid="stSidebar"] > div:first-child {
 
 /* ── 13. Selectbox & Inputs ──────────────────────────────── */
 .stSelectbox [data-baseweb="select"] > div,
-.stTextInput > div > div {
-    border-radius: 3px !important;
-    border-color: #C0C0C0 !important;
+.stTextInput > div > div,
+.stTextArea > div > div,
+.stNumberInput > div > div {
+    border-radius: 10px !important;
+    border: 1px solid #D6E5EA !important;
     font-size: 13px !important;
+    min-height: 42px;
+    background: #FFFFFF;
+    box-shadow: inset 0 1px 2px rgba(15,23,42,0.03);
 }
 .stSelectbox [data-baseweb="select"]:focus-within > div,
-.stTextInput > div > div:focus-within {
-    border-color: #1F6B3A !important;
-    box-shadow: 0 0 0 2px rgba(31,107,58,0.15) !important;
+.stTextInput > div > div:focus-within,
+.stTextArea > div > div:focus-within,
+.stNumberInput > div > div:focus-within {
+    border-color: #00A19C !important;
+    box-shadow: 0 0 0 3px rgba(0,161,156,0.12) !important;
+}
+.stTextInput label, .stSelectbox label, .stTextArea label, .stNumberInput label {
+    font-size: 12px !important;
+    
+    color: #35516A !important;
+    font-weight: 700 !important;
 }
 
 /* ── 14. Metrics ─────────────────────────────────────────── */
 .stMetric {
-    background: #FFFFFF;
-    border: 1px solid #E8E8E8;
-    border-radius: 4px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #FBFEFF 100%);
+    border: 1px solid #E4EDF0;
+    border-radius: 12px;
     padding: 12px 16px;
-    border-top: 3px solid #1F6B3A;
+    border-top: 3px solid #00A19C;
+    box-shadow: 0 6px 16px rgba(15,23,42,0.04);
 }
 .stMetric label { font-size: 11px !important; color: #666 !important; text-transform: uppercase; letter-spacing: 0.5px; }
 .stMetric [data-testid="metric-container"] > div:nth-child(2) { font-size: 22px !important; font-weight: 700 !important; color: #1A1A1A !important; }
@@ -263,8 +357,15 @@ section[data-testid="stSidebar"] > div:first-child {
 .stProgress > div > div > div { background-color: #1F6B3A !important; }
 
 /* ── 16. Info / Warning / Error banners ─────────────────── */
-.stAlert { border-radius: 3px; font-size: 13px; }
-div[data-testid="stNotification"] { font-size: 13px; }
+.stAlert {
+    border-radius: 8px;
+    font-size: 13px;
+    border: 1px solid #D8EAD8;
+}
+div[data-testid="stNotification"] {
+    font-size: 13px;
+    border-radius: 8px;
+}
 
 /* ── 17. Expander ────────────────────────────────────────── */
 details summary {
@@ -329,13 +430,14 @@ hr { border: none; border-top: 1px solid #E8E8E8; margin: 16px 0; }
 .surm-footer {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: #1A5C32;
-    color: rgba(255,255,255,0.85);
+    background: linear-gradient(90deg, #00A19C 0%, #20419A 100%);
+    color: rgba(255,255,255,0.92);
     text-align: center;
     font-size: 11px;
-    padding: 5px 0;
+    padding: 6px 0;
     z-index: 999;
     letter-spacing: 0.3px;
+    box-shadow: 0 -4px 16px rgba(32,65,154,0.12);
 }
 
 /* ── 25. Scroll to top button ────────────────────────────── */

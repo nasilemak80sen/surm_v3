@@ -36,6 +36,8 @@ def render():
                 res_df  = pd.DataFrame(res_rows)
                 planner = build_resolution_planner(res_df)
                 st.session_state["resolution_planner"] = planner.to_dict("records")
+                st.session_state["risk_register"] = []
+                st.session_state["pra_output"] = []
                 save_session(auto=True)
                 st.success(f"✅ {len(planner)} actions loaded.")
                 st.rerun()
@@ -93,17 +95,11 @@ def render():
         elif btn_rem_all:
             for row in data:
                 row["Part of Workplan"] = False
-        st.session_state["resolution_planner"] = data
-        save_session(auto=True)
-        st.rerun()
-
-    # ── Progress dashboard (from saved state) ─────────────────────────
-    saved_planner = st.session_state.get("resolution_planner", [])
-    workplan_rows = [r for r in saved_planner if r.get("Part of Workplan", True)]
-    if not workplan_rows:
-        return
-
-    st.divider()
+            st.session_state["resolution_planner"] = data
+            st.session_state["risk_register"] = []
+            st.session_state["pra_output"] = []
+            save_session(auto=True)
+            st.rerun()
     st.markdown('<div class="surm-section-header">📊 Progress Dashboard</div>', unsafe_allow_html=True)
 
     overall = sum(float(r.get("Progress (0-1)",0) or 0) for r in workplan_rows) / max(len(workplan_rows),1)

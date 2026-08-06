@@ -76,6 +76,9 @@ def render():
             name = row["Uncertainty"]
             res_dict[name] = {opt: row.get(opt,"") for opt in options}
         st.session_state["resolution_list"] = res_dict
+        st.session_state["resolution_planner"] = []
+        st.session_state["risk_register"] = []
+        st.session_state["pra_output"] = []
         save_session(auto=True)
         st.rerun()
 

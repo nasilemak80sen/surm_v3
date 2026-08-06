@@ -1,5 +1,5 @@
 [app]
-entry_point = "app.py"
+entry_point = "surm.py"
 
 [theme]
 base                     = "light"
@@ -12,7 +12,7 @@ font                     = "sans serif"
 [server]
 maxUploadSize    = 50
 headless         = true
-enableCORS       = false
+enableCORS       = true
 
 [browser]
-gatherUsageStats = false
+gatherUsageStats = true
