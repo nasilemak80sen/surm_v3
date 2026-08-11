@@ -107,24 +107,15 @@ def render():
     for label, key in signoffs:
         with st.expander(label, expanded=False):
             st.markdown('<div class="signoff-box">', unsafe_allow_html=True)
-            st.session_state.setdefault(f"{key}_name", "")
-            st.session_state.setdefault(f"{key}_role", "")
-            st.session_state.setdefault(f"{key}_date", date.today())
-            st.text_input(
-                "Name",
-                key=f"{key}_name",
-                placeholder="Full name",
-                label_visibility="collapsed")
-            st.text_input(
-                "Role",
-                key=f"{key}_role",
-                placeholder="Designation",
-                label_visibility="collapsed")
-            st.date_input(
-                "Date",
-                key=f"{key}_date",
-                value=st.session_state.get(f"{key}_date") or date.today(),
-                label_visibility="collapsed")
+            st.session_state[f"{key}_name"] = st.text_input(
+                "Name", key=f"si_{key}_n", value=st.session_state.get(f"{key}_name",""),
+                placeholder="Full name", label_visibility="collapsed")
+            st.session_state[f"{key}_role"] = st.text_input(
+                "Role", key=f"si_{key}_r", value=st.session_state.get(f"{key}_role",""),
+                placeholder="Designation", label_visibility="collapsed")
+            st.session_state[f"{key}_date"] = st.text_input(
+                "Date", key=f"si_{key}_d", value=st.session_state.get(f"{key}_date",""),
+                placeholder="DD/MM/YYYY", label_visibility="collapsed")
             st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Export ────────────────────────────────────────────────────────
