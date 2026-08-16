@@ -6,6 +6,9 @@ Acts as the single source of truth for app-wide state.
 import streamlit as st
 import json, os
 
+# Public set of default session keys (populated in init_session)
+DEFAULT_SESSION_KEYS = set()
+
 def load_master_mapping():
     path = os.path.join(os.path.dirname(__file__), "..", "data", "surm_master_mapping.json")
     with open(path, "r") as f:
@@ -79,11 +82,18 @@ def init_session():
         # ── Persistence tracking ───────────────────────────────────────
         "_last_saved":         "",
         "_last_save_auto":     False,
+        "_auto_save_enabled":  True,
+        # ── UI customisation
+        "ui_primary_color":    "#1F6B3A",
+        "ui_background_color": "#F8FBFC",
     }
 
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+    # expose the set of default keys so persistence can safely filter saved state
+    global DEFAULT_SESSION_KEYS
+    DEFAULT_SESSION_KEYS = set(defaults.keys())
 
 def _build_default_uncertainties(mapping):
     rows = []

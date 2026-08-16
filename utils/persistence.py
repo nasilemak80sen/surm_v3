@@ -6,6 +6,8 @@ import json
 from datetime import datetime
 import streamlit as st
 from utils.db import get_db
+from utils.session import DEFAULT_SESSION_KEYS
+import math
 
 _SKIP_EXACT  = {"_mapping", "_last_saved", "_last_save_auto", "_resume_message", "_resume_attempted"}
 _SKIP_PREFIX = ("_", "unc_")
@@ -39,17 +41,48 @@ def save_session(auto: bool = False) -> bool:
     if not project:
         return False
 
+    # honor user preference for auto-save
+    if auto and not st.session_state.get("_auto_save_enabled", True):
+        return False
+
     payload = {}
+    def _sanitize(o):
+        """Recursively convert values to JSON-safe types."""
+        # primitives
+        if o is None:
+            return o
+        if isinstance(o, (str, bool, int)):
+            return o
+        if isinstance(o, float):
+            if math.isnan(o):
+                return ""
+            return float(o)
+        # lists/tuples
+        if isinstance(o, (list, tuple)):
+            return [_sanitize(x) for x in o]
+        # dicts
+        if isinstance(o, dict):
+            return {str(k): _sanitize(v) for k, v in o.items()}
+        # fallback to string
+        try:
+            return str(o)
+        except Exception:
+            return ""
+
+    # Only persist known default keys to avoid saving transient widget keys
     for key, val in st.session_state.items():
+        if key not in DEFAULT_SESSION_KEYS:
+            continue
         if key in _SKIP_EXACT:
             continue
         if any(key.startswith(p) for p in _SKIP_PREFIX):
             continue
         try:
-            json.dumps(val)
-            payload[key] = val
-        except (TypeError, ValueError):
-            pass
+            safe_val = _sanitize(val)
+            json.dumps(safe_val)
+            payload[key] = safe_val
+        except Exception:
+            continue
 
     now = datetime.now().isoformat(timespec="seconds")
     data = {
@@ -106,7 +139,10 @@ def load_session(project_name: str, field_name: str) -> bool:
         return False
     try:
         mapping = st.session_state.get("_mapping")
+        # Only restore known default session keys to avoid widget-key collisions
         for key, val in data.get("session", {}).items():
+            if key not in DEFAULT_SESSION_KEYS:
+                continue
             st.session_state[key] = val
         if mapping:
             st.session_state["_mapping"] = mapping

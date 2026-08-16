@@ -102,7 +102,15 @@ def render():
                 (r.get("Likelihood (H/M/L)","M"), r.get("Impact (H/M/L)","M")), "Medium"), axis=1)
         st.session_state["risk_register"] = edited.to_dict("records")
         st.session_state["pra_output"]    = edited.to_dict("records")
-        save_session(auto=True)
+        # Manual save from UI
+        try:
+            ok = save_session(auto=False)
+            if ok:
+                st.success("✅ Register saved.")
+            else:
+                st.error("Save failed.")
+        except Exception:
+            st.error("Save failed.")
         st.rerun()
 
     # ── Bowtie generator ──────────────────────────────────────────────
@@ -120,7 +128,7 @@ def render():
     if gen_btn:
         risk_row = rr_df_cur[rr_df_cur["Risk"] == selected_risk].iloc[0].to_dict()
         fig_bt   = build_bowtie(risk_row)
-        st.plotly_chart(fig_bt, width="stretch")
+        st.plotly_chart(fig_bt, use_container_width=True)
         try:
             png_bt = fig_to_png_bytes(fig_bt, width=1600, height=700)
             safe   = selected_risk.replace("/","_").replace(" ","_")[:40]

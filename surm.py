@@ -11,13 +11,33 @@ st.set_page_config(
     page_title="SURM Toolkit | PETRONAS Carigali",
     page_icon="🛢️",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ── Load CSS ──────────────────────────────────────────────────────────
 _css_path = os.path.join(os.path.dirname(__file__), "assets", "style.css")
 with open(_css_path, "r", encoding="utf-8") as _f:
     st.markdown(f"<style>{_f.read()}</style>", unsafe_allow_html=True)
+
+
+def _apply_dynamic_theme():
+    """Inject CSS overrides based on session UI settings (primary & background colors)."""
+    primary = st.session_state.get("ui_primary_color", "#1F6B3A")
+    bg = st.session_state.get("ui_background_color", "#F8FBFC")
+    override = f"""
+    <style>
+    /* dynamic theme overrides */
+    .stApp {{ background: {bg} !important; }}
+    .surm-section-header {{ background: linear-gradient(90deg, {primary} 0%, #20419A 100%) !important; }}
+    .stButton > button[kind="primary"] {{ background: {primary} !important; box-shadow: 0 8px 18px rgba(0,0,0,0.08) !important; }}
+    section[data-testid="stSidebar"] {{ background: linear-gradient(135deg, {primary} 0%, #20419A 100%) !important; }}
+    .surm-pill {{ background: {primary} !important; }}
+    </style>
+    """
+    st.markdown(override, unsafe_allow_html=True)
+
+# Apply dynamic theme on load
+_apply_dynamic_theme()
 
 # ── Session state init ────────────────────────────────────────────────
 from utils.session import init_session
@@ -141,7 +161,7 @@ def _sidebar():
     st.sidebar.markdown('<div style="font-size:10px;opacity:0.65;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Session</div>', unsafe_allow_html=True)
 
     from utils.persistence import save_session
-    if st.sidebar.button("💾 Save Session", key="sidebar_save"):
+    if st.sidebar.button("💾 Save Session"):
         if not ss.get("project_name","").strip():
             st.sidebar.warning("Set a Project Name on the Front Page first.")
         else:
@@ -151,8 +171,53 @@ def _sidebar():
             else:
                 st.sidebar.error("Save failed — check permissions.")
 
+    # Auto-save toggle
+    auto_enabled = st.sidebar.checkbox("Enable auto-save", value=st.session_state.get("_auto_save_enabled", True))
+    st.session_state["_auto_save_enabled"] = bool(auto_enabled)
+
+    # ── UI Theme customisation ───────────────────────────────────────
+    st.sidebar.markdown('<div style="font-size:10px;opacity:0.65;text-transform:uppercase;letter-spacing:0.8px;margin-top:8px;margin-bottom:6px;">Appearance</div>', unsafe_allow_html=True)
+    c1, c2 = st.sidebar.columns([1,1])
+    with c1:
+        primary = st.color_picker("Primary color", value=st.session_state.get("ui_primary_color","#1F6B3A"), key="_ui_primary")
+    with c2:
+        background = st.color_picker("Background", value=st.session_state.get("ui_background_color","#F8FBFC"), key="_ui_bg")
+    apply_theme = st.sidebar.button("Apply theme", key="_apply_theme")
+    if apply_theme:
+        st.session_state["ui_primary_color"] = primary
+        st.session_state["ui_background_color"] = background
+        # re-inject dynamic styles
+        _apply_dynamic_theme()
+        st.sidebar.success("Theme applied")
+
     last_saved  = ss.get("_last_saved", "")
     last_auto   = ss.get("_last_save_auto", False)
+        # ── Saved sessions list ───────────────────────────────────────────
+    from utils.persistence import list_sessions, load_session_record, delete_session
+    sessions = list_sessions()
+    if sessions:
+            # display friendly labels
+            labels = [f"{s['project_name']} — {s['field_name']} ({s.get('completion',0)}%)" for s in sessions]
+            sel = st.sidebar.selectbox("Load saved session:", labels, key="_saved_sessions_select")
+            sel_idx = labels.index(sel)
+            sel_meta = sessions[sel_idx]
+            c_load, c_del = st.sidebar.columns([1,1])
+            if c_load.button("Load", key="_load_saved"):
+                ok = load_session_record(sel_meta)
+                if ok:
+                    st.sidebar.success("✅ Session loaded.\nRefresh view to see changes.")
+                    st.experimental_rerun()
+                else:
+                    st.sidebar.error("Load failed.")
+            if c_del.button("Delete", key="_delete_saved"):
+                ok = delete_session(sel_meta.get('project_name',''), sel_meta.get('field_name',''))
+                if ok:
+                    st.sidebar.success("Deleted saved session.")
+                    st.experimental_rerun()
+                else:
+                    st.sidebar.error("Delete failed.")
+    else:
+            st.sidebar.markdown('<div style="font-size:11px;opacity:0.65;margin-top:6px;">No saved sessions</div>', unsafe_allow_html=True)
     if last_saved:
         ts    = last_saved.replace("T", " ")
         label = f"{'Auto-saved' if last_auto else 'Saved'}: {ts[11:19]}"
@@ -213,12 +278,17 @@ st.markdown(f"""
                     </div>
                 </div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <span class="surm-pill subtle">{field or 'Field pending'}</span>
-                <span class="surm-pill subtle">{proj or 'Project pending'}</span>
-                <span class="surm-pill">{phase or 'Phase pending'}</span>
-                <span class="surm-pill success">{'Saved' if ss.get('_last_saved') else 'Draft'}</span>
-            </div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span class="surm-pill subtle">{field or 'Field pending'}</span>
+                        <span class="surm-pill subtle">{proj or 'Project pending'}</span>
+                        <span class="surm-pill">{phase or 'Phase pending'}</span>
+                        <span class="surm-pill success">{'Saved' if ss.get('_last_saved') else 'Draft'}</span>
+                        <span style="margin-left:8px;">
+                            <form action="" method="post">
+                                <!-- placeholder for quick save -->
+                            </form>
+                        </span>
+                    </div>
         </div>
         <div class="surm-helper" style="margin-top:10px;margin-bottom:0;">
             <span>💡</span>
@@ -226,6 +296,35 @@ st.markdown(f"""
         </div>
     </div>
 """, unsafe_allow_html=True)
+
+# Quick save button and autosave indicator
+col_quick, col_hint = st.columns([1, 5])
+with col_quick:
+    if st.button("💾 Save Progress (Quick)"):
+        if not ss.get("project_name","").strip():
+            st.warning("Enter a Project Name before saving.")
+        else:
+            ok = save_session(auto=False)
+            st.success("Saved.") if ok else st.error("Save failed.")
+with col_hint:
+    last_saved = ss.get("_last_saved","")
+    last_auto = ss.get("_last_save_auto", False)
+    auto_on = ss.get("_auto_save_enabled", True)
+    if last_saved:
+        ts = last_saved.replace("T"," ")
+        st.markdown(f"<div style='font-size:12px;opacity:0.8;'>Last saved: {ts[11:19]} {'(auto)' if last_auto else ''}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:12px;margin-top:2px;'>Auto-save: <b>{'ON' if auto_on else 'OFF'}</b></div>", unsafe_allow_html=True)
+
+# Top-level quick theme controls (visible at the top of the page)
+with st.expander('Appearance — Quick Theme Controls', expanded=False):
+    c1, c2, c3 = st.columns([1,1,1])
+    primary_top = c1.color_picker('Primary', value=st.session_state.get('ui_primary_color','#1F6B3A'))
+    bg_top = c2.color_picker('Background', value=st.session_state.get('ui_background_color','#F8FBFC'))
+    if c3.button('Apply Theme (Top)'):
+        st.session_state['ui_primary_color'] = primary_top
+        st.session_state['ui_background_color'] = bg_top
+        _apply_dynamic_theme()
+        st.success('Theme applied')
 
 
 # ═══════════════════════════════════════════════════════════════════════
