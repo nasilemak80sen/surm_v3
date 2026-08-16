@@ -1,18 +1,52 @@
+# ═════════════════════════════════════════════════════════════════
+# SURM Toolkit v2.0 — Streamlit Configuration
+# Corporate/Enterprise Edition
+# ═════════════════════════════════════════════════════════════════
+
 [app]
-entry_point = "surm.py"
+title                   = "SURM Toolkit"
+description             = "Subsurface Uncertainty & Risk Management | PETRONAS Carigali"
+entry_point             = "surm.py"
+showWarningOnDirectExecution = false
 
 [theme]
-base                     = "light"
-primaryColor             = "#1F6B3A"
-backgroundColor          = "#FFFFFF"
-secondaryBackgroundColor = "#F2F2F2"
-textColor                = "#1A1A1A"
-font                     = "sans serif"
+base                     = "light"  # ✅ FIXED: Was "dark", now matches colors
+primaryColor             = "#00a19c"  # PETRONAS Green
+backgroundColor          = "#FFFFFF"  # Pure white
+secondaryBackgroundColor = "#F8F9FA"  # Light gray
+textColor                = "#0A0E27"  # Near-black
+font                     = "sans serif"  # ✅ FIXED: Removed space
+
+[client]
+toolbarMode              = "minimal"  # Clean UI, user can toggle
+showErrorDetails         = true  # Show Python errors (development)
+maxMessageSize           = 10  # MB (for large file uploads)
 
 [server]
-maxUploadSize    = 50
-headless         = true
-enableCORS       = true
+port                     = 8501
+headless                 = true  # Don't open browser automatically
+enableCORS               = false  # Secure for internal use
+enableXsrfProtection     = true  # ✅ Enabled by default (keep)
+maxUploadSize            = 50  # MB
+runOnSave                = true  # Reload on file save (development)
+fileWatcherType          = "auto"
+
+[logger]
+level                    = "info"
+messageFormat            = "%(asctime)s [%(name)s] %(message)s"
+
+[session]
+sessionTimeout           = 1800  # 30 minutes (seconds)
 
 [browser]
-gatherUsageStats = true
+gatherUsageStats         = false  # ✅ FIXED: Disable for privacy
+serverAddress            = "localhost"  # Internal only
+serverPort               = 8501
+
+# ═════════════════════════════════════════════════════════════════
+# DEPLOYMENT-SPECIFIC OVERRIDES
+# ═════════════════════════════════════════════════════════════════
+
+# For Streamlit Cloud, create .streamlit/secrets.toml:
+# [database]
+# DATABASE_URL = "postgresql://user:pass@host/db"

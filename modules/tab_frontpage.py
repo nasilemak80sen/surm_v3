@@ -54,6 +54,39 @@ def render():
 
         st.divider()
 
+    # Developer helper: load demo data for testing flows (not shown in production)
+    with st.expander("Developer Tools", expanded=False):
+        if st.button("🔁 Load Demo Data"):
+            # minimal demo dataset to exercise Tab 5/6/7 flows
+            demo_project = "DEMO Project"
+            st.session_state["project_name"] = demo_project
+            st.session_state["field_name"] = "Demo Field"
+            # pick first 4 uncertainties from master mapping
+            mapping = st.session_state.get("_mapping", {})
+            ulist = mapping.get("uncertainties", [])[:4]
+            ku = []
+            for i, u in enumerate(ulist, start=1):
+                ku.append({
+                    "Uncertainty": u["name"],
+                    "Degree of Uncertainty": "Medium",
+                    "Impact (Weighted)": 0.5 + i*0.1,
+                    "Impact Bin": "Medium",
+                    "Combined Rating": "HM" if i%2==0 else "MM",
+                    "Rank": i,
+                    "Include in Plan": True,
+                    "Resolution Achieved": False,
+                })
+            st.session_state["key_uncertainties"] = ku
+            # build a simple resolution_list mapping using first two resolution options
+            opts = mapping.get("resolution_options", [])[:3]
+            rl = {u["name"]: {o: ("Y" if idx==0 else "") for idx,o in enumerate(opts)} for u in ulist}
+            st.session_state["resolution_list"] = rl
+            st.session_state["resolution_planner"] = []
+            st.session_state["risk_register"] = []
+            st.session_state["pra_output"] = []
+            save_session(auto=True)
+            st.success("Demo data loaded. Navigate to Tab 5 → Tab 6 → Tab 7 to test flows.")
+
     # ── Project info ─────────────────────────────────────────────────
     st.markdown('<div class="surm-section-header">📋 Project Information</div>', unsafe_allow_html=True)
     st.markdown('<div class="surm-instruction">ℹ️ Fill in the project details. These appear on the exported Excel cover page and identify your saved session.</div>', unsafe_allow_html=True)

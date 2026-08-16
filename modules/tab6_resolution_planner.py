@@ -77,7 +77,7 @@ def render():
                 "Start Date":              st.column_config.TextColumn("Start Date", help="DD/MM/YYYY", width="small"),
                 "Required Completion":     st.column_config.TextColumn("Completion Date", help="DD/MM/YYYY", width="small"),
                 "Progress (0-1)":          st.column_config.NumberColumn("Progress", min_value=0.0, max_value=1.0,
-                                                                          step=0.05, format="%.0%%"),
+                                                                          step=0.05),
                 "Action Owner":            st.column_config.TextColumn("Owner"),
                 "Part of Workplan":        st.column_config.CheckboxColumn("In Workplan?"),
                 "Remarks":                 st.column_config.TextColumn("Remarks", width="large"),
@@ -98,11 +98,28 @@ def render():
             st.session_state["resolution_planner"] = data
             st.session_state["risk_register"] = []
             st.session_state["pra_output"] = []
-            save_session(auto=True)
+            try:
+                save_session(auto=True)
+            except Exception:
+                pass
+            st.rerun()
+        elif btn_save:
+            # persist edits explicitly
+            st.session_state["resolution_planner"] = data
+            try:
+                ok = save_session(auto=False)
+                if ok:
+                    st.success("✅ Planner saved.")
+                else:
+                    st.error("Save failed.")
+            except Exception:
+                st.error("Save failed.")
             st.rerun()
     st.markdown('<div class="surm-section-header">📊 Progress Dashboard</div>', unsafe_allow_html=True)
 
-    overall = sum(float(r.get("Progress (0-1)",0) or 0) for r in workplan_rows) / max(len(workplan_rows),1)
+    # workplan rows: only those marked as part of workplan
+    workplan_rows = [r for r in planner_data if r.get("Part of Workplan")]
+    overall = sum(float(r.get("Progress (0-1)", 0) or 0) for r in workplan_rows) / max(len(workplan_rows), 1)
     ov_clr  = "#1F6B3A" if overall >= 0.8 else "#FFD700" if overall >= 0.4 else "#FF8C00"
 
     st.markdown(f"""
