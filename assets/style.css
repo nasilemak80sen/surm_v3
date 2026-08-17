@@ -1,1730 +1,620 @@
-/* ============================================================================
+/* ==========================================================================
    SURM TOOLKIT
-   Enterprise UI Design System
-   Version 2.0
-   ============================================================================ */
+   Phase 1 — Stable Application Foundation
+   ========================================================================== */
 
 
-/* ============================================================================
-   DESIGN TOKENS
-   ============================================================================ */
+/* --------------------------------------------------------------------------
+   ROOT VARIABLES
+   -------------------------------------------------------------------------- */
 
 :root {
-    --surm-primary: #006C35;
-    --surm-primary-dark: #004F27;
-    --surm-primary-light: #EAF6EF;
 
-    --surm-accent: #00A88F;
+    --surm-green: #176B3A;
+    --surm-green-dark: #0F4D2A;
+    --surm-green-soft: #EAF5EE;
 
-    --surm-bg: #F5F7F6;
+    --surm-blue: #2563EB;
+    --surm-blue-soft: #EFF6FF;
+
+    --surm-background: #F5F7F6;
     --surm-surface: #FFFFFF;
-    --surm-surface-muted: #F8FAF9;
+    --surm-surface-soft: #F8FAF9;
 
-    --surm-border: #DCE4DF;
-    --surm-border-strong: #C7D2CC;
+    --surm-border: #DDE5E0;
 
-    --surm-text: #17221C;
-    --surm-text-secondary: #536158;
-    --surm-text-muted: #78847D;
+    --surm-text: #17201B;
+    --surm-text-muted: #66736B;
 
-    --surm-success: #16803C;
-    --surm-success-bg: #EAF7EE;
+    --surm-success: #15803D;
+    --surm-warning: #B45309;
+    --surm-danger: #B91C1C;
 
-    --surm-warning: #B7791F;
-    --surm-warning-bg: #FFF7E5;
-
-    --surm-danger: #C53030;
-    --surm-danger-bg: #FDECEC;
-
-    --surm-info: #2563EB;
-    --surm-info-bg: #EEF4FF;
-
-    --surm-radius-sm: 6px;
-    --surm-radius-md: 10px;
-    --surm-radius-lg: 14px;
+    --surm-radius-sm: 8px;
+    --surm-radius-md: 12px;
+    --surm-radius-lg: 16px;
 
     --surm-shadow-sm:
-        0 1px 2px rgba(16, 24, 40, 0.04);
+        0 1px 3px rgba(16, 24, 20, 0.06);
 
     --surm-shadow-md:
-        0 4px 12px rgba(16, 24, 40, 0.06);
+        0 4px 12px rgba(16, 24, 20, 0.08);
 
     --surm-transition:
         160ms ease;
-
-    --surm-sidebar-width: 280px;
 }
 
 
-/* ============================================================================
-   GLOBAL
-   ============================================================================ */
+/* --------------------------------------------------------------------------
+   STREAMLIT APP
+   -------------------------------------------------------------------------- */
 
-html,
-body,
 .stApp {
-    font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Helvetica,
-        Arial,
-        sans-serif;
-
-    color: var(--surm-text);
-    background: var(--surm-bg);
-
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    background: var(--surm-background);
 }
 
 
-* {
-    box-sizing: border-box;
+/* Keep Streamlit's layout but give it comfortable spacing. */
+
+.block-container {
+    max-width: 1440px;
+    padding-top: 2rem;
+    padding-bottom: 4rem;
 }
 
 
-body {
-    line-height: 1.5;
-}
-
-
-/* ============================================================================
-   STREAMLIT CHROME
-   ============================================================================ */
-
-#MainMenu {
-    visibility: hidden;
-}
-
-header {
-    visibility: hidden;
-}
-
-footer {
-    visibility: hidden;
-}
-
-
-[data-testid="stAppViewContainer"] {
-    background: var(--surm-bg);
-}
-
-
-[data-testid="stMain"] {
-    background: var(--surm-bg);
-}
-
-
-.main .block-container {
-    max-width: 1480px !important;
-
-    padding:
-        28px
-        38px
-        72px
-        38px !important;
-}
-
-
-/* ============================================================================
+/* --------------------------------------------------------------------------
    SIDEBAR
-   ============================================================================ */
+   -------------------------------------------------------------------------- */
 
 section[data-testid="stSidebar"] {
-    background: var(--surm-primary-dark) !important;
 
-    border-right:
-        1px solid rgba(255, 255, 255, 0.08) !important;
+    background:
+        linear-gradient(
+            180deg,
+            var(--surm-green-dark) 0%,
+            var(--surm-green) 100%
+        );
+
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 
-section[data-testid="stSidebar"] > div {
-    background: var(--surm-primary-dark) !important;
+/*
+Do NOT globally force every sidebar child to white.
+
+That breaks Streamlit/BaseWeb widgets.
+*/
+
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] p {
+    color: rgba(255, 255, 255, 0.92);
 }
 
 
-section[data-testid="stSidebar"] * {
-    color: rgba(255, 255, 255, 0.94);
+/* Sidebar dividers */
+
+section[data-testid="stSidebar"] hr {
+    border-color: rgba(255, 255, 255, 0.14);
 }
 
 
-/* Sidebar brand */
+/* --------------------------------------------------------------------------
+   SIDEBAR BRAND
+   -------------------------------------------------------------------------- */
 
-.surm-brand {
+.sidebar-brand {
+
     display: flex;
-
     align-items: center;
 
-    gap: 12px;
+    gap: 0.75rem;
 
-    padding:
-        8px
-        4px
-        20px
-        4px;
+    padding: 0.25rem 0;
 }
 
 
-.surm-brand-mark {
-    width: 42px;
-    height: 42px;
+.sidebar-brand-icon {
+
+    width: 40px;
+    height: 40px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
+    background: rgba(255, 255, 255, 0.12);
+
     border-radius: 10px;
 
-    background:
-        rgba(255, 255, 255, 0.12);
-
-    font-size: 22px;
+    font-size: 1.35rem;
 }
 
 
-.surm-brand-title {
-    font-size: 16px;
-    font-weight: 750;
+.sidebar-brand-title {
 
-    letter-spacing: -0.2px;
-}
+    color: white;
 
-
-.surm-brand-subtitle {
-    margin-top: 2px;
-
-    font-size: 9px;
-
-    text-transform: uppercase;
-
-    letter-spacing: 0.8px;
-
-    color:
-        rgba(255, 255, 255, 0.62);
-}
-
-
-/* Project context */
-
-.surm-project-context {
-    margin:
-        0
-        2px
-        16px;
-
-    padding:
-        14px;
-
-    border:
-        1px solid rgba(255, 255, 255, 0.10);
-
-    border-radius: var(--surm-radius-md);
-
-    background:
-        rgba(255, 255, 255, 0.055);
-}
-
-
-.surm-context-label {
-    margin-bottom: 10px;
-
-    color:
-        rgba(255, 255, 255, 0.55);
-
-    font-size: 9px;
-
+    font-size: 1rem;
     font-weight: 700;
-
-    letter-spacing: 0.9px;
-
-    text-transform: uppercase;
-}
-
-
-.surm-context-item {
-    display: flex;
-
-    flex-direction: column;
-
-    gap: 2px;
-
-    margin-bottom: 10px;
-}
-
-
-.surm-context-item:last-child {
-    margin-bottom: 0;
-}
-
-
-.surm-context-item span {
-    color:
-        rgba(255, 255, 255, 0.52);
-
-    font-size: 9px;
-
-    text-transform: uppercase;
-
-    letter-spacing: 0.5px;
-}
-
-
-.surm-context-item strong {
-    font-size: 12px;
-
-    line-height: 1.3;
-
-    color:
-        rgba(255, 255, 255, 0.95);
-
-    word-break: break-word;
-}
-
-
-/* Sidebar navigation */
-
-.surm-nav-label {
-    margin:
-        18px
-        4px
-        6px;
-
-    color:
-        rgba(255, 255, 255, 0.48);
-
-    font-size: 9px;
-
-    font-weight: 750;
-
-    letter-spacing: 1px;
-
-    text-transform: uppercase;
-}
-
-
-/* Navigation buttons */
-
-section[data-testid="stSidebar"]
-.stButton > button {
-    min-height: 38px;
-
-    justify-content: flex-start;
-
-    padding:
-        8px
-        11px !important;
-
-    border-radius:
-        7px !important;
-
-    border:
-        1px solid transparent !important;
-
-    background:
-        transparent !important;
-
-    color:
-        rgba(255, 255, 255, 0.72) !important;
-
-    box-shadow: none !important;
-
-    font-size: 12px !important;
-
-    font-weight: 550 !important;
-
-    text-transform: none !important;
-
-    letter-spacing: 0 !important;
-
-    transition:
-        background var(--surm-transition),
-        color var(--surm-transition),
-        border-color var(--surm-transition);
-}
-
-
-section[data-testid="stSidebar"]
-.stButton > button:hover {
-    background:
-        rgba(255, 255, 255, 0.08) !important;
-
-    color:
-        #FFFFFF !important;
-
-    border-color:
-        rgba(255, 255, 255, 0.08) !important;
-
-    transform: none !important;
-}
-
-
-section[data-testid="stSidebar"]
-.stButton > button[kind="primary"] {
-    background:
-        rgba(255, 255, 255, 0.13) !important;
-
-    color:
-        #FFFFFF !important;
-
-    border-color:
-        rgba(255, 255, 255, 0.10) !important;
-
-    box-shadow: none !important;
-}
-
-
-/* Sidebar progress */
-
-.surm-sidebar-progress {
-    margin-top: 2px;
-}
-
-
-.surm-progress-heading {
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    margin-bottom: 7px;
-
-    font-size: 10px;
-}
-
-
-.surm-progress-heading span {
-    color:
-        rgba(255, 255, 255, 0.60);
-}
-
-
-.surm-progress-heading strong {
-    color:
-        #FFFFFF;
-}
-
-
-.surm-progress-track {
-    height: 5px;
-
-    overflow: hidden;
-
-    border-radius: 99px;
-
-    background:
-        rgba(255, 255, 255, 0.12);
-}
-
-
-.surm-progress-value {
-    height: 100%;
-
-    border-radius: 99px;
-
-    background:
-        #55C987;
-
-    transition:
-        width 220ms ease;
-}
-
-
-/* Sidebar statistics */
-
-.surm-stat-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(2, 1fr);
-
-    gap: 6px;
-
-    margin-top: 12px;
-}
-
-
-.surm-sidebar-stat {
-    padding:
-        8px;
-
-    border:
-        1px solid rgba(255, 255, 255, 0.07);
-
-    border-radius:
-        7px;
-
-    background:
-        rgba(255, 255, 255, 0.045);
-}
-
-
-.surm-sidebar-stat strong {
-    display: block;
-
-    font-size: 16px;
-
-    line-height: 1.1;
-
-    color: #FFFFFF;
-}
-
-
-.surm-sidebar-stat span {
-    display: block;
-
-    margin-top: 3px;
-
-    color:
-        rgba(255, 255, 255, 0.52);
-
-    font-size: 8px;
-
-    text-transform: uppercase;
-
-    letter-spacing: 0.4px;
-}
-
-
-/* Sidebar divider */
-
-.surm-sidebar-divider {
-    height: 1px;
-
-    margin:
-        16px
-        0;
-
-    background:
-        rgba(255, 255, 255, 0.10);
-}
-
-
-/* Save state */
-
-.surm-save-state {
-    display: inline-flex;
-
-    align-items: center;
-
-    gap: 7px;
-
-    margin:
-        4px
-        0
-        6px;
-
-    padding:
-        6px
-        9px;
-
-    border-radius:
-        7px;
-
-    font-size: 10px;
-
-    font-weight: 650;
-}
-
-
-.status-dot {
-    width: 6px;
-    height: 6px;
-
-    flex: 0 0 auto;
-
-    border-radius: 50%;
-}
-
-
-.status-success {
-    color:
-        #BCEACB;
-
-    background:
-        rgba(22, 128, 60, 0.15);
-}
-
-
-.status-success .status-dot {
-    background:
-        #55C987;
-}
-
-
-.status-warning {
-    color:
-        #FFE3A3;
-
-    background:
-        rgba(183, 121, 31, 0.16);
-}
-
-
-.status-warning .status-dot {
-    background:
-        #F4C35E;
-}
-
-
-.status-neutral {
-    color:
-        rgba(255, 255, 255, 0.62);
-
-    background:
-        rgba(255, 255, 255, 0.06);
-}
-
-
-.status-neutral .status-dot {
-    background:
-        rgba(255, 255, 255, 0.45);
-}
-
-
-/* Sidebar footer */
-
-.surm-sidebar-footer {
-    margin-top: 20px;
-
-    padding-top: 14px;
-
-    border-top:
-        1px solid rgba(255, 255, 255, 0.08);
-
-    text-align: center;
-
-    color:
-        rgba(255, 255, 255, 0.35);
-
-    font-size: 9px;
-
-    line-height: 1.7;
-}
-
-
-/* ============================================================================
-   MAIN HEADER
-   ============================================================================ */
-
-.surm-header {
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 24px;
-
-    margin-bottom: 26px;
-
-    padding:
-        20px
-        24px;
-
-    border:
-        1px solid var(--surm-border);
-
-    border-radius:
-        var(--surm-radius-lg);
-
-    background:
-        var(--surm-surface);
-
-    box-shadow:
-        var(--surm-shadow-sm);
-}
-
-
-.surm-header-main {
-    min-width: 0;
-}
-
-
-.surm-header-kicker {
-    margin-bottom: 5px;
-
-    color:
-        var(--surm-primary);
-
-    font-size: 9px;
-
-    font-weight: 750;
-
-    letter-spacing: 1px;
-
-    text-transform: uppercase;
-}
-
-
-.surm-header h1 {
-    margin: 0;
-
-    color:
-        var(--surm-text);
-
-    font-size: 24px;
-
-    font-weight: 750;
-
-    letter-spacing: -0.5px;
 
     line-height: 1.2;
 }
 
 
-.surm-header p {
-    margin:
-        5px
-        0
-        0;
+.sidebar-brand-subtitle {
 
-    color:
-        var(--surm-text-muted);
+    margin-top: 2px;
 
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 0.65rem;
+
+    letter-spacing: 0.08em;
+
+    text-transform: uppercase;
 }
 
 
-.header-separator {
-    margin:
-        0
-        5px;
+/* --------------------------------------------------------------------------
+   SIDEBAR SECTIONS
+   -------------------------------------------------------------------------- */
 
-    color:
-        var(--surm-border-strong);
+.sidebar-section-title {
+
+    margin-bottom: 0.7rem;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 0.68rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.08em;
+
+    text-transform: uppercase;
 }
 
 
-.surm-header-meta {
+.sidebar-study {
+
+    padding: 0.8rem;
+
+    background: rgba(255, 255, 255, 0.08);
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.08);
+
+    border-radius: 10px;
+}
+
+
+.sidebar-study-row {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 0.15rem;
+
+    padding: 0.35rem 0;
+}
+
+
+.sidebar-study-row span {
+
+    color: rgba(255, 255, 255, 0.55);
+
+    font-size: 0.65rem;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.05em;
+}
+
+
+.sidebar-study-row strong {
+
+    color: white;
+
+    font-size: 0.8rem;
+
+    font-weight: 600;
+
+    word-break: break-word;
+}
+
+
+.sidebar-stat-value {
+
+    color: white;
+
+    font-weight: 700;
+
+    text-align: right;
+}
+
+
+/* --------------------------------------------------------------------------
+   HEADER
+   -------------------------------------------------------------------------- */
+
+.surm-header {
+
     display: flex;
 
     align-items: center;
 
-    gap: 8px;
+    justify-content: space-between;
 
-    flex-wrap: wrap;
+    gap: 2rem;
 
-    justify-content: flex-end;
+    margin-bottom: 1.5rem;
+
+    padding: 1.4rem 1.6rem;
+
+    background: var(--surm-surface);
+
+    border:
+        1px solid
+        var(--surm-border);
+
+    border-radius: var(--surm-radius-lg);
+
+    box-shadow: var(--surm-shadow-sm);
 }
 
 
-.surm-badge {
+.surm-header-brand {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.9rem;
+
+    min-width: 0;
+}
+
+
+.surm-logo {
+
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    background: var(--surm-green-soft);
+
+    border-radius: 12px;
+
+    font-size: 1.6rem;
+}
+
+
+.surm-eyebrow {
+
+    color: var(--surm-green);
+
+    font-size: 0.65rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.1em;
+
+    text-transform: uppercase;
+}
+
+
+.surm-title {
+
+    margin-top: 0.15rem;
+
+    color: var(--surm-text);
+
+    font-size: 1.45rem;
+
+    font-weight: 750;
+
+    line-height: 1.2;
+}
+
+
+.surm-subtitle {
+
+    margin-top: 0.25rem;
+
+    color: var(--surm-text-muted);
+
+    font-size: 0.75rem;
+}
+
+
+.surm-header-meta {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: flex-end;
+
+    gap: 0.5rem;
+
+    flex-wrap: wrap;
+}
+
+
+.surm-meta-item {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 0.1rem;
+
+    padding:
+        0.45rem
+        0.7rem;
+
+    background: var(--surm-surface-soft);
+
+    border:
+        1px solid
+        var(--surm-border);
+
+    border-radius: 9px;
+}
+
+
+.surm-meta-label {
+
+    color: var(--surm-text-muted);
+
+    font-size: 0.6rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.05em;
+
+    text-transform: uppercase;
+}
+
+
+.surm-meta-value {
+
+    max-width: 180px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+    color: var(--surm-text);
+
+    font-size: 0.75rem;
+
+    font-weight: 600;
+}
+
+
+/* --------------------------------------------------------------------------
+   STATUS
+   -------------------------------------------------------------------------- */
+
+.surm-status {
+
     display: inline-flex;
 
     align-items: center;
 
     padding:
-        7px
-        10px;
+        0.5rem
+        0.75rem;
 
-    border:
-        1px solid var(--surm-border);
+    border-radius: 999px;
 
-    border-radius:
-        7px;
-
-    background:
-        var(--surm-surface-muted);
-
-    color:
-        var(--surm-text-secondary);
-
-    font-size: 10px;
-
-    font-weight: 650;
-}
-
-
-.surm-header .surm-save-state {
-    margin: 0;
-}
-
-
-/* ============================================================================
-   WELCOME CARD
-   ============================================================================ */
-
-.surm-welcome {
-    display: flex;
-
-    align-items: stretch;
-
-    justify-content: space-between;
-
-    gap: 22px;
-
-    margin-bottom: 18px;
-
-    padding:
-        24px;
-
-    border:
-        1px solid #CFE3D5;
-
-    border-radius:
-        var(--surm-radius-lg);
-
-    background:
-        linear-gradient(
-            135deg,
-            #F8FCF9 0%,
-            #F1F8F4 100%
-        );
-}
-
-
-.surm-welcome h2 {
-    margin:
-        5px
-        0
-        7px;
-
-    color:
-        var(--surm-primary-dark);
-
-    font-size: 23px;
-
-    font-weight: 750;
-
-    letter-spacing: -0.4px;
-}
-
-
-.surm-welcome p {
-    max-width: 720px;
-
-    margin: 0;
-
-    color:
-        var(--surm-text-secondary);
-
-    font-size: 12px;
-
-    line-height: 1.6;
-}
-
-
-.surm-health-card {
-    display: flex;
-
-    flex-direction: column;
-
-    justify-content: center;
-
-    min-width: 170px;
-
-    padding:
-        14px
-        16px;
-
-    border:
-        1px solid #D6E8DC;
-
-    border-radius:
-        var(--surm-radius-md);
-
-    background:
-        rgba(255, 255, 255, 0.70);
-}
-
-
-.surm-health-card span {
-    color:
-        var(--surm-text-muted);
-
-    font-size: 9px;
+    font-size: 0.7rem;
 
     font-weight: 700;
-
-    text-transform: uppercase;
-
-    letter-spacing: 0.7px;
 }
 
 
-.surm-health-card strong {
-    margin-top: 3px;
+.surm-status.saved {
 
-    color:
-        var(--surm-primary);
+    background: #DCFCE7;
 
-    font-size: 16px;
+    color: #166534;
 }
 
 
-.surm-health-card small {
-    margin-top: 2px;
+.surm-status.draft {
 
-    color:
-        var(--surm-text-muted);
+    background: #FEF3C7;
 
-    font-size: 10px;
+    color: #92400E;
 }
 
 
-/* ============================================================================
-   EYEBROWS / HEADINGS
-   ============================================================================ */
+/* --------------------------------------------------------------------------
+   CARDS
+   -------------------------------------------------------------------------- */
 
-.surm-eyebrow {
-    color:
-        var(--surm-primary);
+.surm-card {
 
-    font-size: 9px;
+    margin-bottom: 1rem;
 
-    font-weight: 750;
+    padding: 1.25rem;
 
-    letter-spacing: 0.9px;
-
-    text-transform: uppercase;
-}
-
-
-.surm-section-heading {
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    margin:
-        8px
-        0
-        12px;
-}
-
-
-.surm-section-heading h2 {
-    margin:
-        3px
-        0
-        0;
-
-    color:
-        var(--surm-text);
-
-    font-size: 17px;
-
-    font-weight: 720;
-
-    letter-spacing: -0.2px;
-}
-
-
-.surm-section-gap {
-    height: 24px;
-}
-
-
-/* ============================================================================
-   KPI CARDS
-   ============================================================================ */
-
-.surm-kpi-card {
-    min-height: 124px;
-
-    padding:
-        17px;
+    background: var(--surm-surface);
 
     border:
-        1px solid var(--surm-border);
+        1px solid
+        var(--surm-border);
 
-    border-radius:
-        var(--surm-radius-lg);
+    border-radius: var(--surm-radius-md);
 
-    background:
-        var(--surm-surface);
-
-    box-shadow:
-        var(--surm-shadow-sm);
-
-    transition:
-        border-color var(--surm-transition),
-        box-shadow var(--surm-transition);
+    box-shadow: var(--surm-shadow-sm);
 }
 
 
-.surm-kpi-card:hover {
-    border-color:
-        #B8CEC0;
+.surm-card-title {
 
-    box-shadow:
-        var(--surm-shadow-md);
-}
+    margin-bottom: 0.4rem;
 
+    color: var(--surm-text);
 
-.surm-kpi-label {
-    color:
-        var(--surm-text-muted);
-
-    font-size: 9px;
-
-    font-weight: 750;
-
-    letter-spacing: 0.7px;
-
-    text-transform: uppercase;
-}
-
-
-.surm-kpi-value {
-    margin-top: 10px;
-
-    color:
-        var(--surm-primary-dark);
-
-    font-size: 29px;
-
-    font-weight: 760;
-
-    line-height: 1;
-}
-
-
-.surm-kpi-detail {
-    margin-top: 8px;
-
-    color:
-        var(--surm-text-muted);
-
-    font-size: 10px;
-}
-
-
-/* ============================================================================
-   LARGE PROGRESS
-   ============================================================================ */
-
-.surm-progress-summary {
-    margin-bottom: 12px;
-
-    padding:
-        15px;
-
-    border:
-        1px solid var(--surm-border);
-
-    border-radius:
-        var(--surm-radius-md);
-
-    background:
-        var(--surm-surface);
-}
-
-
-.surm-progress-number {
-    color:
-        var(--surm-primary-dark);
-
-    font-size: 20px;
-
-    font-weight: 760;
-}
-
-
-.surm-progress-label {
-    margin-left: 5px;
-
-    color:
-        var(--surm-text-muted);
-
-    font-size: 10px;
-}
-
-
-.surm-large-progress-track {
-    height: 8px;
-
-    margin-top: 10px;
-
-    overflow: hidden;
-
-    border-radius: 99px;
-
-    background:
-        #E6ECE8;
-}
-
-
-.surm-large-progress-value {
-    height: 100%;
-
-    border-radius: 99px;
-
-    background:
-        var(--surm-primary);
-
-    transition:
-        width 220ms ease;
-}
-
-
-/* ============================================================================
-   WORKFLOW ROWS
-   ============================================================================ */
-
-.surm-workflow-row {
-    display: flex;
-
-    align-items: center;
-
-    gap: 12px;
-
-    min-height: 57px;
-
-    margin-bottom: 7px;
-
-    padding:
-        10px
-        12px;
-
-    border:
-        1px solid var(--surm-border);
-
-    border-radius:
-        var(--surm-radius-md);
-
-    background:
-        var(--surm-surface);
-}
-
-
-.surm-workflow-row.complete {
-    border-color:
-        #D2E7D9;
-}
-
-
-.surm-workflow-number {
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    width: 30px;
-    height: 30px;
-
-    flex: 0 0 auto;
-
-    border-radius: 8px;
-
-    background:
-        var(--surm-surface-muted);
-
-    color:
-        var(--surm-text-muted);
-
-    font-size: 9px;
-
-    font-weight: 750;
-}
-
-
-.surm-workflow-row.complete .surm-workflow-number {
-    background:
-        var(--surm-success-bg);
-
-    color:
-        var(--surm-success);
-}
-
-
-.surm-workflow-content {
-    display: flex;
-
-    flex-direction: column;
-
-    min-width: 0;
-
-    flex: 1;
-}
-
-
-.surm-workflow-content strong {
-    color:
-        var(--surm-text);
-
-    font-size: 11px;
-}
-
-
-.surm-workflow-content span {
-    margin-top: 2px;
-
-    color:
-        var(--surm-text-muted);
-
-    font-size: 9px;
-}
-
-
-.surm-workflow-state {
-    color:
-        var(--surm-text-muted);
-
-    font-size: 9px;
-
-    font-weight: 650;
-}
-
-
-.surm-workflow-row.complete
-.surm-workflow-state {
-    color:
-        var(--surm-success);
-}
-
-
-/* ============================================================================
-   ALERT / ACTION REQUIRED
-   ============================================================================ */
-
-.surm-alert-icon {
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-
-    border-radius: 50%;
-
-    font-size: 11px;
-
-    font-weight: 750;
-}
-
-
-.surm-alert-icon.warning {
-    color:
-        var(--surm-warning);
-
-    background:
-        var(--surm-warning-bg);
-}
-
-
-.surm-alert-icon.info {
-    color:
-        var(--surm-info);
-
-    background:
-        var(--surm-info-bg);
-}
-
-
-.surm-alert-text {
-    display: flex;
-
-    align-items: center;
-
-    min-height: 34px;
-
-    color:
-        var(--surm-text-secondary);
-
-    font-size: 11px;
-}
-
-
-/* ============================================================================
-   DETAIL CARDS
-   ============================================================================ */
-
-.surm-detail-card {
-    display: flex;
-
-    flex-direction: column;
-
-    min-height: 78px;
-
-    padding:
-        13px
-        15px;
-
-    border:
-        1px solid var(--surm-border);
-
-    border-radius:
-        var(--surm-radius-md);
-
-    background:
-        var(--surm-surface);
-}
-
-
-.surm-detail-card span {
-    color:
-        var(--surm-text-muted);
-
-    font-size: 9px;
+    font-size: 0.95rem;
 
     font-weight: 700;
-
-    letter-spacing: 0.6px;
-
-    text-transform: uppercase;
 }
 
 
-.surm-detail-card strong {
-    margin-top: 7px;
+.surm-card-description {
 
-    color:
-        var(--surm-text);
+    color: var(--surm-text-muted);
 
-    font-size: 12px;
+    font-size: 0.78rem;
 
-    line-height: 1.35;
-}
-
-
-/* ============================================================================
-   STREAMLIT BUTTONS
-   ============================================================================ */
-
-.stButton > button {
-    min-height: 38px;
-
-    border-radius:
-        var(--surm-radius-md) !important;
-
-    border:
-        1px solid var(--surm-border-strong) !important;
-
-    background:
-        var(--surm-surface) !important;
-
-    color:
-        var(--surm-text) !important;
-
-    font-size: 11px !important;
-
-    font-weight: 650 !important;
-
-    text-transform: none !important;
-
-    letter-spacing: 0 !important;
-
-    box-shadow: none !important;
-
-    transition:
-        border-color var(--surm-transition),
-        background var(--surm-transition),
-        color var(--surm-transition);
-}
-
-
-.stButton > button:hover {
-    border-color:
-        var(--surm-primary) !important;
-
-    background:
-        var(--surm-primary-light) !important;
-
-    color:
-        var(--surm-primary-dark) !important;
-
-    transform: none !important;
-
-    box-shadow: none !important;
-}
-
-
-.stButton > button[kind="primary"] {
-    background:
-        var(--surm-primary) !important;
-
-    border-color:
-        var(--surm-primary) !important;
-
-    color:
-        #FFFFFF !important;
-}
-
-
-.stButton > button[kind="primary"]:hover {
-    background:
-        var(--surm-primary-dark) !important;
-
-    border-color:
-        var(--surm-primary-dark) !important;
-
-    color:
-        #FFFFFF !important;
-}
-
-
-/* ============================================================================
-   DOWNLOAD BUTTON
-   ============================================================================ */
-
-.stDownloadButton > button {
-    min-height: 38px;
-
-    border-radius:
-        var(--surm-radius-md) !important;
-
-    background:
-        var(--surm-primary) !important;
-
-    border:
-        1px solid var(--surm-primary) !important;
-
-    color:
-        #FFFFFF !important;
-
-    font-size: 11px !important;
-
-    font-weight: 650 !important;
-
-    box-shadow: none !important;
-}
-
-
-.stDownloadButton > button:hover {
-    background:
-        var(--surm-primary-dark) !important;
-
-    border-color:
-        var(--surm-primary-dark) !important;
-}
-
-
-/* ============================================================================
-   INPUTS
-   ============================================================================ */
-
-.stTextInput > div > div,
-.stTextArea > div > div,
-.stSelectbox > div > div,
-.stNumberInput > div > div,
-.stDateInput > div > div {
-    border-radius:
-        var(--surm-radius-md) !important;
-
-    border:
-        1px solid var(--surm-border-strong) !important;
-
-    background:
-        var(--surm-surface) !important;
-
-    box-shadow: none !important;
-}
-
-
-.stTextInput > div > div:focus-within,
-.stTextArea > div > div:focus-within,
-.stSelectbox > div > div:focus-within,
-.stNumberInput > div > div:focus-within,
-.stDateInput > div > div:focus-within {
-    border-color:
-        var(--surm-primary) !important;
-
-    box-shadow:
-        0 0 0 3px rgba(0, 108, 53, 0.08) !important;
-}
-
-
-label {
-    color:
-        var(--surm-text-secondary) !important;
-
-    font-size: 10px !important;
-
-    font-weight: 650 !important;
-}
-
-
-/* ============================================================================
-   DATA EDITORS / DATAFRAMES
-   ============================================================================ */
-
-[data-testid="stDataEditor"],
-[data-testid="stDataFrame"] {
-    border:
-        1px solid var(--surm-border) !important;
-
-    border-radius:
-        var(--surm-radius-lg) !important;
-
-    overflow: hidden;
-}
-
-
-/* ============================================================================
-   METRICS
-   ============================================================================ */
-
-[data-testid="stMetric"] {
-    padding:
-        15px !important;
-
-    border:
-        1px solid var(--surm-border) !important;
-
-    border-radius:
-        var(--surm-radius-lg) !important;
-
-    background:
-        var(--surm-surface) !important;
-
-    box-shadow:
-        var(--surm-shadow-sm);
-}
-
-
-[data-testid="stMetricLabel"] {
-    color:
-        var(--surm-text-muted) !important;
-
-    font-size: 9px !important;
-
-    text-transform: uppercase;
-}
-
-
-[data-testid="stMetricValue"] {
-    color:
-        var(--surm-primary-dark) !important;
-
-    font-size: 24px !important;
-
-    font-weight: 750 !important;
-}
-
-
-/* ============================================================================
-   ALERTS
-   ============================================================================ */
-
-[data-testid="stAlert"] {
-    border-radius:
-        var(--surm-radius-md) !important;
-
-    border:
-        1px solid var(--surm-border) !important;
-
-    box-shadow: none !important;
-
-    font-size: 11px !important;
-}
-
-
-/* ============================================================================
-   EXPANDERS
-   ============================================================================ */
-
-[data-testid="stExpander"] {
-    border:
-        1px solid var(--surm-border) !important;
-
-    border-radius:
-        var(--surm-radius-md) !important;
-
-    background:
-        var(--surm-surface) !important;
-}
-
-
-[data-testid="stExpander"] summary {
-    font-size: 11px !important;
-
-    font-weight: 650 !important;
-}
-
-
-/* ============================================================================
-   CHECKBOXES / RADIO
-   ============================================================================ */
-
-.stCheckbox label,
-.stRadio label {
-    font-size: 11px !important;
-}
-
-
-/* ============================================================================
-   STATUS BAR
-   ============================================================================ */
-
-.surm-status-bar {
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 12px;
-
-    margin-top: 32px;
-
-    padding:
-        9px
-        12px;
-
-    border-top:
-        1px solid var(--surm-border);
-
-    color:
-        var(--surm-text-muted);
-
-    font-size: 9px;
-}
-
-
-.surm-status-bar strong {
-    color:
-        var(--surm-text-secondary);
-}
-
-
-.surm-status-bar span {
-    margin-left: 5px;
-}
-
-
-.status-divider {
-    color:
-        var(--surm-border-strong);
-}
-
-
-/* ============================================================================
-   SPACING HELPERS
-   ============================================================================ */
-
-.stMarkdown {
     line-height: 1.55;
 }
 
 
-/* ============================================================================
+/* --------------------------------------------------------------------------
+   STREAMLIT BUTTONS
+   -------------------------------------------------------------------------- */
+
+.stButton > button {
+
+    border-radius: 9px !important;
+
+    font-weight: 600 !important;
+
+    transition:
+        transform var(--surm-transition),
+        box-shadow var(--surm-transition);
+}
+
+
+.stButton > button:hover {
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 4px 10px
+        rgba(16, 24, 20, 0.08);
+}
+
+
+/* --------------------------------------------------------------------------
+   INPUTS
+   -------------------------------------------------------------------------- */
+
+.stTextInput input,
+.stTextArea textarea {
+
+    border-radius: 9px !important;
+}
+
+
+.stSelectbox > div > div {
+
+    border-radius: 9px !important;
+}
+
+
+.stNumberInput input {
+
+    border-radius: 9px !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   PROGRESS
+   -------------------------------------------------------------------------- */
+
+.stProgress > div > div {
+
+    border-radius: 999px;
+}
+
+
+/* --------------------------------------------------------------------------
+   FOOTER
+   -------------------------------------------------------------------------- */
+
+.surm-footer {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 0.75rem;
+
+    flex-wrap: wrap;
+
+    margin-top: 3rem;
+
+    padding-top: 1rem;
+
+    border-top:
+        1px solid
+        var(--surm-border);
+
+    color: var(--surm-text-muted);
+
+    font-size: 0.7rem;
+}
+
+
+/* --------------------------------------------------------------------------
    RESPONSIVE
-   ============================================================================ */
+   -------------------------------------------------------------------------- */
 
-@media (max-width: 1100px) {
-
-    .main .block-container {
-        padding:
-            22px
-            24px
-            60px
-            24px !important;
-    }
+@media (max-width: 900px) {
 
     .surm-header {
+
         align-items: flex-start;
 
         flex-direction: column;
     }
 
     .surm-header-meta {
+
         justify-content: flex-start;
-    }
 
-    .surm-welcome {
-        flex-direction: column;
-    }
-
-    .surm-health-card {
         width: 100%;
     }
 }
 
 
-@media (max-width: 768px) {
+@media (max-width: 600px) {
 
-    .main .block-container {
-        padding:
-            16px
-            14px
-            50px
-            14px !important;
+    .block-container {
+
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
 
-    .surm-header {
-        padding:
-            16px;
+    .surm-title {
+
+        font-size: 1.2rem;
     }
 
-    .surm-header h1 {
-        font-size: 20px;
-    }
+    .surm-meta-item {
 
-    .surm-welcome {
-        padding:
-            18px;
-    }
+        flex: 1;
 
-    .surm-welcome h2 {
-        font-size: 19px;
-    }
-
-    .surm-status-bar {
-        align-items: flex-start;
-
-        flex-direction: column;
-    }
-
-    .surm-kpi-card {
-        min-height: 105px;
-    }
-}
-
-
-/* ============================================================================
-   ACCESSIBILITY
-   ============================================================================ */
-
-@media (prefers-reduced-motion: reduce) {
-
-    *,
-    *::before,
-    *::after {
-        scroll-behavior: auto !important;
-
-        transition-duration: 0.01ms !important;
-
-        animation-duration: 0.01ms !important;
-
-        animation-iteration-count: 1 !important;
-    }
-}
-
-
-/* ============================================================================
-   PRINT
-   ============================================================================ */
-
-@media print {
-
-    section[data-testid="stSidebar"],
-    header,
-    footer,
-    .surm-status-bar,
-    button,
-    .stButton,
-    .stDownloadButton {
-        display: none !important;
-    }
-
-    .main .block-container {
-        max-width: none !important;
-
-        padding: 0 !important;
-    }
-
-    .surm-kpi-card,
-    .surm-workflow-row,
-    .surm-detail-card {
-        box-shadow: none !important;
-
-        break-inside: avoid;
+        min-width: 120px;
     }
 }

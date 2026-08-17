@@ -5,9 +5,10 @@ Acts as the single source of truth for app-wide state.
 """
 import streamlit as st
 import json, os
+from copy import deepcopy
 
 # Public set of default session keys (populated in init_session)
-DEFAULT_SESSION_KEYS = set()
+DEFAULT_SESSION_STATE = set()
 
 def load_master_mapping():
     path = os.path.join(os.path.dirname(__file__), "..", "data", "surm_master_mapping.json")
@@ -88,19 +89,11 @@ def init_session():
         "ui_background_color": "#F8FBFC",
     }
 
-    for key, default_value in defaults.items():
+    # CORRECT
+    for key, value in defaults.items():
         if key not in st.session_state:
-            # Avoid sharing mutable default objects between states.
-            if isinstance(default_value, list):
-                st.session_state[key] = default_value.copy()
-            elif isinstance(default_value, dict):
-                st.session_state[key] = default_value.copy()
-            else:
-                st.session_state[key] = default_value
-    # expose the set of default keys so persistence can safely filter saved state
-    global DEFAULT_SESSION_KEYS
-    DEFAULT_SESSION_KEYS = set(defaults.keys())
-
+            st.session_state[key] = deepcopy(value)
+            
 def _build_default_uncertainties(mapping):
     rows = []
     for u in mapping["uncertainties"]:

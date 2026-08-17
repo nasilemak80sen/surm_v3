@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 import streamlit as st
 from utils.db import get_db
-from utils.session import DEFAULT_SESSION_KEYS
+from utils.session import DEFAULT_SESSION_STATE
 import math
 
 _SKIP_EXACT  = {"_mapping", "_last_saved", "_last_save_auto", "_resume_message", "_resume_attempted"}
@@ -71,7 +71,7 @@ def save_session(auto: bool = False) -> bool:
 
     # Only persist known default keys to avoid saving transient widget keys
     for key, val in st.session_state.items():
-        if key not in DEFAULT_SESSION_KEYS:
+        if key not in DEFAULT_SESSION_STATE:
             continue
         if key in _SKIP_EXACT:
             continue
@@ -141,7 +141,7 @@ def load_session(project_name: str, field_name: str) -> bool:
         mapping = st.session_state.get("_mapping")
         # Only restore known default session keys to avoid widget-key collisions
         for key, val in data.get("session", {}).items():
-            if key not in DEFAULT_SESSION_KEYS:
+            if key not in DEFAULT_SESSION_STATE:
                 continue
             st.session_state[key] = val
         if mapping:
