@@ -1106,6 +1106,35 @@ def render_study_details() -> None:
                 unsafe_allow_html=True,
             )
 
+# Quick save button and autosave indicator
+col_quick, col_hint = st.columns([1, 5])
+with col_quick:
+    if st.button("💾 Save Progress (Quick)"):
+        if not ss.get("project_name","").strip():
+            st.warning("Enter a Project Name before saving.")
+        else:
+            ok = save_session(auto=False)
+            st.success("Saved.") if ok else st.error("Save failed.")
+with col_hint:
+    last_saved = ss.get("_last_saved","")
+    last_auto = ss.get("_last_save_auto", False)
+    auto_on = ss.get("_auto_save_enabled", True)
+    if last_saved:
+        ts = last_saved.replace("T"," ")
+        st.markdown(f"<div style='font-size:12px;opacity:0.8;'>Last saved: {ts[11:19]} {'(auto)' if last_auto else ''}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:12px;margin-top:2px;'>Auto-save: <b>{'ON' if auto_on else 'OFF'}</b></div>", unsafe_allow_html=True)
+
+# Top-level quick theme controls (visible at the top of the page)
+with st.expander('Appearance — Quick Theme Controls', expanded=False):
+    c1, c2, c3 = st.columns([1,1,1])
+    primary_top = c1.color_picker('Primary', value=st.session_state.get('ui_primary_color','#1F6B3A'))
+    bg_top = c2.color_picker('Background', value=st.session_state.get('ui_background_color','#F8FBFC'))
+    if c3.button('Apply Theme (Top)'):
+        st.session_state['ui_primary_color'] = primary_top
+        st.session_state['ui_background_color'] = bg_top
+        _apply_dynamic_theme()
+        st.success('Theme applied')
+
 
 # ============================================================================
 # OVERVIEW
