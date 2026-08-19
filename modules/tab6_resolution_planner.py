@@ -78,6 +78,7 @@ def render():
                 "Required Completion":     st.column_config.TextColumn("Completion Date", help="DD/MM/YYYY", width="small"),
                 "Progress (0-1)":          st.column_config.NumberColumn("Progress", min_value=0.0, max_value=1.0,
                                                                           step=0.05),
+                "Status":                  st.column_config.SelectboxColumn("Status", options=["Open", "Under Assessment", "Resolution Planned", "In Progress", "Resolved", "Closed"]),
                 "Action Owner":            st.column_config.TextColumn("Owner"),
                 "Part of Workplan":        st.column_config.CheckboxColumn("In Workplan?"),
                 "Remarks":                 st.column_config.TextColumn("Remarks", width="large"),

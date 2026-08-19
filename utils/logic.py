@@ -172,6 +172,7 @@ def build_resolution_planner(resolution_df: pd.DataFrame) -> pd.DataFrame:
             "Start Date":              ex.get("Start Date", ""),
             "Required Completion":     ex.get("Required Completion", ""),
             "Progress (0-1)":          ex.get("Progress (0-1)", 0.0),
+            "Status":                  ex.get("Status", "Open"),
             "Action Owner":            ex.get("Action Owner", ""),
             "Part of Workplan":        ex.get("Part of Workplan", True),
             "Remarks":                 ex.get("Remarks", ""),

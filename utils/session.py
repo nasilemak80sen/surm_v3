@@ -8,7 +8,19 @@ import json, os
 from copy import deepcopy
 
 # Public set of default session keys (populated in init_session)
-DEFAULT_SESSION_STATE = set()
+DEFAULT_SESSION_STATE = {
+    "project_name", "field_name", "project_phase",
+    "prep_name", "prep_role", "prep_date",
+    "rev_gg_name", "rev_gg_role", "rev_gg_date",
+    "rev_re_name", "rev_re_role", "rev_re_date",
+    "rev_pp_name", "rev_pp_role", "rev_pp_date",
+    "endorsed_name", "endorsed_role", "endorsed_date",
+    "team_members", "uncertainties", "key_decisions",
+    "impact_assessment", "key_uncertainties", "resolution_list",
+    "resolution_planner", "risk_register", "pra_output",
+    "study_lifecycle", "study_revision", "study_change_log",
+    "ui_primary_color", "ui_background_color",
+}
 
 def load_master_mapping():
     path = os.path.join(os.path.dirname(__file__), "..", "data", "surm_master_mapping.json")
@@ -77,6 +89,11 @@ def init_session():
         # ── PRA output ───────────────────────────────────────────────
         "pra_output":          [],
 
+        # ── Study governance ─────────────────────────────────────────
+        "study_lifecycle":     "Draft",
+        "study_revision":      0,
+        "study_change_log":    [],
+
         # ── Master reference data (read-only) ─────────────────────────
         "_mapping":            mapping,
 
@@ -89,7 +106,10 @@ def init_session():
         "ui_background_color": "#F8FBFC",
     }
 
-    # CORRECT
+    # Persistence uses this set to distinguish durable study data from
+    # transient widget state. Keep it synchronized with the defaults.
+    DEFAULT_SESSION_STATE.update(defaults)
+
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = deepcopy(value)

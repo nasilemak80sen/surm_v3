@@ -3,10 +3,132 @@ import streamlit as st
 from datetime import date
 from utils.export_excel import build_excel_export
 from utils.persistence import save_session, list_sessions, load_session_record, delete_session
+from components.metrics import render_metric_grid, render_progress_card
+from components.cards import render_card
+from utils.study_export import snapshot_csv, snapshot_json
+from utils.analytics import build_study_analytics
 
 _PHASES = ["","PGR0","PGR1","PGR2","PGR3/FID","ITR2a","ITR2b","SBS","SIR2a","SIR2b","PGR4"]
 
 def render():
+    ss = st.session_state
+    selected_uncertainties = sum(
+        1 for item in ss.get("uncertainties", [])
+        if isinstance(item, dict) and item.get("selected")
+    )
+    key_decisions = sum(
+        1 for item in ss.get("key_decisions", [])
+        if isinstance(item, dict) and str(item.get("Key Decision", "")).strip()
+    )
+    resolution_actions = len(ss.get("resolution_planner", []))
+    risks = len(ss.get("risk_register", []))
+    checks = [
+        bool(str(ss.get("project_name", "")).strip()),
+        selected_uncertainties > 0,
+        key_decisions > 0,
+        bool(ss.get("impact_assessment")),
+        bool(ss.get("key_uncertainties")),
+        bool(ss.get("resolution_list")),
+        resolution_actions > 0,
+        risks > 0,
+    ]
+    progress = round(sum(checks) / len(checks) * 100) if checks else 0
+    workflow_pages = [
+        ("1️⃣ Uncertainties", selected_uncertainties > 0),
+        ("2️⃣ Key Decisions", key_decisions > 0),
+        ("3️⃣ Impact Assessment", bool(ss.get("impact_assessment"))),
+        ("4️⃣ Key Uncertainties", bool(ss.get("key_uncertainties"))),
+        ("5️⃣ Resolution List", bool(ss.get("resolution_list"))),
+        ("6️⃣ Resolution Planner", resolution_actions > 0),
+        ("7️⃣ Risk Register", risks > 0),
+    ]
+    next_step = next((label for label, complete in workflow_pages if not complete), "📄 PRA Output")
+    analytics = build_study_analytics(dict(ss))
+
+    render_metric_grid([
+        {"title": "Uncertainties", "value": selected_uncertainties, "description": "Selected for study", "variant": "primary"},
+        {"title": "Key Decisions", "value": key_decisions, "description": "Decision drivers"},
+        {"title": "Resolution Actions", "value": resolution_actions, "description": "In the workplan"},
+        {"title": "Risks", "value": risks, "description": "In the register", "variant": "warning"},
+    ])
+    render_progress_card("Study Progress", progress, description="Completion across the eight core study stages.")
+    render_card(
+        "Current Study",
+        "The active study context used for saved sessions and exports.",
+        content=(
+            f'<div class="overview-context-grid">'
+            f'<div><span>Field</span><strong>{ss.get("field_name") or "Not configured"}</strong></div>'
+            f'<div><span>Project</span><strong>{ss.get("project_name") or "Not configured"}</strong></div>'
+            f'<div><span>Phase</span><strong>{ss.get("project_phase") or "Not configured"}</strong></div>'
+            f'</div>'
+        ),
+        variant="info",
+    )
+    render_card(
+        "Next Step",
+        f"Continue with {next_step}.",
+        content='<div class="overview-next-step">Follow the workflow in order to keep downstream outputs current.</div>',
+        variant="success",
+    )
+    critical_items = analytics["critical_uncertainties"] or ["No ranked uncertainties yet"]
+    render_card(
+        "Critical Uncertainties",
+        "Highest-ranked items currently carried into the study plan.",
+        content="<ol class=\"overview-critical-list\">" + "".join(
+            f"<li>{item}</li>" for item in critical_items
+        ) + "</ol>",
+        variant="warning",
+    )
+    status_text = " · ".join(
+        f"{status}: {count}" for status, count in analytics["resolution_status"].items()
+    ) or "No resolution actions recorded yet"
+    render_card(
+        "Resolution Status",
+        status_text,
+        content="Relationships and status are derived from the current study records.",
+        variant="info",
+    )
+    affected_decisions = sorted({
+        item["target"] for item in analytics["relationships"]
+        if item["type"] == "affects"
+    })
+    render_card(
+        "Decision Trace",
+        "Recorded uncertainty-to-decision links.",
+        content=(
+            "<div class=\"overview-next-step\">"
+            + (" · ".join(affected_decisions) if affected_decisions else "No high or medium impact decision links recorded yet")
+            + "</div>"
+        ),
+        variant="info",
+    )
+
+    st.markdown('<div class="surm-section-header">Study Governance</div>', unsafe_allow_html=True)
+    gov_col, export_col = st.columns([2, 1])
+    with gov_col:
+        st.selectbox(
+            "Study lifecycle",
+            ["Draft", "In Review", "Reviewed", "Approved", "Archived"],
+            key="study_lifecycle",
+            help="Governance state for this study output.",
+        )
+        st.caption(f"Revision {ss.get('study_revision', 0)}. Save the study to create an immutable revision snapshot.")
+    with export_col:
+        st.download_button(
+            "Download Study JSON",
+            data=snapshot_json(dict(ss)),
+            file_name=f"SURM_{(ss.get('project_name') or 'Study').replace(' ', '_')}.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+        st.download_button(
+            "Download Relationships CSV",
+            data=snapshot_csv(dict(ss)),
+            file_name=f"SURM_{(ss.get('project_name') or 'Study').replace(' ', '_')}_relationships.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+
     st.markdown('<div class="surm-helper"><span>🧭</span><span>Start with the project details, then move through the tabs in sequence. This keeps the workflow clearer and makes each saved session easier to resume.</span></div>', unsafe_allow_html=True)
 
     # ── Saved sessions panel ─────────────────────────────────────────
@@ -108,9 +230,15 @@ def render():
             key="field_name",
             placeholder="e.g. Ledang")
     with c3:
-        cur_phase = st.session_state.get("project_phase", "")
-        idx = _PHASES.index(cur_phase) if cur_phase in _PHASES else 0
-        st.selectbox("Project Phase", _PHASES, key="project_phase", index=idx)
+        st.selectbox("Project Phase", _PHASES, key="project_phase")
+
+    clear_col, _ = st.columns([1, 4])
+    with clear_col:
+        if st.button("Clear Study Details", key="clear_study_details"):
+            st.session_state["project_name"] = ""
+            st.session_state["field_name"] = ""
+            st.session_state["project_phase"] = ""
+            st.rerun()
 
     # ── Manual save on this page too ──────────────────────────────────
     col_save, col_hint = st.columns([1, 4])
@@ -140,14 +268,14 @@ def render():
     for label, key in signoffs:
         with st.expander(label, expanded=False):
             st.markdown('<div class="signoff-box">', unsafe_allow_html=True)
-            st.session_state[f"{key}_name"] = st.text_input(
-                "Name", key=f"si_{key}_n", value=st.session_state.get(f"{key}_name",""),
+            st.text_input(
+                "Name", key=f"{key}_name",
                 placeholder="Full name", label_visibility="collapsed")
-            st.session_state[f"{key}_role"] = st.text_input(
-                "Role", key=f"si_{key}_r", value=st.session_state.get(f"{key}_role",""),
+            st.text_input(
+                "Role", key=f"{key}_role",
                 placeholder="Designation", label_visibility="collapsed")
-            st.session_state[f"{key}_date"] = st.text_input(
-                "Date", key=f"si_{key}_d", value=st.session_state.get(f"{key}_date",""),
+            st.text_input(
+                "Date", key=f"{key}_date",
                 placeholder="DD/MM/YYYY", label_visibility="collapsed")
             st.markdown('</div>', unsafe_allow_html=True)
 

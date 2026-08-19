@@ -85,6 +85,8 @@ def save_session(auto: bool = False) -> bool:
             continue
 
     now = datetime.now().isoformat(timespec="seconds")
+    revision = int(st.session_state.get("study_revision", 0)) + 1
+    payload["study_revision"] = revision
     data = {
         "meta": {
             "project_name":  project,
@@ -94,6 +96,8 @@ def save_session(auto: bool = False) -> bool:
             "auto_saved":    auto,
             "completion":    _completion(payload),
             "version":       "1.1",
+            "study_revision": revision,
+            "study_lifecycle": st.session_state.get("study_lifecycle", "Draft"),
         },
         "session": payload,
     }
@@ -103,6 +107,8 @@ def save_session(auto: bool = False) -> bool:
         st.session_state["_last_saved"]     = now
         st.session_state["_last_save_auto"] = auto
         st.session_state["_resume_message"] = ""
+        st.session_state["study_revision"] = revision
+        db.save_version(project, field, revision, data)
     return ok
 
 
@@ -131,7 +137,7 @@ def _has_user_progress(session: dict) -> bool:
     return False
 
 
-def load_session(project_name: str, field_name: str) -> bool:
+def load_session(project_name: str, field_name: str, phase_name: str = "") -> bool:
     """Restore session state from database. Returns True on success."""
     db = get_db()
     data = db.load(project_name, field_name)
@@ -147,8 +153,28 @@ def load_session(project_name: str, field_name: str) -> bool:
         if mapping:
             st.session_state["_mapping"] = mapping
         meta = data.get("meta", {})
+        # Older saves may contain an empty session payload because durable
+        # keys were not registered. The database row still has study identity.
+        st.session_state["project_name"] = (
+            data.get("session", {}).get("project_name")
+            or meta.get("project_name")
+            or ""
+        )
+        st.session_state["field_name"] = (
+            data.get("session", {}).get("field_name")
+            or meta.get("field_name")
+            or ""
+        )
+        st.session_state["project_phase"] = (
+            data.get("session", {}).get("project_phase")
+            or meta.get("project_phase")
+            or phase_name
+            or ""
+        )
         st.session_state["_last_saved"] = meta.get("saved_at", "")
         st.session_state["_last_save_auto"] = bool(meta.get("auto_saved", False))
+        st.session_state["study_revision"] = int(meta.get("study_revision", data.get("session", {}).get("study_revision", 0)) or 0)
+        st.session_state["study_lifecycle"] = meta.get("study_lifecycle", data.get("session", {}).get("study_lifecycle", "Draft"))
         st.session_state["_resume_message"] = f"Resumed saved session: {project_name}"
         return True
     except Exception:
@@ -161,6 +187,9 @@ def load_session_record(session_meta: dict) -> bool:
     field_name = (session_meta or {}).get("field_name", "").strip()
     if not project_name or not field_name:
         return False
+    phase_name = (session_meta or {}).get("phase", "")
+    if phase_name:
+        return load_session(project_name, field_name, phase_name)
     return load_session(project_name, field_name)
 
 
