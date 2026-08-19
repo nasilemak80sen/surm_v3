@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import html
 
-import streamlit as st
 from utils.ui import render_html
+import streamlit as st
 
 
 # ============================================================================
@@ -71,7 +71,7 @@ def render_metric_card(
         </div>
         """
 
-    st.markdown(
+    render_html(
         f"""
         <div class="surm-metric-card surm-metric-{variant}">
 
@@ -196,7 +196,7 @@ def render_progress_card(
         </div>
         """
 
-    st.markdown(
+    render_html(
         f"""
         <div class="surm-progress-card">
 

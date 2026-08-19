@@ -16,6 +16,7 @@ from __future__ import annotations
 import html
 from typing import Any
 from utils.ui import render_html
+from components.status import status_html
 
 
 def _safe(value: Any, fallback: str = "Not configured") -> str:
@@ -50,6 +51,7 @@ def render_header(
     organisation: str = "PETRONAS CARIGALI",
     app_name: str = "SURM Toolkit",
     subtitle: str = "Subsurface Uncertainty & Risk Management",
+    saved: bool = False,
 ) -> None:
     """
     Render the SURM application header.
@@ -75,6 +77,7 @@ def render_header(
     field_html = _safe(field)
     project_html = _safe(project)
     phase_html = _safe(phase)
+    save_status = status_html("saved" if saved else "draft")
 
     render_html(
         f"""
@@ -144,6 +147,8 @@ def render_header(
                     </div>
 
                 </div>
+
+                {save_status}
 
             </div>
 

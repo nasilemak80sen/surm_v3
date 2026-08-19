@@ -38,6 +38,6 @@ echo.
 start "" /B cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:8501"
 
 :: Run app
-streamlit run app.py --server.port 8501 --browser.gatherUsageStats false
+streamlit run surm.py --server.port 8501 --browser.gatherUsageStats false
 
 pause

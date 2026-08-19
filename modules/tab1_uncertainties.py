@@ -13,6 +13,35 @@ def render():
     disciplines = mapping["disciplines"]
     all_risks   = mapping["risks"]
 
+    selected_items = [
+        item for item in st.session_state["uncertainties"]
+        if item.get("selected")
+    ]
+    selected_count = len(selected_items)
+    flagged_risks = sorted({
+        risk for item in selected_items for risk in item.get("risks", [])
+    })
+
+    st.markdown('<div class="surm-section-header">📌 Selection Summary</div>', unsafe_allow_html=True)
+    summary_columns = st.columns(3)
+    summary_columns[0].metric("Selected", selected_count)
+    summary_columns[1].metric("Risks Flagged", len(flagged_risks))
+    summary_columns[2].metric("Custom Added", sum(1 for item in st.session_state["uncertainties"] if item.get("custom")))
+
+    if selected_items:
+        selected_html = "".join(
+            f'<li><strong>{item["name"]}</strong><span>{item["discipline"]}</span></li>'
+            for item in selected_items
+        )
+        st.markdown(
+            f'<div class="uncertainty-selection-list">'
+            f'<div class="uncertainty-selection-title">Currently selected uncertainties</div>'
+            f'<ul>{selected_html}</ul></div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info("No uncertainties selected yet. Select items below and this summary will update immediately.")
+
     # ── Global Select / Deselect All ─────────────────────────────────
     st.markdown('<div class="surm-section-header">🎛️ Global Controls</div>', unsafe_allow_html=True)
     g1, g2, g3, g4 = st.columns([1, 1, 1, 5])
@@ -111,18 +140,5 @@ def render():
             st.success(f"✅ Added: **{c_name.strip()}**")
             st.rerun()
 
-    # ── Summary ───────────────────────────────────────────────────────
-    st.divider()
-    n_sel   = sum(1 for u in st.session_state["uncertainties"] if u["selected"])
-    flagged = set()
-    for u in st.session_state["uncertainties"]:
-        if u["selected"]:
-            flagged.update(u["risks"])
-    m1,m2,m3 = st.columns(3)
-    m1.metric("Uncertainties Selected", n_sel)
-    m2.metric("Risks Flagged",          len(flagged))
-    m3.metric("Custom Added",           sum(1 for u in st.session_state["uncertainties"] if u.get("custom")))
-    if n_sel == 0:
-        st.info("☝️ Select at least one uncertainty above to begin.")
-    elif n_sel >= 5:
-        st.success(f"✅ {n_sel} uncertainties selected — proceed to **Tab 2 → Key Decisions**.")
+    if selected_count >= 5:
+        st.success(f"✅ {selected_count} uncertainties selected — proceed to **Tab 2 → Key Decisions**.")

@@ -65,7 +65,7 @@ def render():
         edited = st.data_editor(
             df_in, column_config=col_cfg,
             hide_index=True, width="stretch",
-            num_rows="fixed", key="impact_editor",
+            num_rows="fixed", key=f"impact_editor_{st.session_state.get('study_id', 'new')}",
         )
 
     # ── Handle form submission ────────────────────────────────────────

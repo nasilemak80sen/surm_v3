@@ -5,11 +5,9 @@ Provides reusable workflow navigation and progress indicators.
 """
 
 from __future__ import annotations
-from utils.ui import render_html
-
 import html
 
-import streamlit as st
+from utils.ui import render_html
 
 
 # ============================================================================
@@ -64,7 +62,7 @@ def render_workflow_item(
         </div>
         """
 
-    st.markdown(
+    render_html(
         f"""
         <div class="surm-workflow-item surm-workflow-{state}">
 
@@ -230,7 +228,7 @@ def render_workflow_header(
         </div>
         """
 
-    st.markdown(
+    render_html(
         f"""
         <div class="surm-page-header">
 
@@ -249,4 +247,45 @@ def render_workflow_header(
         </div>
         """,
          
+    )
+
+
+def render_page_frame(
+    title: str,
+    description: str,
+    *,
+    step: int | None = None,
+    total_steps: int = 7,
+) -> None:
+    """Render the consistent heading used by workflow and output pages."""
+
+    render_workflow_header(
+        title,
+        description,
+        step=step,
+        total_steps=total_steps,
+    )
+
+
+def render_page_footer(
+    *,
+    previous_page: str | None = None,
+    next_page: str | None = None,
+) -> None:
+    """Render a lightweight page boundary for visual continuity."""
+
+    previous_html = html.escape(previous_page or "")
+    next_html = html.escape(next_page or "")
+
+    render_html(
+        f"""
+        <div class="surm-page-footer">
+            <span class="surm-page-footer-previous">
+                {f"Previous: {previous_html}" if previous_page else ""}
+            </span>
+            <span class="surm-page-footer-next">
+                {f"Next: {next_html} &rarr;" if next_page else ""}
+            </span>
+        </div>
+        """
     )

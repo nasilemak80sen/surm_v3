@@ -71,7 +71,8 @@ def render():
                 "Include in Plan":       st.column_config.CheckboxColumn("Include ✓"),
                 "Resolution Achieved":   st.column_config.CheckboxColumn("Resolved ✓"),
             },
-            hide_index=True, width="stretch", num_rows="fixed", key="ku_editor",
+            hide_index=True, width="stretch", num_rows="fixed",
+            key=f"ku_editor_{st.session_state.get('study_id', 'new')}",
         )
 
     # ── Handle submission ─────────────────────────────────────────────

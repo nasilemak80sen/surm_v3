@@ -93,7 +93,8 @@ def render():
                 "Risk Status":         st.column_config.SelectboxColumn("Status", options=_STATUS_OPTIONS, width="small"),
                 "Remarks":             st.column_config.TextColumn("Remarks", width="large"),
             },
-            hide_index=True, width="stretch", num_rows="fixed", key="rr_editor",
+            hide_index=True, width="stretch", num_rows="fixed",
+            key=f"rr_editor_{st.session_state.get('study_id', 'new')}",
         )
 
     if btn_save:

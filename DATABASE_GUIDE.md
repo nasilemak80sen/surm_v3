@@ -21,7 +21,7 @@ No database setup needed. Sessions auto-save to `sessions.db` in the app folder.
 python -m venv .venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 pip install -r requirements.txt
-streamlit run app.py
+streamlit run surm.py
 ```
 
 Sessions persist indefinitely on your machine.
@@ -64,7 +64,7 @@ Free options:
 2. **Go to https://share.streamlit.io**
    - Click **New app**
    - Select your repository
-   - Set main file to `app.py`
+   - Set main file to `surm.py`
    - Click **Advanced settings**
 
 3. **Add the `DATABASE_URL` secret:**

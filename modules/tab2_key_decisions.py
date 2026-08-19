@@ -8,7 +8,16 @@ def render():
     st.markdown('<div class="surm-section-header">🎯 Key Project Decisions</div>', unsafe_allow_html=True)
 
     df = pd.DataFrame(st.session_state["key_decisions"])
+    if "Weight (1-3)" not in df.columns:
+        df["Weight (1-3)"] = 1
+    df["Weight (1-3)"] = (
+        pd.to_numeric(df["Weight (1-3)"], errors="coerce")
+        .fillna(1)
+        .clip(1, 3)
+        .astype(int)
+    )
 
+    editor_key = f"kd_editor_{st.session_state.get('study_id', 'new')}"
     edited = st.data_editor(
         df,
         num_rows="dynamic",
@@ -19,22 +28,37 @@ def render():
             "Description":  st.column_config.TextColumn("Description", width="large", help="Brief context for this decision"),
         },
         hide_index=True,
-        key="kd_editor",
+        key=editor_key,
     )
 
-    # Persist changes
-    st.session_state["key_decisions"] = edited.to_dict("records")
+    # Persist the editor result as-is. Cleaning or rebuilding rows during the
+    # same render makes Streamlit restore the previous widget snapshot.
+    normalized = edited.copy()
+    normalized["Weight (1-3)"] = (
+        pd.to_numeric(normalized["Weight (1-3)"], errors="coerce")
+        .fillna(1)
+        .clip(1, 3)
+        .astype(int)
+    )
+    st.session_state["key_decisions"] = normalized.to_dict("records")
+
+    if st.button("Remove Empty Decision Rows", key="remove_empty_decision_rows"):
+        st.session_state["key_decisions"] = [
+            row for row in st.session_state["key_decisions"]
+            if str(row.get("Key Decision") or "").strip()
+        ] or [{"Key Decision": "", "Weight (1-3)": 1, "Description": ""}]
+        st.rerun()
 
     # Summary
     st.divider()
-    if not edited.empty:
+    if not normalized.empty:
         mc1, mc2, mc3 = st.columns(3)
-        mc1.metric("Decisions Defined", len(edited))
-        mc2.metric("Max Weight",        int(edited["Weight (1-3)"].max()) if not edited.empty else 0)
-        mc3.metric("Total Weight Sum",  int(edited["Weight (1-3)"].sum()) if not edited.empty else 0)
+        mc1.metric("Decisions Defined", len(normalized))
+        mc2.metric("Max Weight",        int(normalized["Weight (1-3)"].max()))
+        mc3.metric("Total Weight Sum",  int(normalized["Weight (1-3)"].sum()))
 
         st.markdown('<div class="surm-section-header">⚖️ Weight Distribution</div>', unsafe_allow_html=True)
-        for _, row in edited.iterrows():
+        for _, row in normalized.iterrows():
             w = int(row["Weight (1-3)"])
             bar_color = "#1F6B3A" if w == 3 else "#FFD700" if w == 2 else "#CCC"
             st.markdown(

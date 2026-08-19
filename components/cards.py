@@ -5,10 +5,9 @@ Reusable content containers used throughout the application.
 """
 
 from __future__ import annotations
-from utils.ui import render_html
 import html
 
-import streamlit as st
+from utils.ui import render_html
 
 
 # ============================================================================
@@ -105,7 +104,7 @@ def render_card(
 
     content_html = content or ""
 
-    st.markdown(
+    render_html(
         f"""
         <div class="surm-card surm-card-{variant}">
 
@@ -159,7 +158,7 @@ def render_section_header(
         </div>
         """
 
-    st.markdown(
+    render_html(
         f"""
         <div class="surm-section-header">
 
@@ -191,7 +190,7 @@ def render_empty_state(
     Render an empty-state panel.
     """
 
-    st.markdown(
+    render_html(
         f"""
         <div class="surm-empty-state">
 

@@ -40,6 +40,20 @@ class SessionDB(ABC):
         """Delete session. Returns True on success."""
         pass
 
+    def save_version(self, project_name: str, field_name: str, revision: int, session_data: dict) -> bool:
+        """Persist an immutable study snapshot when supported by the backend."""
+        return False
+
+    def list_versions(self, project_name: str, field_name: str) -> list:
+        """Return immutable study revisions, newest first."""
+        return []
+
+    def save_bundle(self, project_name: str, field_name: str, revision: int, session_data: dict) -> bool:
+        """Save current state and immutable revision as one logical operation."""
+        return self.save(project_name, field_name, session_data) and self.save_version(
+            project_name, field_name, revision, session_data
+        )
+
 
 class SQLiteDB(SessionDB):
     """Local SQLite database for development."""
@@ -64,8 +78,26 @@ class SQLiteDB(SessionDB):
                     session_json TEXT NOT NULL,
                     completion_pct INTEGER DEFAULT 0,
                     auto_saved BOOLEAN DEFAULT 0,
+                    study_id TEXT,
+                    study_owner TEXT,
                     saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(project_name, field_name)
+                )
+            """)
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(sessions)")}
+            if "study_id" not in columns:
+                conn.execute("ALTER TABLE sessions ADD COLUMN study_id TEXT")
+            if "study_owner" not in columns:
+                conn.execute("ALTER TABLE sessions ADD COLUMN study_owner TEXT")
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS study_versions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_name TEXT NOT NULL,
+                    field_name TEXT NOT NULL,
+                    revision INTEGER NOT NULL,
+                    session_json TEXT NOT NULL,
+                    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(project_name, field_name, revision)
                 )
             """)
             conn.commit()
@@ -81,16 +113,19 @@ class SQLiteDB(SessionDB):
             session_json = json.dumps(session_data["session"], ensure_ascii=False)
             meta = session_data["meta"]
             conn.execute("""
-                INSERT INTO sessions (project_name, field_name, phase, session_json, completion_pct, auto_saved, saved_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO sessions (project_name, field_name, phase, session_json, completion_pct, auto_saved, study_id, study_owner, saved_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(project_name, field_name) DO UPDATE SET
                     phase = excluded.phase,
                     session_json = excluded.session_json,
                     completion_pct = excluded.completion_pct,
                     auto_saved = excluded.auto_saved,
+                      study_id = excluded.study_id,
+                    study_owner = excluded.study_owner,
                     saved_at = excluded.saved_at
-            """, (project_name, field_name, meta.get("project_phase",""), session_json,
-                  meta.get("completion",0), int(meta.get("auto_saved",False)), meta.get("saved_at","")))
+                """, (project_name, field_name, meta.get("project_phase",""), session_json,
+                    meta.get("completion",0), int(meta.get("auto_saved",False)),
+                      meta.get("study_id", ""), meta.get("study_owner", ""), meta.get("saved_at","")))
             conn.commit()
             conn.close()
             return True
@@ -98,23 +133,89 @@ class SQLiteDB(SessionDB):
             st.warning(f"SQLite save: {e}")
             return False
 
+    def save_bundle(self, project_name: str, field_name: str, revision: int, session_data: dict) -> bool:
+        import sqlite3
+        try:
+            conn = sqlite3.connect(self.db_path)
+            meta = session_data["meta"]
+            session_json = json.dumps(session_data["session"], ensure_ascii=False)
+            conn.execute("BEGIN")
+            conn.execute(
+                """INSERT INTO sessions (project_name, field_name, phase, session_json, completion_pct, auto_saved, study_id, study_owner, saved_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(project_name, field_name) DO UPDATE SET
+                phase=excluded.phase, session_json=excluded.session_json,
+                completion_pct=excluded.completion_pct, auto_saved=excluded.auto_saved,
+                study_id=excluded.study_id, study_owner=excluded.study_owner, saved_at=excluded.saved_at""",
+                (project_name, field_name, meta.get("project_phase", ""), session_json,
+                 meta.get("completion", 0), int(meta.get("auto_saved", False)),
+                 meta.get("study_id", ""), meta.get("study_owner", ""), meta.get("saved_at", "")),
+            )
+            conn.execute(
+                "INSERT OR IGNORE INTO study_versions (project_name, field_name, revision, session_json, saved_at) VALUES (?, ?, ?, ?, ?)",
+                (project_name, field_name, revision, session_json, meta.get("saved_at", "")),
+            )
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            try:
+                conn.rollback()
+                conn.close()
+            except Exception:
+                pass
+            st.warning(f"SQLite bundle save: {e}")
+            return False
+
+    def save_version(self, project_name: str, field_name: str, revision: int, session_data: dict) -> bool:
+        import sqlite3
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.execute(
+                "INSERT OR IGNORE INTO study_versions (project_name, field_name, revision, session_json, saved_at) VALUES (?, ?, ?, ?, ?)",
+                (project_name, field_name, revision, json.dumps(session_data["session"], ensure_ascii=False), session_data["meta"].get("saved_at", "")),
+            )
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            st.warning(f"SQLite version save: {e}")
+            return False
+
+    def list_versions(self, project_name: str, field_name: str) -> list:
+        import sqlite3
+        try:
+            conn = sqlite3.connect(self.db_path)
+            rows = conn.execute(
+                "SELECT revision, saved_at FROM study_versions WHERE project_name = ? AND field_name = ? ORDER BY revision DESC",
+                (project_name, field_name),
+            ).fetchall()
+            conn.close()
+            return [{"revision": row[0], "saved_at": row[1]} for row in rows]
+        except Exception as e:
+            st.warning(f"SQLite version list: {e}")
+            return []
+
     def load(self, project_name: str, field_name: str) -> dict:
         """Load session by project/field name."""
         import sqlite3
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.execute(
-                "SELECT session_json, saved_at, auto_saved FROM sessions WHERE project_name = ? AND field_name = ?",
+                "SELECT session_json, phase, saved_at, auto_saved, study_id, study_owner FROM sessions WHERE project_name = ? AND field_name = ?",
                 (project_name, field_name)
             )
             row = cursor.fetchone()
             conn.close()
             if not row:
                 return {}
-            session_json, saved_at, auto_saved = row
+            session_json, phase, saved_at, auto_saved, study_id, study_owner = row
             return {
                 "session": json.loads(session_json),
                 "meta": {"project_name": project_name, "field_name": field_name,
+                         "project_phase": phase or "",
+                         "study_id": study_id or "",
+                         "study_owner": study_owner or "",
                          "saved_at": saved_at, "auto_saved": bool(auto_saved)}
             }
         except Exception as e:
@@ -180,8 +281,23 @@ class PostgresDB(SessionDB):
                     session_json TEXT NOT NULL,
                     completion_pct INTEGER DEFAULT 0,
                     auto_saved BOOLEAN DEFAULT FALSE,
+                    study_id VARCHAR(36),
+                    study_owner VARCHAR(255),
                     saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(project_name, field_name)
+                )
+            """)
+            cursor.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS study_id VARCHAR(36)")
+            cursor.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS study_owner VARCHAR(255)")
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS study_versions (
+                    id SERIAL PRIMARY KEY,
+                    project_name VARCHAR(255) NOT NULL,
+                    field_name VARCHAR(255) NOT NULL,
+                    revision INTEGER NOT NULL,
+                    session_json TEXT NOT NULL,
+                    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(project_name, field_name, revision)
                 )
             """)
             cursor.close()
@@ -198,14 +314,17 @@ class PostgresDB(SessionDB):
             session_json = json.dumps(session_data["session"], ensure_ascii=False)
             meta = session_data["meta"]
             cursor.execute("""
-                INSERT INTO sessions (project_name, field_name, phase, session_json, completion_pct, auto_saved, saved_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO sessions (project_name, field_name, phase, session_json, completion_pct, auto_saved, study_id, study_owner, saved_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT(project_name, field_name) DO UPDATE SET
                     phase = EXCLUDED.phase, session_json = EXCLUDED.session_json,
                     completion_pct = EXCLUDED.completion_pct, auto_saved = EXCLUDED.auto_saved,
+                                        study_id = EXCLUDED.study_id,
+                    study_owner = EXCLUDED.study_owner,
                     saved_at = EXCLUDED.saved_at
             """, (project_name, field_name, meta.get("project_phase",""), session_json,
-                  meta.get("completion",0), meta.get("auto_saved",False), meta.get("saved_at","")))
+                                    meta.get("completion",0), meta.get("auto_saved",False),
+                                      meta.get("study_id", ""), meta.get("study_owner", ""), meta.get("saved_at","")))
             conn.commit()
             cursor.close()
             conn.close()
@@ -214,6 +333,76 @@ class PostgresDB(SessionDB):
             st.warning(f"PostgreSQL save: {e}")
             return False
 
+    def save_bundle(self, project_name: str, field_name: str, revision: int, session_data: dict) -> bool:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(self.db_url)
+            cursor = conn.cursor()
+            meta = session_data["meta"]
+            session_json = json.dumps(session_data["session"], ensure_ascii=False)
+            cursor.execute(
+                """INSERT INTO sessions (project_name, field_name, phase, session_json, completion_pct, auto_saved, study_id, study_owner, saved_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT(project_name, field_name) DO UPDATE SET
+                phase=EXCLUDED.phase, session_json=EXCLUDED.session_json,
+                completion_pct=EXCLUDED.completion_pct, auto_saved=EXCLUDED.auto_saved,
+                study_id=EXCLUDED.study_id, study_owner=EXCLUDED.study_owner, saved_at=EXCLUDED.saved_at""",
+                (project_name, field_name, meta.get("project_phase", ""), session_json,
+                 meta.get("completion", 0), meta.get("auto_saved", False),
+                 meta.get("study_id", ""), meta.get("study_owner", ""), meta.get("saved_at", "")),
+            )
+            cursor.execute(
+                "INSERT INTO study_versions (project_name, field_name, revision, session_json, saved_at) VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                (project_name, field_name, revision, session_json, meta.get("saved_at", "")),
+            )
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return True
+        except Exception as e:
+            try:
+                conn.rollback()
+                cursor.close()
+                conn.close()
+            except Exception:
+                pass
+            st.warning(f"PostgreSQL bundle save: {e}")
+            return False
+
+    def save_version(self, project_name: str, field_name: str, revision: int, session_data: dict) -> bool:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(self.db_url)
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO study_versions (project_name, field_name, revision, session_json, saved_at) VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                (project_name, field_name, revision, json.dumps(session_data["session"], ensure_ascii=False), session_data["meta"].get("saved_at", "")),
+            )
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return True
+        except Exception as e:
+            st.warning(f"PostgreSQL version save: {e}")
+            return False
+
+    def list_versions(self, project_name: str, field_name: str) -> list:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(self.db_url)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT revision, saved_at FROM study_versions WHERE project_name = %s AND field_name = %s ORDER BY revision DESC",
+                (project_name, field_name),
+            )
+            rows = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return [{"revision": row[0], "saved_at": row[1].isoformat() if hasattr(row[1], "isoformat") else str(row[1])} for row in rows]
+        except Exception as e:
+            st.warning(f"PostgreSQL version list: {e}")
+            return []
+
     def load(self, project_name: str, field_name: str) -> dict:
         """Load session by project/field name."""
         try:
@@ -221,7 +410,7 @@ class PostgresDB(SessionDB):
             conn = psycopg2.connect(self.db_url)
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT session_json, saved_at, auto_saved FROM sessions WHERE project_name = %s AND field_name = %s",
+                "SELECT session_json, phase, saved_at, auto_saved, study_id, study_owner FROM sessions WHERE project_name = %s AND field_name = %s",
                 (project_name, field_name)
             )
             row = cursor.fetchone()
@@ -229,10 +418,13 @@ class PostgresDB(SessionDB):
             conn.close()
             if not row:
                 return {}
-            session_json, saved_at, auto_saved = row
+            session_json, phase, saved_at, auto_saved, study_id, study_owner = row
             return {
                 "session": json.loads(session_json),
                 "meta": {"project_name": project_name, "field_name": field_name,
+                         "project_phase": phase or "",
+                         "study_id": study_id or "",
+                         "study_owner": study_owner or "",
                          "saved_at": saved_at.isoformat() if hasattr(saved_at, 'isoformat') else str(saved_at),
                          "auto_saved": bool(auto_saved)}
             }

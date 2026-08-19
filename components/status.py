@@ -5,11 +5,9 @@ Provides consistent visual status indicators throughout the application.
 """
 
 from __future__ import annotations
-from utils.ui import render_html
-
 import html
 
-import streamlit as st
+from utils.ui import render_html
 
 
 # ============================================================================
@@ -97,7 +95,7 @@ def render_status(
     display_label = html.escape(str(display_label))
     display_icon = html.escape(str(display_icon))
 
-    st.markdown(
+    render_html(
         f"""
         <span class="surm-status-badge {config["css_class"]}">
             <span class="surm-status-icon">{display_icon}</span>

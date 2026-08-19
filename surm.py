@@ -15,6 +15,11 @@ from pathlib import Path
 
 import streamlit as st
 
+from components.header import render_header as render_shared_header
+from components.workflow import render_page_footer, render_page_frame, render_workflow_list
+from utils.analytics import build_study_analytics
+from utils.workflow import current_stage, stage_results, validate_stage
+
 
 # ============================================================================
 # APPLICATION CONFIGURATION
@@ -148,89 +153,15 @@ def render_header() -> None:
     """
     Render the persistent application header.
     """
-
     ss = st.session_state
 
-    field = ss.get("field_name", "").strip()
-    project = ss.get("project_name", "").strip()
-    phase = ss.get("project_phase", "").strip()
-
-    field_label = field if field else "Field not configured"
-    project_label = project if project else "Project not configured"
-    phase_label = phase if phase else "Phase not configured"
-
-    saved = bool(ss.get("_last_saved"))
-
-    status_label = "Saved" if saved else "Draft"
-    status_class = "saved" if saved else "draft"
-
-    st.markdown(
-        f"""
-        <div class="surm-header">
-
-            <div class="surm-header-brand">
-
-                <div class="surm-logo">
-                    🛢️
-                </div>
-
-                <div>
-                    <div class="surm-eyebrow">
-                        PETRONAS CARIGALI
-                    </div>
-
-                    <div class="surm-title">
-                        {APP_NAME}
-                    </div>
-
-                    <div class="surm-subtitle">
-                        {APP_SUBTITLE}
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="surm-header-meta">
-
-                <div class="surm-meta-item">
-                    <span class="surm-meta-label">
-                        Field
-                    </span>
-
-                    <span class="surm-meta-value">
-                        {field_label}
-                    </span>
-                </div>
-
-                <div class="surm-meta-item">
-                    <span class="surm-meta-label">
-                        Project
-                    </span>
-
-                    <span class="surm-meta-value">
-                        {project_label}
-                    </span>
-                </div>
-
-                <div class="surm-meta-item">
-                    <span class="surm-meta-label">
-                        Phase
-                    </span>
-
-                    <span class="surm-meta-value">
-                        {phase_label}
-                    </span>
-                </div>
-
-                <span class="surm-status {status_class}">
-                    {status_label}
-                </span>
-
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True,
+    render_shared_header(
+        field=ss.get("field_name"),
+        project=ss.get("project_name"),
+        phase=ss.get("project_phase"),
+        app_name=APP_NAME,
+        subtitle=APP_SUBTITLE,
+        saved=bool(ss.get("_last_saved")),
     )
 
 
@@ -433,6 +364,33 @@ def render_sidebar() -> None:
             "Progress is based on completion of the core study stages."
         )
 
+        st.markdown(
+            '<div class="sidebar-section-title">Study Workflow</div>',
+            unsafe_allow_html=True,
+        )
+
+        workflow_items = [
+            {
+                "number": index,
+                "label": label.split(" ", 1)[-1],
+                "page": label,
+                "completed": stage.complete,
+                "locked": not stage.available,
+            }
+            for index, (label, stage) in enumerate(
+                zip(
+                    list(PAGE_DEFINITIONS.keys())[3:11],
+                    stage_results(ss),
+                ),
+                start=1,
+            )
+        ]
+
+        render_workflow_list(
+            workflow_items,
+            current_page=ss.get("current_page"),
+        )
+
         # --------------------------------------------------------------------
         # STATISTICS
         # --------------------------------------------------------------------
@@ -530,6 +488,9 @@ def render_sidebar() -> None:
         else:
             st.caption("No save recorded yet.")
 
+        if ss.get("_resume_message"):
+            st.success(ss["_resume_message"])
+
         st.divider()
 
         # --------------------------------------------------------------------
@@ -565,47 +526,25 @@ def render_sidebar() -> None:
             col_load, col_delete = st.columns(2)
 
             with col_load:
-
-                if st.button(
+                st.button(
                     "Load",
                     key="load_saved_session",
                     use_container_width=True,
-                ):
-
-                    success = load_session_record(
-                        selected_session
-                    )
-
-                    if success:
-                        st.success("Session loaded.")
-                        st.rerun()
-                    else:
-                        st.error("Unable to load session.")
+                    on_click=load_session_record,
+                    args=(selected_session,),
+                )
 
             with col_delete:
-
-                if st.button(
+                st.button(
                     "Delete",
                     key="delete_saved_session",
                     use_container_width=True,
-                ):
-
-                    success = delete_session(
-                        selected_session.get(
-                            "project_name",
-                            "",
-                        ),
-                        selected_session.get(
-                            "field_name",
-                            "",
-                        ),
-                    )
-
-                    if success:
-                        st.success("Session deleted.")
-                        st.rerun()
-                    else:
-                        st.error("Unable to delete session.")
+                    on_click=delete_session,
+                    args=(
+                        selected_session.get("project_name", ""),
+                        selected_session.get("field_name", ""),
+                    ),
+                )
 
         else:
             st.caption("No saved sessions found.")
@@ -681,16 +620,95 @@ def render_navigation() -> None:
     """
 
     page_names = list(PAGE_DEFINITIONS.keys())
+    selected_page = st.session_state.get("current_page", page_names[0])
+    if selected_page not in PAGE_DEFINITIONS:
+        selected_page = page_names[0]
 
-    selected_page = st.sidebar.radio(
-        "Study workflow",
-        page_names,
-        key="current_page",
+    selected_index = page_names.index(selected_page)
+    workflow_index = selected_index - 3
+    is_workflow_page = 0 <= workflow_index < 8
+    title = selected_page.split(" ", 1)[-1]
+    descriptions = {
+        "📋 Overview": "A live view of study progress, outputs, and the next recommended step.",
+        "👥 Team": "Maintain the people and roles contributing to this study.",
+        "📖 How to Use": "A concise guide to the SURM study workflow.",
+        "1️⃣ Uncertainties": "Select and refine the subsurface uncertainties relevant to the study.",
+        "2️⃣ Key Decisions": "Define the decisions that the uncertainty assessment must support.",
+        "3️⃣ Impact Assessment": "Rate uncertainty degree and decision impact to build the ranking.",
+        "4️⃣ Key Uncertainties": "Review the ranked uncertainties and select those for resolution planning.",
+        "5️⃣ Resolution List": "Map selected uncertainties to the actions that can resolve them.",
+        "6️⃣ Resolution Planner": "Turn selected resolution actions into an owned, trackable workplan.",
+        "7️⃣ Risk Register": "Convert study outputs into a managed risk register and bowtie view.",
+        "📄 PRA Output": "Review the read-only portfolio output generated from the risk register.",
+    }
+
+    if is_workflow_page:
+        stage_key = stage_results(st.session_state)[workflow_index].key
+        allowed, reason = validate_stage(st.session_state, stage_key)
+        if not allowed:
+            render_page_frame(title, descriptions.get(selected_page, "SURM study workspace."), step=workflow_index + 1)
+            st.warning(f"This stage is not ready yet. {reason}")
+            st.info(f"Current study stage: {current_stage(st.session_state).label}")
+            render_page_footer(previous_page=page_names[selected_index - 1] if selected_index else None)
+            return
+
+    render_page_frame(
+        title,
+        descriptions.get(selected_page, "SURM study workspace."),
+        step=workflow_index + 1 if is_workflow_page else None,
     )
+    PAGE_DEFINITIONS[selected_page]()
 
-    renderer = PAGE_DEFINITIONS[selected_page]
+    previous_page = page_names[selected_index - 1] if selected_index else None
+    next_page = page_names[selected_index + 1] if selected_index < len(page_names) - 1 else None
+    render_page_footer(previous_page=previous_page, next_page=next_page)
 
-    renderer()
+
+def render_top_navigation() -> None:
+    """Render the primary page switcher above the anchored application header."""
+
+    page_names = list(PAGE_DEFINITIONS.keys())
+    current_page = st.session_state.get("current_page", page_names[0])
+    current_index = page_names.index(current_page) if current_page in page_names else 0
+
+    def sync_navigation() -> None:
+        st.session_state["current_page"] = st.session_state["top_navigation"]
+
+    def choose_page(page: str) -> None:
+        st.session_state["current_page"] = page
+        st.session_state["top_navigation"] = page
+
+    if "top_navigation" not in st.session_state:
+        st.session_state["top_navigation"] = current_page
+    elif st.session_state["top_navigation"] not in page_names:
+        st.session_state["top_navigation"] = current_page
+
+    st.markdown('<div class="surm-top-navigation-label">Study navigation</div>', unsafe_allow_html=True)
+    nav_left, nav_select, nav_right = st.columns([1, 5, 1])
+    with nav_left:
+        st.button(
+            "← Previous",
+            key="top_previous",
+            disabled=current_index == 0,
+            on_click=choose_page,
+            args=(page_names[current_index - 1],) if current_index else (page_names[0],),
+        )
+    with nav_select:
+        st.selectbox(
+            "Navigate to",
+            page_names,
+            key="top_navigation",
+            on_change=sync_navigation,
+            label_visibility="collapsed",
+        )
+    with nav_right:
+        st.button(
+            "Next →",
+            key="top_next",
+            disabled=current_index == len(page_names) - 1,
+            on_click=choose_page,
+            args=(page_names[current_index + 1],) if current_index < len(page_names) - 1 else (page_names[-1],),
+        )
 
 
 # ============================================================================
@@ -767,23 +785,16 @@ def main() -> None:
 
     apply_theme()
 
-    # ------------------------------------------------------------------------
-    # 5. Render sidebar
-    # ------------------------------------------------------------------------
+    # Reserve the header's visual position, process page inputs, then fill the
+    # header and live sidebar from the newest session values.
+    header_slot = st.empty()
+    render_top_navigation()
+    render_navigation()
+
+    with header_slot.container():
+        render_header()
 
     render_sidebar()
-
-    # ------------------------------------------------------------------------
-    # 6. Render header
-    # ------------------------------------------------------------------------
-
-    render_header()
-
-    # ------------------------------------------------------------------------
-    # 7. Render page
-    # ------------------------------------------------------------------------
-
-    render_navigation()
 
     # ------------------------------------------------------------------------
     # 8. Render footer

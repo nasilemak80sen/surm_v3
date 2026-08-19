@@ -55,7 +55,8 @@ def render():
 
         edited = st.data_editor(
             df_in, column_config=col_cfg, hide_index=True,
-            width="stretch", num_rows="fixed", key="res_list_editor",
+            width="stretch", num_rows="fixed",
+            key=f"res_list_editor_{st.session_state.get('study_id', 'new')}",
         )
 
     # ── Handle submission ─────────────────────────────────────────────

@@ -26,4 +26,7 @@ desktop.ini
 
 # Output
 *.zip
+sessions.db
+*.db-shm
+*.db-wal
 notebooks/.ipynb_checkpoints/

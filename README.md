@@ -44,7 +44,7 @@ source .venv/bin/activate      # Mac/Linux
 pip install -r requirements.txt
 
 # 3. Run
-streamlit run app.py
+streamlit run surm.py
 ```
 
 ---
@@ -63,7 +63,7 @@ streamlit run app.py
    Your repo should look like:
    ```
    surm-toolkit/
-   ├── app.py
+   ├── surm.py
    ├── requirements.txt
    ├── .streamlit/config.toml
    ├── data/
@@ -76,7 +76,7 @@ streamlit run app.py
 
 5. Click **"New app"** → select your repository → set:
    - **Branch:** `main`
-   - **Main file path:** `app.py`
+   - **Main file path:** `surm.py`
 
 6. Click **Deploy**. In ~2 minutes you'll have a shareable URL like:  
    `https://your-name-surm-toolkit.streamlit.app`
@@ -133,7 +133,7 @@ docker-compose up -d
 | 7️⃣ Risk Register | Populate register, fill contingency, generate Bowtie |
 | 📄 PRA Output | Review final PRA table, download full Excel |
 
-> ⚠️ **Session is not saved.** Always export to Excel before closing the browser.
+> Sessions are saved to SQLite locally or PostgreSQL when `DATABASE_URL` is configured.
 
 ---
 
@@ -141,7 +141,7 @@ docker-compose up -d
 
 ```
 surm_app/
-├── app.py                        Main entry point
+├── surm.py                       Main entry point
 ├── requirements.txt              Python dependencies
 ├── launch.bat                    Windows one-click launcher
 ├── launch.sh                     Mac/Linux launcher
@@ -194,8 +194,8 @@ surm_app/
 |-------|-----|
 | `ModuleNotFoundError` | Run `pip install -r requirements.txt` |
 | PNG export not working | `pip install kaleido` |
-| `use_container_width` warnings | Already patched — ensure you have the latest zip |
-| App won't start on port 8501 | Another app may use that port. Run: `streamlit run app.py --server.port 8502` |
+| `use_container_width` warnings | Update calls to use `width='stretch'` |
+| App won't start on port 8501 | Another app may use that port. Run: `streamlit run surm.py --server.port 8502` |
 | Blank tab content | Check that session state was initialised — reload the page |
 
 ---

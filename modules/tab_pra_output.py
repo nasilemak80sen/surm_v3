@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 from utils.logic import build_pra_output
 from utils.export_excel import build_excel_export
+from utils.analytics import build_executive_summary
 
 _RISK_BG  = {"Extreme":"#FFEBEE","High":"#FFF3E0","Medium":"#FFFDE7","Low":"#E8F5E9"}
 _RISK_CLR = {"Extreme":"#C00000","High":"#E64A19","Medium":"#F57F17","Low":"#2E7D32"}
@@ -21,6 +22,9 @@ def render():
     if pra_df.empty:
         st.warning("No PRA data to display.")
         return
+
+    st.markdown('<div class="surm-section-header">Executive Summary</div>', unsafe_allow_html=True)
+    st.info(build_executive_summary(dict(st.session_state)))
 
     # ── Summary metrics ───────────────────────────────────────────────
     st.markdown('<div class="surm-section-header">📊 Risk Portfolio Summary</div>', unsafe_allow_html=True)
