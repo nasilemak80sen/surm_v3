@@ -241,6 +241,15 @@ def render():
             st.session_state["field_name"] = ""
             st.session_state["project_phase"] = ""
             st.rerun()
+        st.selectbox("Project Phase", _PHASES, key="project_phase")
+
+    clear_col, _ = st.columns([1, 4])
+    with clear_col:
+        if st.button("Clear Study Details", key="clear_study_details"):
+            st.session_state["project_name"] = ""
+            st.session_state["field_name"] = ""
+            st.session_state["project_phase"] = ""
+            st.rerun()
 
     # ── Manual save on this page too ──────────────────────────────────
     col_save, col_hint = st.columns([1, 4])
@@ -272,10 +281,16 @@ def render():
             st.markdown('<div class="signoff-box">', unsafe_allow_html=True)
             st.text_input(
                 "Name", key=f"{key}_name",
+            st.text_input(
+                "Name", key=f"{key}_name",
                 placeholder="Full name", label_visibility="collapsed")
             st.text_input(
                 "Role", key=f"{key}_role",
+            st.text_input(
+                "Role", key=f"{key}_role",
                 placeholder="Designation", label_visibility="collapsed")
+            st.text_input(
+                "Date", key=f"{key}_date",
             st.text_input(
                 "Date", key=f"{key}_date",
                 placeholder="DD/MM/YYYY", label_visibility="collapsed")

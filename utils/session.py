@@ -98,6 +98,11 @@ def init_session():
         "study_revision":      0,
         "study_change_log":    [],
 
+        # ── Study governance ─────────────────────────────────────────
+        "study_lifecycle":     "Draft",
+        "study_revision":      0,
+        "study_change_log":    [],
+
         # ── Master reference data (read-only) ─────────────────────────
         "_mapping":            mapping,
 
@@ -109,6 +114,10 @@ def init_session():
         "ui_primary_color":    "#1F6B3A",
         "ui_background_color": "#F8FBFC",
     }
+
+    # Persistence uses this set to distinguish durable study data from
+    # transient widget state. Keep it synchronized with the defaults.
+    DEFAULT_SESSION_STATE.update(defaults)
 
     # Persistence uses this set to distinguish durable study data from
     # transient widget state. Keep it synchronized with the defaults.

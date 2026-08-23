@@ -135,6 +135,7 @@ def _has_user_progress(session: dict) -> bool:
 
 
 def load_session(project_name: str, field_name: str, phase_name: str = "") -> bool:
+def load_session(project_name: str, field_name: str, phase_name: str = "") -> bool:
     """Restore session state from database. Returns True on success."""
     db = get_db()
     data = db.load(project_name, field_name)
@@ -148,6 +149,24 @@ def load_session(project_name: str, field_name: str, phase_name: str = "") -> bo
         if mapping:
             st.session_state["_mapping"] = mapping
         meta = data.get("meta", {})
+        # Older saves may contain an empty session payload because durable
+        # keys were not registered. The database row still has study identity.
+        st.session_state["project_name"] = (
+            data.get("session", {}).get("project_name")
+            or meta.get("project_name")
+            or ""
+        )
+        st.session_state["field_name"] = (
+            data.get("session", {}).get("field_name")
+            or meta.get("field_name")
+            or ""
+        )
+        st.session_state["project_phase"] = (
+            data.get("session", {}).get("project_phase")
+            or meta.get("project_phase")
+            or phase_name
+            or ""
+        )
         # Older saves may contain an empty session payload because durable
         # keys were not registered. The database row still has study identity.
         st.session_state["project_name"] = (
@@ -192,6 +211,9 @@ def load_session_record(session_meta: dict) -> bool:
     field_name = (session_meta or {}).get("field_name", "").strip()
     if not project_name or not field_name:
         return False
+    phase_name = (session_meta or {}).get("phase", "")
+    if phase_name:
+        return load_session(project_name, field_name, phase_name)
     phase_name = (session_meta or {}).get("phase", "")
     if phase_name:
         return load_session(project_name, field_name, phase_name)
