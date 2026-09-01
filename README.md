@@ -85,6 +85,23 @@ streamlit run surm.py
 
 > 💡 Free tier gives you 1 app and sufficient compute for a small team. Upgrade to Streamlit Teams ($) for private apps with password protection.
 
+### Keep the Community Cloud app warm
+
+The repository includes `.github/workflows/keep-streamlit-awake.yml`. It checks the
+deployed app every six hours and can also be run manually from the GitHub Actions
+page. This is a best-effort workaround for Community Cloud sleep behaviour, not a
+guaranteed always-on service.
+
+Configure it once in GitHub:
+
+1. Open **Settings → Secrets and variables → Actions → Variables**.
+2. Add a repository variable named `SURM_APP_URL`, for example:
+   `https://your-name-surm-toolkit.streamlit.app/`.
+3. Open **Actions → Keep SURM Awake → Run workflow** to test it.
+
+The manual run also accepts an optional URL override. The workflow reports the HTTP
+status and fails when the app returns HTTP 400 or higher.
+
 ---
 
 ## Option 3 — Docker (For IT-managed or server deployment)
