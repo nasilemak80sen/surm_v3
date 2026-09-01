@@ -1,41 +1,34 @@
 # ═════════════════════════════════════════════════════════════════
 # SURM Toolkit v2.0 — Streamlit Configuration
-# Corporate/Enterprise Edition
+# Corporate / Enterprise Edition
 # ═════════════════════════════════════════════════════════════════
+
 
 [theme]
-base                     = "light"  # ✅ FIXED: Was "dark", now matches colors
-primaryColor             = "#00a19c"  # PETRONAS Green
-backgroundColor          = "#FFFFFF"  # Pure white
-secondaryBackgroundColor = "#F8F9FA"  # Light gray
-textColor                = "#0A0E27"  # Near-black
-font                     = "sans serif"  # ✅ FIXED: Removed space
+base = "light"
+primaryColor = "#00a19c"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F8F9FA"
+textColor = "#0A0E27"
+font = "sans serif"
 
 [client]
-toolbarMode              = "minimal"  # Clean UI, user can toggle
-showErrorDetails         = true  # Show Python errors (development)
+toolbarMode = "minimal"
+showErrorDetails = true
 
 [server]
-port                     = 8501
-headless                 = true  # Don't open browser automatically
-enableXsrfProtection     = true  # ✅ Enabled by default (keep)
-maxUploadSize            = 50  # MB
-runOnSave                = true  # Reload on file save (development)
-fileWatcherType          = "auto"
+port = 8501
+headless = true
+enableXsrfProtection = true
+maxUploadSize = 50
+runOnSave = true
+fileWatcherType = "auto"
 
 [logger]
-level                    = "info"
-messageFormat            = "%(asctime)s [%(name)s] %(message)s"
+level = "info"
+messageFormat = "%(asctime)s [%(name)s] %(message)s"
 
 [browser]
-gatherUsageStats         = false  # ✅ FIXED: Disable for privacy
-serverAddress            = "localhost"  # Internal only
-serverPort               = 8501
-
-# ═════════════════════════════════════════════════════════════════
-# DEPLOYMENT-SPECIFIC OVERRIDES
-# ═════════════════════════════════════════════════════════════════
-
-# For Streamlit Cloud, create .streamlit/secrets.toml:
-# [database]
-# DATABASE_URL = "postgresql://user:pass@host/db"
+gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501

@@ -4,13 +4,9 @@ import pandas as pd
 from utils.persistence import save_session
 
 def render():
-    st.markdown('<div class="surm-instruction">ℹ️ Record all team members who contributed to this SURM. This will appear in the Excel export documentation sheet.</div>', unsafe_allow_html=True)
+    st.info("Add the people involved in this study. Their names and roles will appear in the exported documentation.")
     st.markdown('<div class="surm-section-header">👥 Team Members</div>', unsafe_allow_html=True)
 
-    rows = st.session_state.get("team_members", [{"Name":"","Function / Role":"","Date":""}])
-    df = pd.DataFrame(rows)
-    if "Date (DD/MM/YYYY)" not in df.columns:
-        df["Date (DD/MM/YYYY)"] = df.pop("Date") if "Date" in df.columns else ""
     rows = st.session_state.get("team_members", [{"Name":"","Function / Role":"","Date":""}])
     df = pd.DataFrame(rows)
     if "Date (DD/MM/YYYY)" not in df.columns:
@@ -26,13 +22,10 @@ def render():
             "Function / Role":  st.column_config.SelectboxColumn("Function / Role", width="medium",
                 options=["","ES","PE","RE","G&G","PT","PP","FE","D&C","FDP Lead","Other"]),
             "Date (DD/MM/YYYY)": st.column_config.TextColumn("Date (DD/MM/YYYY)", width="small"),
-            "Date (DD/MM/YYYY)": st.column_config.TextColumn("Date (DD/MM/YYYY)", width="small"),
         },
         hide_index=True,
         key=editor_key,
     )
-    # Keep the editor's rows intact. Removing blank rows during render causes
-    # Streamlit to reconcile the widget with stale data on the next rerun.
     # Keep the editor's rows intact. Removing blank rows during render causes
     # Streamlit to reconcile the widget with stale data on the next rerun.
     raw = edited.to_dict("records")
@@ -52,23 +45,6 @@ def render():
             if any(str(value).strip() for value in row.values())
         ] or [{"Name": "", "Function / Role": "", "Date": ""}]
         st.rerun()
-    st.session_state["team_members"] = [
-        {
-            "Name": str(row.get("Name") or "").strip(),
-            "Function / Role": str(row.get("Function / Role") or "").strip(),
-            "Date": str(row.get("Date (DD/MM/YYYY)") or "").strip(),
-        }
-        for row in raw
-    ] or [{"Name": "", "Function / Role": "", "Date": ""}]
-    st.metric("Team Size", len([r for r in raw if str(r.get("Name") or "").strip()]))
-
-    if st.button("Remove Empty Team Rows", key="remove_empty_team_rows"):
-        st.session_state["team_members"] = [
-            row for row in st.session_state["team_members"]
-            if any(str(value).strip() for value in row.values())
-        ] or [{"Name": "", "Function / Role": "", "Date": ""}]
-        st.rerun()
-
     # Per-tab save button
     col1, col2 = st.columns([1, 4])
     with col1:

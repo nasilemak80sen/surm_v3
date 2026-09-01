@@ -12,6 +12,8 @@ from uuid import uuid4
 DEFAULT_SESSION_STATE = {
     "project_name", "field_name", "project_phase",
     "study_id", "study_owner",
+    "study_mode", "current_page", "top_navigation",
+    "study_access_mode",
     "prep_name", "prep_role", "prep_date",
     "rev_gg_name", "rev_gg_role", "rev_gg_date",
     "rev_re_name", "rev_re_role", "rev_re_date",
@@ -40,6 +42,10 @@ def init_session():
         "project_phase":       "",
         "study_id":            str(uuid4()),
         "study_owner":         os.environ.get("SURM_USER", "local-user"),
+        "study_mode":          "new",
+        "study_access_mode":   "edit",
+        "current_page":        "📋 Overview",
+        "top_navigation":      "📋 Overview",
         "prep_name":           "",
         "prep_role":           "",
         "prep_date":           "",
@@ -98,11 +104,6 @@ def init_session():
         "study_revision":      0,
         "study_change_log":    [],
 
-        # ── Study governance ─────────────────────────────────────────
-        "study_lifecycle":     "Draft",
-        "study_revision":      0,
-        "study_change_log":    [],
-
         # ── Master reference data (read-only) ─────────────────────────
         "_mapping":            mapping,
 
@@ -115,18 +116,22 @@ def init_session():
         "ui_background_color": "#F8FBFC",
     }
 
-    # Persistence uses this set to distinguish durable study data from
-    # transient widget state. Keep it synchronized with the defaults.
-    DEFAULT_SESSION_STATE.update(defaults)
-
-    # Persistence uses this set to distinguish durable study data from
-    # transient widget state. Keep it synchronized with the defaults.
     DEFAULT_SESSION_STATE.update(defaults)
 
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = deepcopy(value)
-            
+
+    if "_mapping" not in st.session_state:
+        st.session_state["_mapping"] = mapping
+
+
+def create_new_study() -> None:
+    """Replace the current workspace with a fresh, unsaved study."""
+    st.session_state.clear()
+    init_session()
+
+
 def _build_default_uncertainties(mapping):
     rows = []
     for u in mapping["uncertainties"]:

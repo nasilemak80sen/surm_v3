@@ -228,15 +228,25 @@ class SQLiteDB(SessionDB):
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.execute("""
-                SELECT project_name, field_name, phase, completion_pct, auto_saved, saved_at
+                SELECT project_name, field_name, phase, completion_pct, auto_saved, saved_at, session_json
                 FROM sessions ORDER BY saved_at DESC
             """)
             rows = cursor.fetchall()
             conn.close()
-            return [{
-                "project_name": r[0], "field_name": r[1], "phase": r[2] or "—",
-                "completion": r[3], "auto_saved": bool(r[4]), "saved_at": r[5],
-            } for r in rows]
+            summaries = []
+            for row in rows:
+                payload = json.loads(row[6] or "{}")
+                changes = payload.get("study_change_log", []) or [{}]
+                latest = changes[-1]
+                summaries.append({
+                    "project_name": row[0], "field_name": row[1], "phase": row[2] or "—",
+                    "completion": row[3], "auto_saved": bool(row[4]), "saved_at": row[5],
+                    "study_lifecycle": payload.get("study_lifecycle", "Draft"),
+                    "study_revision": payload.get("study_revision", 0),
+                    "last_edited_by": latest.get("actor", "local-user"),
+                    "last_edited_at": latest.get("saved_at", row[5]),
+                })
+            return summaries
         except Exception as e:
             st.warning(f"SQLite list: {e}")
             return []
@@ -439,17 +449,27 @@ class PostgresDB(SessionDB):
             conn = psycopg2.connect(self.db_url)
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT project_name, field_name, phase, completion_pct, auto_saved, saved_at
+                SELECT project_name, field_name, phase, completion_pct, auto_saved, saved_at, session_json
                 FROM sessions ORDER BY saved_at DESC
             """)
             rows = cursor.fetchall()
             cursor.close()
             conn.close()
-            return [{
-                "project_name": r[0], "field_name": r[1], "phase": r[2] or "—",
-                "completion": r[3], "auto_saved": bool(r[4]),
-                "saved_at": r[5].isoformat() if hasattr(r[5], 'isoformat') else str(r[5]),
-            } for r in rows]
+            summaries = []
+            for row in rows:
+                payload = json.loads(row[6] or "{}")
+                changes = payload.get("study_change_log", []) or [{}]
+                latest = changes[-1]
+                saved_at = row[5].isoformat() if hasattr(row[5], "isoformat") else str(row[5])
+                summaries.append({
+                    "project_name": row[0], "field_name": row[1], "phase": row[2] or "—",
+                    "completion": row[3], "auto_saved": bool(row[4]), "saved_at": saved_at,
+                    "study_lifecycle": payload.get("study_lifecycle", "Draft"),
+                    "study_revision": payload.get("study_revision", 0),
+                    "last_edited_by": latest.get("actor", "local-user"),
+                    "last_edited_at": latest.get("saved_at", saved_at),
+                })
+            return summaries
         except Exception as e:
             st.warning(f"PostgreSQL list: {e}")
             return []

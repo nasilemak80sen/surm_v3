@@ -27,12 +27,12 @@ def render():
         st.info("⬅️ Complete **Tab 4** first.")
         return
 
-    st.markdown('<div class="surm-instruction">ℹ️ Click <b>Populate Risk Register</b> to auto-build from upstream tabs. Fill in the editable columns (Owner, Contingency, Consequence, Likelihood, Impact). Then generate a Bowtie for any risk.</div>', unsafe_allow_html=True)
+    st.info("Build the register from the prioritised uncertainties, then complete owner, contingency, consequence, likelihood, and impact.")
 
     # ── Populate button ───────────────────────────────────────────────
     col_btn, _ = st.columns([1, 4])
     with col_btn:
-        if st.button("🔄 Populate Risk Register", type="primary"):
+        if st.button("🔄 Populate Risk Register", type="primary", key="populate_risk_register"):
             ku_df   = pd.DataFrame(ku_list)
             options = st.session_state["_mapping"]["resolution_options"]
             res_rows = []
@@ -117,14 +117,14 @@ def render():
     # ── Bowtie generator ──────────────────────────────────────────────
     st.divider()
     st.markdown('<div class="surm-section-header">🦋 Bowtie Diagram Generator</div>', unsafe_allow_html=True)
-    st.markdown('<div class="surm-instruction">ℹ️ Select a risk and click <b>Generate Bowtie</b>. Fill in Consequence and Contingency Plan in the register above for a complete diagram.</div>', unsafe_allow_html=True)
+    st.info("Select a risk to generate its Bowtie. Complete the consequence and contingency fields above for a useful diagram.")
 
     risk_names = rr_df_cur["Risk"].tolist()
     col_sel, col_gen = st.columns([3, 1])
     with col_sel:
-        selected_risk = st.selectbox("Select risk:", risk_names, label_visibility="collapsed")
+        selected_risk = st.selectbox("Select risk:", risk_names, label_visibility="collapsed", key="bowtie_risk_selection")
     with col_gen:
-        gen_btn = st.button("🦋 Generate Bowtie", type="primary")
+        gen_btn = st.button("🦋 Generate Bowtie", type="primary", key="generate_bowtie")
 
     if gen_btn:
         risk_row = rr_df_cur[rr_df_cur["Risk"] == selected_risk].iloc[0].to_dict()

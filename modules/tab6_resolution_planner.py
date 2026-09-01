@@ -17,12 +17,12 @@ def render():
         st.info("⬅️ Go to **Tab 5** and select resolution actions first.")
         return
 
-    st.markdown('<div class="surm-instruction">ℹ️ Click <b>Update Planner</b> to load actions from Tab 5. Fill in description, resources, dates, owner and progress. Use bulk workplan toggles to add/remove all at once. Click <b>Save Planner</b> when done.</div>', unsafe_allow_html=True)
+    st.info("Load actions from Resolution List, then assign owners, dates, resources, progress, and workplan status. Save before switching pages.")
 
     # ── Update trigger ────────────────────────────────────────────────
     col_btn, _ = st.columns([1, 4])
     with col_btn:
-        if st.button("🔄 Update Planner from Tab 5", type="primary"):
+        if st.button("🔄 Update Planner from Tab 5", type="primary", key="update_resolution_planner"):
             options = st.session_state["_mapping"]["resolution_options"]
             ku_df   = pd.DataFrame(ku_list) if ku_list else pd.DataFrame()
             if ku_df.empty:

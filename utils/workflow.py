@@ -18,7 +18,6 @@ class WorkflowStage:
     available: bool
     reason: str = ""
 
-<<<<<<< HEAD
     @property
     def state(self) -> str:
         if self.complete:
@@ -26,9 +25,6 @@ class WorkflowStage:
         if not self.available:
             return "Blocked"
         return "In Progress"
-
-=======
->>>>>>> fdabfa70d79f5ac5259db5e93512c9a3dc1cbc85
 
 STAGES = (
     ("uncertainties", "Uncertainties"),

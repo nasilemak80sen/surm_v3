@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-
+from typing import Any, cast
 import streamlit as st
 
 from components.header import render_header as render_shared_header
 from components.workflow import render_page_footer, render_page_frame, render_workflow_list
 from utils.analytics import build_study_analytics
+from utils.styles import load_css
 from utils.workflow import current_stage, stage_results, validate_stage
 
 
@@ -49,8 +50,7 @@ st.set_page_config(
 # IMPORT APPLICATION SERVICES
 # ============================================================================
 
-from utils.session import init_session
-from utils.persistence import resume_latest_session
+from utils.session import create_new_study, init_session
 
 
 # ============================================================================
@@ -68,41 +68,12 @@ from modules.tab5_resolution_list import render as render_resolution_list
 from modules.tab6_resolution_planner import render as render_resolution_planner
 from modules.tab7_risk_register import render as render_risk_register
 from modules.tab_pra_output import render as render_pra_output
+from modules.tab_study_repository import render as render_study_repository
 
 
 # ============================================================================
 # CSS
 # ============================================================================
-
-def load_css() -> None:
-    """
-    Load the application's external stylesheet.
-
-    CSS must live in assets/style.css.
-    No raw CSS should be embedded in this Python file.
-    """
-
-    css_path = ASSETS_DIR / "style.css"
-
-    if not css_path.exists():
-        st.warning(
-            f"Stylesheet not found: {css_path}"
-        )
-        return
-
-    try:
-        css = css_path.read_text(encoding="utf-8")
-
-        st.markdown(
-            f"<style>{css}</style>",
-            unsafe_allow_html=True,
-        )
-
-    except OSError as exc:
-        st.error(
-            f"Unable to load application stylesheet: {exc}"
-        )
-
 
 # ============================================================================
 # THEME
@@ -247,6 +218,57 @@ def calculate_study_progress() -> dict:
     }
 
 
+def _load_selected_session(session_meta: dict) -> None:
+    """Streamlit callback for explicit saved-study loading."""
+    from utils.persistence import load_session_record
+
+    if not load_session_record(session_meta):
+        st.session_state["_resume_message"] = "Unable to load the selected study."
+
+
+def _delete_selected_session(project_name: str, field_name: str) -> None:
+    """Streamlit callback for deleting a saved study."""
+    from utils.persistence import delete_session
+
+    if delete_session(project_name, field_name):
+        if (
+            st.session_state.get("project_name", "").strip() == project_name
+            and st.session_state.get("field_name", "").strip() == field_name
+        ):
+            create_new_study()
+    else:
+        st.session_state["_resume_message"] = "Unable to delete the selected study."
+
+
+def _render_read_only_page(page_name: str) -> None:
+    """Render study data without creating editable Streamlit widgets."""
+    section_keys = {
+        "📋 Overview": ["project_name", "field_name", "project_phase", "study_lifecycle", "study_revision"],
+        "👥 Team": ["team_members"],
+        "1️⃣ Uncertainties": ["uncertainties"],
+        "2️⃣ Key Decisions": ["key_decisions"],
+        "3️⃣ Impact Assessment": ["impact_assessment"],
+        "4️⃣ Key Uncertainties": ["key_uncertainties"],
+        "5️⃣ Resolution List": ["resolution_list"],
+        "6️⃣ Resolution Planner": ["resolution_planner"],
+        "7️⃣ Risk Register": ["risk_register"],
+        "📄 PRA Output": ["pra_output"],
+    }
+    st.info("Read-only view. Select Edit Study to unlock changes.")
+    for key in section_keys.get(page_name, []):
+        value = st.session_state.get(key, "")
+        st.markdown(f"### {key.replace('_', ' ').title()}")
+        if isinstance(value, (list, dict)):
+            st.dataframe(value, use_container_width=True, hide_index=True)
+        else:
+            st.write(value or "Not configured")
+
+
+def _enable_edit_mode() -> None:
+    st.session_state["study_access_mode"] = "edit"
+    st.rerun()
+
+
 # ============================================================================
 # SIDEBAR
 # ============================================================================
@@ -273,6 +295,7 @@ def render_sidebar() -> None:
 
     ss = st.session_state
     stats = calculate_study_progress()
+    session = cast(dict[str, Any], dict(ss))
 
     with st.sidebar:
 
@@ -379,8 +402,8 @@ def render_sidebar() -> None:
             }
             for index, (label, stage) in enumerate(
                 zip(
-                    list(PAGE_DEFINITIONS.keys())[3:11],
-                    stage_results(ss),
+                    list(PAGE_DEFINITIONS.keys())[4:12],
+                    stage_results(session),
                 ),
                 start=1,
             )
@@ -468,6 +491,14 @@ def render_sidebar() -> None:
                         "Unable to save the session."
                     )
 
+        if st.button(
+            "＋ New Study",
+            key="sidebar_new_study",
+            use_container_width=True,
+        ):
+            create_new_study()
+            st.rerun()
+
         # IMPORTANT:
         # Streamlit owns this widget's state.
         # We never assign st.session_state["_auto_save_enabled"]
@@ -530,7 +561,7 @@ def render_sidebar() -> None:
                     "Load",
                     key="load_saved_session",
                     use_container_width=True,
-                    on_click=load_session_record,
+                    on_click=_load_selected_session,
                     args=(selected_session,),
                 )
 
@@ -539,7 +570,7 @@ def render_sidebar() -> None:
                     "Delete",
                     key="delete_saved_session",
                     use_container_width=True,
-                    on_click=delete_session,
+                    on_click=_delete_selected_session,
                     args=(
                         selected_session.get("project_name", ""),
                         selected_session.get("field_name", ""),
@@ -547,7 +578,7 @@ def render_sidebar() -> None:
                 )
 
         else:
-            st.caption("No saved sessions found.")
+            st.info("No saved studies yet. Create and save a study to make it available here.")
 
         st.divider()
 
@@ -597,6 +628,7 @@ def render_sidebar() -> None:
 # ============================================================================
 
 PAGE_DEFINITIONS = {
+    "🗂️ Study Repository": render_study_repository,
     "📋 Overview": render_frontpage,
     "👥 Team": render_documentation,
     "📖 How to Use": render_how_to_use,
@@ -625,10 +657,11 @@ def render_navigation() -> None:
         selected_page = page_names[0]
 
     selected_index = page_names.index(selected_page)
-    workflow_index = selected_index - 3
+    workflow_index = selected_index - 4
     is_workflow_page = 0 <= workflow_index < 8
     title = selected_page.split(" ", 1)[-1]
     descriptions = {
+        "🗂️ Study Repository": "Browse, view, and edit saved field studies.",
         "📋 Overview": "A live view of study progress, outputs, and the next recommended step.",
         "👥 Team": "Maintain the people and roles contributing to this study.",
         "📖 How to Use": "A concise guide to the SURM study workflow.",
@@ -643,12 +676,13 @@ def render_navigation() -> None:
     }
 
     if is_workflow_page:
-        stage_key = stage_results(st.session_state)[workflow_index].key
-        allowed, reason = validate_stage(st.session_state, stage_key)
+        session = cast(dict[str, Any], dict(st.session_state))
+        stage_key = stage_results(session)[workflow_index].key
+        allowed, reason = validate_stage(session, stage_key)
         if not allowed:
             render_page_frame(title, descriptions.get(selected_page, "SURM study workspace."), step=workflow_index + 1)
             st.warning(f"This stage is not ready yet. {reason}")
-            st.info(f"Current study stage: {current_stage(st.session_state).label}")
+            st.info(f"Current study stage: {current_stage(session).label}")
             render_page_footer(previous_page=page_names[selected_index - 1] if selected_index else None)
             return
 
@@ -657,7 +691,16 @@ def render_navigation() -> None:
         descriptions.get(selected_page, "SURM study workspace."),
         step=workflow_index + 1 if is_workflow_page else None,
     )
-    PAGE_DEFINITIONS[selected_page]()
+    if (
+        st.session_state.get("study_access_mode") == "view"
+        and selected_page != "🗂️ Study Repository"
+    ):
+        edit_col, _ = st.columns([1, 5])
+        with edit_col:
+            st.button("✏️ Edit Study", key="view_page_edit_study", type="primary", on_click=_enable_edit_mode)
+        _render_read_only_page(selected_page)
+    else:
+        PAGE_DEFINITIONS[selected_page]()
 
     previous_page = page_names[selected_index - 1] if selected_index else None
     next_page = page_names[selected_index + 1] if selected_index < len(page_names) - 1 else None
@@ -744,46 +787,16 @@ def render_footer() -> None:
 # ============================================================================
 # APPLICATION
 # ============================================================================
-
 def main() -> None:
-    """
-    Main application lifecycle.
-
-    The order is deliberate:
-
-        1. Initialise session
-        2. Restore persisted session
-        3. Load CSS
-        4. Apply theme
-        5. Render sidebar
-        6. Render header
-        7. Render current page
-        8. Render footer
-    """
 
     # ------------------------------------------------------------------------
-    # 1. Initialise session state
+    # 1. Initialise session
     # ------------------------------------------------------------------------
-
+    load_css()
     init_session()
 
-    # ------------------------------------------------------------------------
-    # 2. Restore persisted session
-    # ------------------------------------------------------------------------
+    # Saved studies are loaded explicitly from the sidebar.
 
-    resume_latest_session()
-
-    # ------------------------------------------------------------------------
-    # 3. Load external CSS
-    # ------------------------------------------------------------------------
-
-    load_css()
-
-    # ------------------------------------------------------------------------
-    # 4. Apply theme
-    # ------------------------------------------------------------------------
-
-    apply_theme()
 
     # Reserve the header's visual position, process page inputs, then fill the
     # header and live sidebar from the newest session values.
@@ -797,12 +810,10 @@ def main() -> None:
     render_sidebar()
 
     # ------------------------------------------------------------------------
-    # 8. Render footer
+    # 8. Footer
     # ------------------------------------------------------------------------
 
     render_footer()
-
-
 # ============================================================================
 # ENTRY POINT
 # ============================================================================

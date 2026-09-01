@@ -14,7 +14,7 @@ def render():
         st.info("⬅️ Go to **Tab 4** and select uncertainties to include in the plan.")
         return
 
-    st.markdown('<div class="surm-instruction">ℹ️ For each uncertainty, mark <b>Y</b> against the resolution actions that will address it. Use bulk controls to fill or clear all, then fine-tune individually. Click <b>Save Selections</b> when done.</div>', unsafe_allow_html=True)
+    st.info("For each uncertainty, mark Y for the actions that address it. Use bulk controls, refine the matrix, and save your selections.")
 
     options = st.session_state["_mapping"]["resolution_options"]
     ku_df   = pd.DataFrame(ku_list)

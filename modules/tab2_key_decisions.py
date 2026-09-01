@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 
 def render():
-    st.markdown('<div class="surm-instruction">ℹ️ <b>Instructions:</b> List the key decisions this study will drive. Assign a weight factor (1 = low importance, 3 = high importance) to each. These weights determine which uncertainties matter most in the scoring.</div>', unsafe_allow_html=True)
+    st.info("List the decisions this study must support. Use weight 1 for low importance and 3 for high importance; these weights drive prioritisation.")
 
     st.markdown('<div class="surm-section-header">🎯 Key Project Decisions</div>', unsafe_allow_html=True)
 

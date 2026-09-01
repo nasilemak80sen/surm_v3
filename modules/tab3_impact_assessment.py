@@ -22,7 +22,7 @@ def render():
         st.info("⬅️ Go to **Tab 2** and define at least one key decision first.")
         return
 
-    st.markdown('<div class="surm-instruction">ℹ️ Rate each uncertainty\'s <b>Degree</b> (H/M/L) and its impact on each decision. Use the quick-fill buttons to bulk-set a column, then fine-tune rows individually. Click <b>Save Assessment</b> when done — weighted scores update instantly.</div>', unsafe_allow_html=True)
+    st.info("Rate each uncertainty and its impact on every key decision. Use quick-fill for bulk updates, then save to calculate weighted scores and combined ratings.")
 
     decision_names = [d["Key Decision"] for d in decisions]
 

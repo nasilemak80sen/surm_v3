@@ -33,14 +33,10 @@ def build_study_snapshot(session: dict[str, Any]) -> dict[str, Any]:
             "resolutions": session.get("resolution_planner", []),
             "risks": session.get("risk_register", []),
         },
-<<<<<<< HEAD
         "workflow": [
             {**stage.__dict__, "state": stage.state}
             for stage in stage_results(session)
         ],
-=======
-        "workflow": [stage.__dict__ for stage in stage_results(session)],
->>>>>>> fdabfa70d79f5ac5259db5e93512c9a3dc1cbc85
         "analytics": build_study_analytics(session),
     }
 

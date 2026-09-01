@@ -61,7 +61,7 @@ def save_session(auto: bool = False) -> bool:
         except Exception:
             return ""
 
-    document = StudyDocument.from_session(dict(st.session_state))
+    document = StudyDocument.from_session({str(key): value for key, value in st.session_state.items()})
     document.study_revision = int(st.session_state.get("study_revision", 0)) + 1
     document.study_change_log = list(document.study_change_log or []) + [{
         "revision": document.study_revision,
@@ -135,7 +135,6 @@ def _has_user_progress(session: dict) -> bool:
 
 
 def load_session(project_name: str, field_name: str, phase_name: str = "") -> bool:
-def load_session(project_name: str, field_name: str, phase_name: str = "") -> bool:
     """Restore session state from database. Returns True on success."""
     db = get_db()
     data = db.load(project_name, field_name)
@@ -167,28 +166,12 @@ def load_session(project_name: str, field_name: str, phase_name: str = "") -> bo
             or phase_name
             or ""
         )
-        # Older saves may contain an empty session payload because durable
-        # keys were not registered. The database row still has study identity.
-        st.session_state["project_name"] = (
-            data.get("session", {}).get("project_name")
-            or meta.get("project_name")
-            or ""
-        )
-        st.session_state["field_name"] = (
-            data.get("session", {}).get("field_name")
-            or meta.get("field_name")
-            or ""
-        )
-        st.session_state["project_phase"] = (
-            data.get("session", {}).get("project_phase")
-            or meta.get("project_phase")
-            or phase_name
-            or ""
-        )
         st.session_state["_last_saved"] = meta.get("saved_at", "")
         st.session_state["_last_save_auto"] = bool(meta.get("auto_saved", False))
         st.session_state["study_revision"] = int(meta.get("study_revision", data.get("session", {}).get("study_revision", 0)) or 0)
         st.session_state["study_lifecycle"] = meta.get("study_lifecycle", data.get("session", {}).get("study_lifecycle", "Draft"))
+        st.session_state["study_mode"] = "loaded"
+        st.session_state["study_access_mode"] = "view"
         st.session_state["study_id"] = (
             data.get("session", {}).get("study_id")
             or meta.get("study_id")
@@ -214,9 +197,6 @@ def load_session_record(session_meta: dict) -> bool:
     phase_name = (session_meta or {}).get("phase", "")
     if phase_name:
         return load_session(project_name, field_name, phase_name)
-    phase_name = (session_meta or {}).get("phase", "")
-    if phase_name:
-        return load_session(project_name, field_name, phase_name)
     return load_session(project_name, field_name)
 
 
@@ -230,7 +210,7 @@ def resume_latest_session() -> bool:
     """Auto-restore the most recent saved session when the user opens a fresh app."""
     if st.session_state.get("_resume_attempted"):
         return False
-    if _has_user_progress(st.session_state):
+    if _has_user_progress({str(key): value for key, value in st.session_state.items()}):
         return False
     latest = get_latest_session()
     if not latest:

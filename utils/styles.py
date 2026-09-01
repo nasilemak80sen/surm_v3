@@ -16,12 +16,7 @@ def load_css() -> None:
 
     project_root = Path(__file__).resolve().parents[1]
 
-    css_path = (
-        project_root
-        / "assets"
-        / "css"
-        / "surm.css"
-    )
+    css_path = project_root / "assets" / "style.css"
 
     if not css_path.exists():
 

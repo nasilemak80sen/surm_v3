@@ -1,1 +1,3 @@
-# utils package
+"""
+SURM utility package.
+"""

@@ -3,12 +3,24 @@ import streamlit as st
 from datetime import date
 from utils.export_excel import build_excel_export
 from utils.persistence import save_session, list_sessions, load_session_record, delete_session
+from utils.session import create_new_study
 from components.metrics import render_metric_grid, render_progress_card
 from components.cards import render_card
 from utils.study_export import snapshot_csv, snapshot_json
 from utils.analytics import build_study_analytics, validation_warnings
 
 _PHASES = ["","PGR0","PGR1","PGR2","PGR3/FID","ITR2a","ITR2b","SBS","SIR2a","SIR2b","PGR4"]
+
+
+def _parse_signoff_date(value: str) -> date | None:
+    """Convert the persisted DD/MM/YYYY value for Streamlit's date picker."""
+    if not value:
+        return None
+    try:
+        day, month, year = (int(part) for part in value.split("/"))
+        return date(year, month, day)
+    except (TypeError, ValueError):
+        return None
 
 def render():
     ss = st.session_state
@@ -54,42 +66,48 @@ def render():
         {"title": "Risks", "value": risks, "description": "In the register", "variant": "warning"},
     ])
     render_progress_card("Study Progress", progress, description="Completion across the eight core study stages.")
-    render_card(
-        "Current Study",
-        "The active study context used for saved sessions and exports.",
-        content=(
-            f'<div class="overview-context-grid">'
-            f'<div><span>Field</span><strong>{ss.get("field_name") or "Not configured"}</strong></div>'
-            f'<div><span>Project</span><strong>{ss.get("project_name") or "Not configured"}</strong></div>'
-            f'<div><span>Phase</span><strong>{ss.get("project_phase") or "Not configured"}</strong></div>'
-            f'</div>'
-        ),
-        variant="info",
-    )
-    render_card(
-        "Next Step",
-        f"Continue with {next_step}.",
-        content='<div class="overview-next-step">Follow the workflow in order to keep downstream outputs current.</div>',
-        variant="success",
-    )
+    context_col, next_col = st.columns([1.35, 1], gap="large")
+    with context_col:
+        render_card(
+            "Current Study",
+            "Active context for this workspace and its exports.",
+            content=(
+                f'<div class="overview-context-grid">'
+                f'<div><span>Field</span><strong>{ss.get("field_name") or "Not configured"}</strong></div>'
+                f'<div><span>Project</span><strong>{ss.get("project_name") or "Not configured"}</strong></div>'
+                f'<div><span>Phase</span><strong>{ss.get("project_phase") or "Not configured"}</strong></div>'
+                f'</div>'
+            ),
+            variant="info",
+        )
+    with next_col:
+        render_card(
+            "Next Step",
+            f"Continue with {next_step}.",
+            content='<div class="overview-next-step">Keep stages in order to keep downstream outputs current.</div>',
+            variant="success",
+        )
     critical_items = analytics["critical_uncertainties"] or ["No ranked uncertainties yet"]
-    render_card(
-        "Critical Uncertainties",
-        "Highest-ranked items currently carried into the study plan.",
-        content="<ol class=\"overview-critical-list\">" + "".join(
-            f"<li>{item}</li>" for item in critical_items
-        ) + "</ol>",
-        variant="warning",
-    )
+    critical_col, status_col = st.columns([1.35, 1], gap="large")
+    with critical_col:
+        render_card(
+            "Critical Uncertainties",
+            "Highest-ranked items currently carried into the study plan.",
+            content="<ol class=\"overview-critical-list\">" + "".join(
+                f"<li>{item}</li>" for item in critical_items
+            ) + "</ol>",
+            variant="warning",
+        )
     status_text = " · ".join(
         f"{status}: {count}" for status, count in analytics["resolution_status"].items()
     ) or "No resolution actions recorded yet"
-    render_card(
-        "Resolution Status",
-        status_text,
-        content="Relationships and status are derived from the current study records.",
-        variant="info",
-    )
+    with status_col:
+        render_card(
+            "Resolution Status",
+            status_text,
+            content="Derived from the current study records.",
+            variant="info",
+        )
     affected_decisions = sorted({
         item["target"] for item in analytics["relationships"]
         if item["type"] == "affects"
@@ -131,15 +149,15 @@ def render():
             use_container_width=True,
         )
 
-    st.markdown('<div class="surm-helper"><span>🧭</span><span>Start with the project details, then move through the tabs in sequence. This keeps the workflow clearer and makes each saved session easier to resume.</span></div>', unsafe_allow_html=True)
+    st.info("Start with project details, then complete the workflow from Uncertainties through PRA Output. Save before loading another study.")
 
     # ── Saved sessions panel ─────────────────────────────────────────
     sessions = list_sessions()
     if sessions:
-        st.markdown('<div class="surm-section-header">📂 Resume a Saved Session</div>', unsafe_allow_html=True)
-        st.markdown('<div class="surm-instruction">ℹ️ Click <b>Load</b> to restore a previously saved study. Your current unsaved work will be replaced.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="surm-section-header">📂 Saved Sessions</div>', unsafe_allow_html=True)
+        st.info("Choose Load to restore a saved study. Any current unsaved changes will be replaced.")
 
-        for s in sessions:
+        for session_index, s in enumerate(sessions):
             pct         = s["completion"]
             bar_clr     = "#1F6B3A" if pct >= 80 else "#FFD700" if pct >= 40 else "#FF8C00"
             ts          = s["saved_at"].replace("T", " ")[:16] if s["saved_at"] else "—"
@@ -163,7 +181,7 @@ def render():
                     </div>
                 """, unsafe_allow_html=True)
             with col_load:
-                if st.button("📂 Load", key=f"load_{s['project_name']}_{s['field_name']}"):
+                if st.button("📂 Load", key=f"load_saved_study_{session_index}"):
                     ok = load_session_record(s)
                     if ok:
                         st.success(f"Loaded: {s['project_name']}")
@@ -172,15 +190,22 @@ def render():
                     else:
                         st.error("Load failed.")
             with col_del:
-                if st.button("🗑️", key=f"del_{s['project_name']}_{s['field_name']}", help="Delete this saved session"):
+                if st.button("🗑️", key=f"delete_saved_study_{session_index}", help="Delete this saved study"):
                     delete_session(s["project_name"], s["field_name"])
                     st.rerun()
 
         st.divider()
+    else:
+        st.markdown('<div class="surm-section-header">📂 Saved Sessions</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.info("No saved sessions yet. Create a new session, complete the study, and save it here.")
+            if st.button("＋ Create New Session", key="overview_create_new_session", type="primary"):
+                create_new_study()
+                st.rerun()
 
     # Developer helper: load demo data for testing flows (not shown in production)
     with st.expander("Developer Tools", expanded=False):
-        if st.button("🔁 Load Demo Data"):
+        if st.button("🔁 Load Demo Data", key="load_demo_data"):
             # minimal demo dataset to exercise Tab 5/6/7 flows
             demo_project = "DEMO Project"
             st.session_state["project_name"] = demo_project
@@ -213,7 +238,7 @@ def render():
 
     # ── Project info ─────────────────────────────────────────────────
     st.markdown('<div class="surm-section-header">📋 Project Information</div>', unsafe_allow_html=True)
-    st.markdown('<div class="surm-instruction">ℹ️ Fill in the project details. These appear on the exported Excel cover page and identify your saved session.</div>', unsafe_allow_html=True)
+    st.info("Enter the field, project, and phase first. These details identify the study and appear in exported reports.")
 
     st.session_state.setdefault("project_name", "")
     st.session_state.setdefault("field_name", "")
@@ -232,15 +257,6 @@ def render():
             key="field_name",
             placeholder="e.g. Ledang")
     with c3:
-        st.selectbox("Project Phase", _PHASES, key="project_phase")
-
-    clear_col, _ = st.columns([1, 4])
-    with clear_col:
-        if st.button("Clear Study Details", key="clear_study_details"):
-            st.session_state["project_name"] = ""
-            st.session_state["field_name"] = ""
-            st.session_state["project_phase"] = ""
-            st.rerun()
         st.selectbox("Project Phase", _PHASES, key="project_phase")
 
     clear_col, _ = st.columns([1, 4])
@@ -281,19 +297,19 @@ def render():
             st.markdown('<div class="signoff-box">', unsafe_allow_html=True)
             st.text_input(
                 "Name", key=f"{key}_name",
-            st.text_input(
-                "Name", key=f"{key}_name",
                 placeholder="Full name", label_visibility="collapsed")
             st.text_input(
                 "Role", key=f"{key}_role",
-            st.text_input(
-                "Role", key=f"{key}_role",
                 placeholder="Designation", label_visibility="collapsed")
-            st.text_input(
-                "Date", key=f"{key}_date",
-            st.text_input(
-                "Date", key=f"{key}_date",
-                placeholder="DD/MM/YYYY", label_visibility="collapsed")
+            date_value = st.date_input(
+                "Date",
+                value=_parse_signoff_date(ss.get(f"{key}_date", "")),
+                format="DD/MM/YYYY",
+                key=f"{key}_date_picker_{ss.get('study_id', 'new')}",
+                label_visibility="collapsed",
+                help="Choose a date from the calendar or type it directly as DD/MM/YYYY.",
+            )
+            ss[f"{key}_date"] = date_value.strftime("%d/%m/%Y") if date_value else ""
             st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Export ────────────────────────────────────────────────────────

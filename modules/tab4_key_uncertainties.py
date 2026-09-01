@@ -30,7 +30,7 @@ def render():
         st.info("⬅️ Complete **Tab 3 – Impact Assessment** first.")
         return
 
-    st.markdown('<div class="surm-instruction">ℹ️ Uncertainties are auto-ranked by weighted impact. Use <b>Include All</b> / <b>Exclude All</b> or tick individually, then click <b>Apply & Refresh Charts</b>.</div>', unsafe_allow_html=True)
+    st.info("Uncertainties are ranked by weighted impact. Include the items that require resolution planning, then apply the selection.")
 
     ia_df = pd.DataFrame(ia)
     ku_df = compute_key_uncertainties(ia_df, decisions)

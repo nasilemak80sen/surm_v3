@@ -7,7 +7,7 @@ _DISC_ICONS = {
 }
 
 def render():
-    st.markdown('<div class="surm-instruction">ℹ️ Select every uncertainty relevant to your field. Use <b>Select All / Deselect All</b> at global or discipline level, then deselect what isn\'t applicable.</div>', unsafe_allow_html=True)
+    st.info("Select the uncertainties relevant to this field. Use the global or discipline controls to select groups quickly, then refine the list.")
 
     mapping     = st.session_state["_mapping"]
     disciplines = mapping["disciplines"]
@@ -128,10 +128,10 @@ def render():
     st.markdown('<div class="surm-section-header">➕ Add Custom Uncertainty</div>', unsafe_allow_html=True)
     with st.form("custom_unc_form", clear_on_submit=True):
         fc1, fc2, fc3 = st.columns([2, 4, 2])
-        with fc1: c_disc  = st.selectbox("Discipline", disciplines)
-        with fc2: c_name  = st.text_input("Description", placeholder="Be specific — e.g. 'Fault seal integrity in eastern block'")
-        with fc3: c_risks = st.multiselect("Associated Risks", all_risks)
-        if st.form_submit_button("➕ Add Uncertainty", type="primary") and c_name.strip():
+        with fc1: c_disc  = st.selectbox("Discipline", disciplines, key="custom_uncertainty_discipline")
+        with fc2: c_name  = st.text_input("Description", placeholder="Be specific — e.g. 'Fault seal integrity in eastern block'", key="custom_uncertainty_description")
+        with fc3: c_risks = st.multiselect("Associated Risks", all_risks, key="custom_uncertainty_risks")
+        if st.form_submit_button("➕ Add Uncertainty", type="primary", key="add_custom_uncertainty") and c_name.strip():
             new_id = max((u["id"] for u in st.session_state["uncertainties"]), default=0) + 1
             st.session_state["uncertainties"].append({
                 "id":new_id,"discipline":c_disc,"name":c_name.strip(),
