@@ -1,58 +1,31 @@
-name: Keep SURM Awake
+name: Wake Streamlit App
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 */6 * * *"
-  workflow_dispatch:
-    inputs:
-      app_url:
-        description: "Optional Streamlit URL override"
-        required: false
-        type: string
-        default: ""
 
 jobs:
-  ping:
-    name: Ping SURM Streamlit App
+  wake-streamlit:
     runs-on: ubuntu-latest
-    env:
-      SURM_APP_URL: ${{ inputs.app_url || vars.SURM_APP_URL }}
 
     steps:
-      - name: Check SURM
-        shell: bash
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Playwright
         run: |
-          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
 
-          if [ -z "${SURM_APP_URL}" ]; then
-            echo "SURM_APP_URL is not configured."
-            echo "Set a repository variable named SURM_APP_URL or provide a manual app_url input."
-            exit 1
-          fi
-
-          case "${SURM_APP_URL}" in
-            http://*|https://*) ;;
-            *)
-              echo "SURM_APP_URL must start with http:// or https://"
-              exit 1
-              ;;
-          esac
-
-          echo "Checking SURM at ${SURM_APP_URL}"
-          http_status=$(curl \
-            --location \
-            --output /dev/null \
-            --silent \
-            --show-error \
-            --write-out "%{http_code}" \
-            --max-time 60 \
-            "${SURM_APP_URL}")
-
-          echo "HTTP status: ${http_status}"
-
-          if [ "${http_status}" -ge 400 ]; then
-            echo "SURM returned HTTP ${http_status}"
-            exit 1
-          fi
-
-          echo "SURM is reachable."
+      - name: Visit Streamlit application
+        env:
+          STREAMLIT_APP_URL: ${{ secrets.STREAMLIT_APP_URL }}
+        run: |
+          python scripts/wake_streamlit.py
