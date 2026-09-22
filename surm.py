@@ -16,7 +16,7 @@ from typing import Any, cast
 import streamlit as st
 
 from components.header import render_header as render_shared_header
-from components.workflow import render_page_footer, render_page_frame, render_workflow_list
+from components.workflow import render_page_frame, render_workflow_list
 from utils.analytics import build_study_analytics
 from utils.styles import load_css
 from utils.workflow import current_stage, stage_results, validate_stage
@@ -389,13 +389,10 @@ def render_sidebar() -> None:
                 "page": label,
                 "completed": stage.complete,
                 "locked": not stage.available,
-                "description": stage.guidance or stage.reason,
+                "description": None,
             }
             for index, (label, stage) in enumerate(
-                zip(
-                    list(PAGE_DEFINITIONS.keys())[4:12],
-                    stage_results(session),
-                ),
+                zip(WORKFLOW_PAGES, stage_results(session)),
                 start=1,
             )
         ]
@@ -620,9 +617,9 @@ def render_sidebar() -> None:
 
 PAGE_DEFINITIONS = {
     "🗂️ Study Repository": render_study_repository,
+    "📖 How to Use": render_how_to_use,
     "📋 Overview": render_frontpage,
     "👥 Team": render_documentation,
-    "📖 How to Use": render_how_to_use,
     "1️⃣ Uncertainties": render_uncertainties,
     "2️⃣ Key Decisions": render_key_decisions,
     "3️⃣ Impact Assessment": render_impact_assessment,
@@ -632,6 +629,17 @@ PAGE_DEFINITIONS = {
     "7️⃣ Risk Register": render_risk_register,
     "📄 PRA Output": render_pra_output,
 }
+ 
+WORKFLOW_PAGES = [
+    "1️⃣ Uncertainties",
+    "2️⃣ Key Decisions",
+    "3️⃣ Impact Assessment",
+    "4️⃣ Key Uncertainties",
+    "5️⃣ Resolution List",
+    "6️⃣ Resolution Planner",
+    "7️⃣ Risk Register",
+    "📄 PRA Output",
+]
 
 
 def render_navigation() -> None:
@@ -648,8 +656,8 @@ def render_navigation() -> None:
         selected_page = page_names[0]
 
     selected_index = page_names.index(selected_page)
-    workflow_index = selected_index - 4
-    is_workflow_page = 0 <= workflow_index < 8
+    is_workflow_page = selected_page in WORKFLOW_PAGES
+    workflow_index = WORKFLOW_PAGES.index(selected_page) if is_workflow_page else -1
     title = selected_page.split(" ", 1)[-1]
     descriptions = {
         "🗂️ Study Repository": "Browse, view, and edit saved field studies.",
@@ -675,7 +683,6 @@ def render_navigation() -> None:
             st.warning(f"This stage is not ready yet. {reason}")
             current = current_stage(session)
             st.info(f"Current study stage: **{current.label}** — {current.guidance}")
-            render_page_footer(previous_page=page_names[selected_index - 1] if selected_index else None)
             return
 
     render_page_frame(
@@ -694,9 +701,6 @@ def render_navigation() -> None:
     else:
         PAGE_DEFINITIONS[selected_page]()
 
-    previous_page = page_names[selected_index - 1] if selected_index else None
-    next_page = page_names[selected_index + 1] if selected_index < len(page_names) - 1 else None
-    render_page_footer(previous_page=previous_page, next_page=next_page)
 
 
 def render_top_navigation() -> None:
