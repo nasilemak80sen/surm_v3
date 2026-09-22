@@ -63,7 +63,7 @@ class StudyDocument:
     """Durable study state independent of Streamlit widget state."""
 
     study_id: str = field(default_factory=lambda: str(uuid4()))
-    schema_version: str = "2.1"
+    schema_version: str = "2.2"
 
     project_name: str = ""
     field_name: str = ""
@@ -80,6 +80,7 @@ class StudyDocument:
     resolution_planner: list[dict[str, Any]] = field(default_factory=list)
     risk_register: list[dict[str, Any]] = field(default_factory=list)
     pra_output: list[dict[str, Any]] = field(default_factory=list)
+    bowtie_register: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     # Governance / sign-off
     prep_name: str = ""
@@ -121,6 +122,7 @@ class StudyDocument:
             "resolution_planner": [],
             "risk_register": [],
             "pra_output": [],
+            "bowtie_register": {},
             "prep_name": "",
             "prep_role": "",
             "prep_date": "",
