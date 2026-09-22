@@ -7,6 +7,7 @@ from uuid import uuid4
 import streamlit as st
 
 from utils.form_ui import render_form_header, render_stage_status
+from utils.workflow import mark_stage_changed
 
 
 _DISC_ICONS = {
@@ -25,6 +26,11 @@ def render():
     mapping = st.session_state["_mapping"]
     disciplines = mapping["disciplines"]
     all_risks = mapping["risks"]
+
+    before_selection = tuple(
+        (str(item.get("uncertainty_id") or item.get("id") or ""), bool(item.get("selected")))
+        for item in st.session_state["uncertainties"]
+    )
 
     selected_items = [
         item
@@ -244,6 +250,13 @@ def render():
                         "—</span>",
                         unsafe_allow_html=True,
                     )
+
+    after_selection = tuple(
+        (str(item.get("uncertainty_id") or item.get("id") or ""), bool(item.get("selected")))
+        for item in st.session_state["uncertainties"]
+    )
+    if before_selection != after_selection:
+        mark_stage_changed(st.session_state, "uncertainties")
 
     # ------------------------------------------------------------------
     # Custom uncertainty
