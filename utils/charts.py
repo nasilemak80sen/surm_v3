@@ -79,6 +79,7 @@ def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
         hover_text = []
 
         for index, (_, row) in enumerate(key_unc_df.iterrows(), start=1):
+            marker_number = str(row.get("Matrix #", index))
             degree = str(row.get("Degree of Uncertainty", "L") or "L")
             impact = str(row.get("Impact Bin", "L") or "L")
             x_base = {"L": 1, "M": 2, "H": 3}.get(degree, 1)
@@ -95,13 +96,13 @@ def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
 
             x_values.append(x_base + x_offset)
             y_values.append(y_base + y_offset)
-            marker_text.append(str(index))
+            marker_text.append(marker_number)
             rating = str(row.get("Combined Rating", "") or "")
             marker_colors.append(RATING_COLOR.get(rating, "#176B3A"))
 
             label = html.escape(str(row.get("Uncertainty", "") or "Uncertainty"))
             hover_text.append(
-                f"<b>#{index} — {label}</b>"
+                f"<b>#{marker_number} — {label}</b>"
                 f"<br>Degree: {html.escape(degree)}"
                 f"<br>Impact: {html.escape(impact)}"
                 f"<br>Rating: <b>{html.escape(rating)}</b>"
