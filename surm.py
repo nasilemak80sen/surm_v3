@@ -19,6 +19,7 @@ from components.header import render_header as render_shared_header
 from components.workflow import render_page_frame, render_workflow_list
 from utils.analytics import build_study_analytics
 from utils.assurance import study_is_editable
+from utils.auth import can_delete_study, can_edit_study, current_user_label
 from utils.styles import load_css
 from utils.workflow import current_stage, stage_results, validate_stage
 
