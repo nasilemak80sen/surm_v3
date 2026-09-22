@@ -237,6 +237,8 @@ def sync_barrier_register(session: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 due_date = _text(action.get("Required Completion") or action.get("End Date")) or _text(prev.get("due_date"))
                 progress = safe_float(action.get("Progress (0-1)"), default=safe_float(prev.get("progress"), default=0.0))
                 effectiveness = _text(node.get("effectiveness")) or _text(prev.get("effectiveness"))
+                degradation_factors = node.get("degradation_factors") if isinstance(node.get("degradation_factors"), list) else []
+                controls = node.get("controls") if isinstance(node.get("controls"), list) else []
                 health = _planner_health(action) if action else _text(prev.get("health")) or "Planned"
 
                 record = {
@@ -250,6 +252,8 @@ def sync_barrier_register(session: dict[str, Any]) -> dict[str, dict[str, Any]]:
                     "progress": progress,
                     "due_date": due_date,
                     "effectiveness": effectiveness,
+                    "degradation_factors": degradation_factors,
+                    "controls": controls,
                     "health": health,
                     "criticality": _text(prev.get("criticality")) or "Standard",
                     "verification_status": _text(prev.get("verification_status")) or "Pending",
@@ -352,6 +356,15 @@ def build_bowtie_qa(session: dict[str, Any]) -> list[dict[str, Any]]:
                     "risk": risk_name,
                     "severity": "info",
                     "message": f"Barrier '{node.get('name', barrier_id)}' has no effectiveness recorded.",
+                })
+            degradation = node.get("degradation_factors") or managed.get("degradation_factors") or []
+            controls = node.get("controls") or managed.get("controls") or []
+            if degradation and not controls:
+                findings.append({
+                    "risk_id": risk_id,
+                    "risk": risk_name,
+                    "severity": "warning",
+                    "message": f"Barrier '{node.get('name', barrier_id)}' has degradation factors but no controls.",
                 })
 
     return findings
