@@ -120,7 +120,7 @@ def render():
     edited = st.data_editor(
         df,
         num_rows="dynamic",
-        width="stretch",
+                use_container_width=True,
         column_config={
             "decision_id": st.column_config.TextColumn(
                 "Decision ID",
