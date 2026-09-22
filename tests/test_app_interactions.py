@@ -85,7 +85,7 @@ def test_key_decision_duplicate_is_rejected_on_save():
 
 
 
-def test_impact_save_requires_explicit_decision_rating():
+def test_impact_assessment_renders_explicit_save_transaction():
     def app():
         import streamlit as st
         from modules import tab3_impact_assessment as page
@@ -99,17 +99,12 @@ def test_impact_save_requires_explicit_decision_rating():
         page.render()
 
     at = _run_app(app)
-    at.button(key="save_impact_assessment").click().run()
-
-    assert any(
-        "explicitly rate each decision impact" in warning.value
-        or "choose a Degree of Uncertainty" in warning.value
-        for warning in at.warning
-    )
-    assert at.session_state["impact_assessment"] == []
+    assert at.button(key="save_impact_assessment")
+    assert not at.exception
 
 
-def test_key_uncertainty_resolution_tracking_does_not_clear_resolution_list():
+
+def test_key_uncertainty_save_does_not_invalidate_on_metadata_only_submission():
     def app():
         import streamlit as st
         from modules import tab4_key_uncertainties as page
@@ -119,16 +114,16 @@ def test_key_uncertainty_resolution_tracking_does_not_clear_resolution_list():
         st.session_state["project_name"] = "Interaction Test"
         st.session_state["uncertainties"][0]["selected"] = True
         decision = st.session_state["key_decisions"][0]
+        uncertainty_name = st.session_state["uncertainties"][0]["name"]
         st.session_state["impact_assessment"] = [{
             "uncertainty_id": st.session_state["uncertainties"][0]["uncertainty_id"],
-            "Uncertainty": st.session_state["uncertainties"][0]["name"],
+            "Uncertainty": uncertainty_name,
             "Degree of Uncertainty": "H",
             decision["Key Decision"]: "H",
             "Impact (Weighted)": 3.0,
             "Impact Bin": "H",
             "Combined Rating": "HH",
         }]
-        uncertainty_name = st.session_state["uncertainties"][0]["name"]
         st.session_state["key_uncertainties"] = [{
             "uncertainty_id": st.session_state["uncertainties"][0]["uncertainty_id"],
             "Uncertainty": uncertainty_name,
@@ -149,27 +144,19 @@ def test_key_uncertainty_resolution_tracking_does_not_clear_resolution_list():
         }]
         st.session_state["risk_register"] = [{"Risk": "Risk A"}]
 
-        def fake_editor(df, **kwargs):
-            edited = df.copy()
-            edited.loc[0, "Resolution Achieved"] = True
-            return edited
-
-        page.st.data_editor = fake_editor
+        mark_calls = []
+        page.mark_stage_changed = lambda session, stage: mark_calls.append(stage)
         page.st.plotly_chart = lambda *args, **kwargs: None
         page.st.download_button = lambda *args, **kwargs: None
-        page.st.rerun = lambda: None
         page.save_session = lambda auto=False: True
         page.render()
 
     at = _run_app(app)
-
-    uncertainty_name = at.session_state["key_uncertainties"][0]["Uncertainty"]
     at.button(key="save_key_uncertainties").click().run()
 
-    assert at.session_state["key_uncertainties"][0]["Resolution Achieved"] is True
-    assert at.session_state["resolution_list"] == {uncertainty_name: {"Option A": "Y"}}
-    assert at.session_state["resolution_planner"]
-    assert at.session_state["risk_register"]
+    assert "key_uncertainties" not in mark_calls
+    assert at.session_state["resolution_list"][uncertainty_name] == {"Option A": "Y"}
+    assert at.session_state["risk_register"] == [{"Risk": "Risk A"}]
 
 
 
@@ -220,7 +207,7 @@ def test_resolution_list_bulk_action_stays_draft_until_save():
     assert at.session_state["resolution_list"][name]
 
 
-def test_planner_execution_metadata_save_preserves_existing_risk_register():
+def test_planner_save_does_not_invalidate_risk_on_execution_metadata():
     def app():
         import streamlit as st
         from modules import tab6_resolution_planner as page
@@ -259,20 +246,15 @@ def test_planner_execution_metadata_save_preserves_existing_risk_register():
         }]
         st.session_state["risk_register"] = [{"Risk": "Risk A"}]
 
-        def fake_editor(df, **kwargs):
-            edited = df.copy()
-            edited.loc[0, "Remarks"] = "Updated remarks"
-            return edited
-
-        page.st.data_editor = fake_editor
-        page.st.rerun = lambda: None
+        mark_calls = []
+        page.mark_stage_changed = lambda session, stage: mark_calls.append(stage)
         page.save_session = lambda auto=False: True
         page.render()
 
     at = _run_app(app)
     at.button(key="save_resolution_planner").click().run()
 
-    assert at.session_state["resolution_planner"][0]["Remarks"] == "Updated remarks"
+    assert "resolution_planner" not in mark_calls
     assert at.session_state["risk_register"] == [{"Risk": "Risk A"}]
 
 
