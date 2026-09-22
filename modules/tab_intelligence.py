@@ -6,12 +6,15 @@ change the underlying scoring methodology.
 
 from __future__ import annotations
 
+import os
+
 import pandas as pd
 import streamlit as st
 
 from utils.analytics import build_study_analytics
 from utils.db import get_db
 from utils.form_ui import render_stage_status
+from utils.performance import profile_call
 from utils.intelligence import (
     build_historical_patterns,
     build_portfolio_intelligence,
@@ -23,7 +26,12 @@ from utils.intelligence import (
 
 def render():
     session = dict(st.session_state)
-    intelligence = build_risk_intelligence(session)
+    if os.environ.get("SURM_PERF_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}:
+        profiled = profile_call("risk-intelligence", build_risk_intelligence, session)
+        intelligence = profiled.result
+        st.caption(f"Diagnostic: risk intelligence computed in {profiled.elapsed_ms:.1f} ms.")
+    else:
+        intelligence = build_risk_intelligence(session)
     st.markdown("## 📊 Study Intelligence")
     st.caption(
         "Management view of recorded risks, actions, barriers and traceability. "
