@@ -9,6 +9,13 @@ from utils.form_ui import render_form_header, render_stage_status
 from utils.workflow import mark_stage_changed
 
 
+def _weight_value(value) -> int:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _normalize_decisions(frame: pd.DataFrame) -> pd.DataFrame:
     normalized = frame.copy()
 
@@ -75,7 +82,7 @@ def render():
         (
             str(row.get("decision_id", "")),
             str(row.get("Key Decision", "")).strip(),
-            int(row.get("Weight (1-3)", 0) or 0),
+            _weight_value(row.get("Weight (1-3)", 0)),
             str(row.get("Description", "") or "").strip(),
         )
         for row in existing_decisions
