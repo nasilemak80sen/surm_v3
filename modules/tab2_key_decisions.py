@@ -5,15 +5,13 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from utils.coercion import safe_int
 from utils.form_ui import render_form_header, render_stage_status
 from utils.workflow import mark_stage_changed
 
 
 def _weight_value(value) -> int:
-    try:
-        return int(float(value))
-    except (TypeError, ValueError):
-        return 0
+    return safe_int(value, default=0)
 
 
 def _normalize_decisions(frame: pd.DataFrame) -> pd.DataFrame:
@@ -218,7 +216,7 @@ def render():
             if not decision_name:
                 continue
 
-            weight = int(row["Weight (1-3)"])
+            weight = _weight_value(row.get("Weight (1-3)", 0))
             bar_color = (
                 "#1F6B3A"
                 if weight == 3
