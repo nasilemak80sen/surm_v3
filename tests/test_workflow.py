@@ -188,3 +188,25 @@ def test_stage_change_accepts_string_revision():
     mark_stage_changed(session, "impact_assessment")
 
     assert session["workflow_revisions"]["impact_assessment"] == 4
+
+
+def test_duplicate_key_decisions_block_stage_completion():
+    session = make_minimal_ready_session()
+    session["key_decisions"].append({
+        "Key Decision": "D1",
+        "Weight (1-3)": 2,
+    })
+    stages = stage_results(session)
+    decisions_stage = next(stage for stage in stages if stage.key == "key_decisions")
+    assert decisions_stage.complete is False
+
+
+def test_duplicate_uncertainty_names_block_stage_completion():
+    session = make_minimal_ready_session()
+    session["uncertainties"].append({
+        "name": "U1",
+        "selected": False,
+    })
+    stages = stage_results(session)
+    uncertainty_stage = stages[0]
+    assert uncertainty_stage.complete is False
