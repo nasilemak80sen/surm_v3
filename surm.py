@@ -191,19 +191,9 @@ def calculate_study_progress() -> dict:
         and str(item.get("Name", "")).strip()
     )
 
-    checks = [
-        bool(ss.get("project_name", "").strip()),
-        selected_uncertainties > 0,
-        decisions > 0,
-        bool(ss.get("impact_assessment")),
-        included_key_uncertainties > 0,
-        bool(ss.get("resolution_list")),
-        actions > 0,
-        risks > 0,
-    ]
-
+    stages = stage_results(ss)
     progress = round(
-        (sum(checks) / len(checks)) * 100
+        (sum(stage.complete for stage in stages) / len(stages)) * 100
     )
 
     return {
