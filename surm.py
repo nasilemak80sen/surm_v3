@@ -641,7 +641,13 @@ def render_navigation() -> None:
             st.info(f"Current study stage: **{current.label}** — {current.guidance}")
             return
 
-    if not is_workflow_page:
+    custom_header_pages = {
+        "🗂️ Study Repository",
+        "📖 How to Use",
+        "📋 Overview",
+        "👥 Team",
+    }
+    if not is_workflow_page and selected_page not in custom_header_pages:
         render_page_frame(
             title,
             descriptions.get(selected_page, "SURM study workspace."),
