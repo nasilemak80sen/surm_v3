@@ -237,7 +237,7 @@ def test_bowtie_editor_browser_round_trip_and_controls():
             expect(page.locator("#editName")).to_have_value("New Threat")
 
             page.locator("#editName").fill("Edited Threat")
-            page.locator("#editName").dispatch_event("change")
+            page.locator("#editName").press("Tab")
             page.wait_for_timeout(50)
             assert not page_errors, page_errors
             expect(page.locator("#objects")).to_contain_text("Edited Threat")
