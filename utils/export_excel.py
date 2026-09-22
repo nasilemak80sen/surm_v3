@@ -115,11 +115,11 @@ def build_excel_export() -> bytes:
     # Sign-off block
     signoff_headers = ["Role", "Name", "Date"]
     signoff_data    = [
-        ["Prepared By",      study.get("prep_name", ""),      ss.get("prep_date", "")],
-        ["Reviewed By (G&G)", ss.get("rev_gg_name", ""),    ss.get("rev_gg_date", "")],
-        ["Reviewed By (RE)",  ss.get("rev_re_name", ""),    ss.get("rev_re_date", "")],
-        ["Reviewed By (PP)",  ss.get("rev_pp_name", ""),    ss.get("rev_pp_date", "")],
-        ["Endorsed By",       ss.get("endorsed_name", ""), ss.get("endorsed_date", "")],
+        ["Prepared By",      study.get("prep_name", ""),      study.get("prep_date", "")],
+        ["Reviewed By (G&G)", study.get("rev_gg_name", ""),    study.get("rev_gg_date", "")],
+        ["Reviewed By (RE)",  study.get("rev_re_name", ""),    study.get("rev_re_date", "")],
+        ["Reviewed By (PP)",  study.get("rev_pp_name", ""),    study.get("rev_pp_date", "")],
+        ["Endorsed By",       study.get("endorsed_name", ""), study.get("endorsed_date", "")],
     ]
     ws.cell(row=7, column=1, value="Sign-Off").font = Font(name="Calibri", bold=True, size=12, color="FFFFFF")
     ws.cell(row=7, column=1).fill = PatternFill("solid", fgColor=GREEN_DARK)
@@ -134,35 +134,35 @@ def build_excel_export() -> bytes:
 
     # ── Sheet: Team ───────────────────────────────────────────────────
     ws2 = wb.create_sheet("Documentation")
-    team_df = pd.DataFrame(ss.get("team_members", []))
+    team_df = pd.DataFrame(study.get("team_members", []))
     _write_df_to_sheet(ws2, team_df, "Team Members & Documentation")
 
     # ── Sheet: Tab 1 — Uncertainties ─────────────────────────────────
     ws3 = wb.create_sheet("1. Uncertainties List")
     unc_rows = [
         {"Discipline": u["discipline"], "Uncertainty": u["name"], "Selected": "Y" if u["selected"] else ""}
-        for u in ss.get("uncertainties", [])
+        for u in study.get("uncertainties", [])
     ]
     _write_df_to_sheet(ws3, pd.DataFrame(unc_rows), "Uncertainties List")
 
     # ── Sheet: Tab 2 — Key Decisions ─────────────────────────────────
     ws4 = wb.create_sheet("2. Key Decisions")
-    kd_df = pd.DataFrame(ss.get("key_decisions", []))
+    kd_df = pd.DataFrame(study.get("key_decisions", []))
     _write_df_to_sheet(ws4, kd_df, "Key Project Decisions")
 
     # ── Sheet: Tab 3 — Impact Assessment ─────────────────────────────
     ws5 = wb.create_sheet("3. Impact Assessment")
-    ia_df = pd.DataFrame(ss.get("impact_assessment", []))
+    ia_df = pd.DataFrame(study.get("impact_assessment", []))
     _write_df_to_sheet(ws5, ia_df, "Impact Assessment")
 
     # ── Sheet: Tab 4 — Key Uncertainties ─────────────────────────────
     ws6 = wb.create_sheet("4. Key Uncertainties")
-    ku_df = pd.DataFrame(ss.get("key_uncertainties", []))
+    ku_df = pd.DataFrame(study.get("key_uncertainties", []))
     _write_df_to_sheet(ws6, ku_df, "Key Uncertainties (Ranked)")
 
     # ── Sheet: Tab 5 — Resolution List ───────────────────────────────
     ws7 = wb.create_sheet("5. Resolution List")
-    rl_data = ss.get("resolution_list", {})
+    rl_data = study.get("resolution_list", {})
     rl_rows = []
     for name, opts in rl_data.items():
         row = {"Uncertainty": name}
@@ -172,17 +172,17 @@ def build_excel_export() -> bytes:
 
     # ── Sheet: Tab 6 — Resolution Planner ────────────────────────────
     ws8 = wb.create_sheet("6. Resolution Planner")
-    rp_df = pd.DataFrame(ss.get("resolution_planner", []))
+    rp_df = pd.DataFrame(study.get("resolution_planner", []))
     _write_df_to_sheet(ws8, rp_df, "Resolution Planner")
 
     # ── Sheet: Tab 7 — Risk Register ─────────────────────────────────
     ws9 = wb.create_sheet("7. Risk Register")
-    rr_df = pd.DataFrame(ss.get("risk_register", []))
+    rr_df = pd.DataFrame(study.get("risk_register", []))
     _write_df_to_sheet(ws9, rr_df, "Risk Register")
 
     # ── Sheet: PRA Output ─────────────────────────────────────────────
     ws10 = wb.create_sheet("PRA Output")
-    pra_df = pd.DataFrame(ss.get("pra_output", []))
+    pra_df = pd.DataFrame(study.get("pra_output", []))
     _write_df_to_sheet(ws10, pra_df, "PRA Output — Risk Register")
 
     # ── Save to bytes ─────────────────────────────────────────────────
