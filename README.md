@@ -69,7 +69,7 @@ Sessions use SQLite locally and PostgreSQL when DATABASE_URL is configured.
 
 ## Excel output
 
-The exporter currently produces 13 worksheets:
+The exporter currently produces 14 worksheets:
 
 1. Front Page
 2. Documentation
@@ -83,7 +83,8 @@ The exporter currently produces 13 worksheets:
 10. 7b. Bowtie Register
 11. 8. Barrier Management
 12. 9. Assurance & Reviews
-13. PRA Output
+13. 10. Traceability
+14. PRA Output
 
 The workbook is an output projection of the canonical study model; it is not the application's source of truth.
 
