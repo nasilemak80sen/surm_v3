@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from utils.form_ui import render_form_header, render_stage_status
+from utils.form_ui import render_form_header, render_save_hint, render_stage_status
 from utils.persistence import save_session
 from utils.workflow import mark_stage_changed
 
@@ -61,14 +61,18 @@ def render():
     with left:
         st.markdown("**Resolution alternatives**")
         st.caption("Select Y where an action genuinely addresses the uncertainty.")
-        with st.form("res_list_form"):
+        render_save_hint(
+            "Resolution mappings are a session draft until you click Save selections. "
+            "Bulk actions apply the draft but do not persist it."
+        )
+        with st.form("res_list_form", enter_to_submit=False):
             button_cols = st.columns([1, 1, 2.2])
             with button_cols[0]:
-                select_all = st.form_submit_button("Y for all")
+                select_all = st.form_submit_button("Y for all", key="res_select_all")
             with button_cols[1]:
-                clear_all = st.form_submit_button("Clear all")
+                clear_all = st.form_submit_button("Clear all", key="res_clear_all")
             with button_cols[2]:
-                save_clicked = st.form_submit_button("Save selections", type="primary")
+                save_clicked = st.form_submit_button("Save selections", key="save_resolution_list", type="primary")
 
             column_config = {
                 "uncertainty_id": st.column_config.TextColumn("ID", width="small", disabled=True),
@@ -107,9 +111,23 @@ def render():
                 row["Uncertainty"]: {option: row.get(option, "") for option in options}
                 for row in data
             }
+            previous = st.session_state.get("resolution_list", {})
             st.session_state["resolution_list"] = resolution_dict
-            mark_stage_changed(st.session_state, "resolution_list")
-            save_session(auto=not save_clicked)
+
+            if previous != resolution_dict:
+                mark_stage_changed(st.session_state, "resolution_list")
+
+            if save_clicked:
+                if not st.session_state.get("project_name", "").strip():
+                    st.warning("Enter a Project Name on Overview before saving the resolution mapping.")
+                    return
+                ok = save_session(auto=False)
+                if not ok:
+                    st.error("Resolution mapping could not be saved.")
+                    return
+                st.success("✅ Resolution selections saved.")
+            else:
+                st.info("Draft updated. Click **Save selections** to persist the resolution mapping.")
             st.rerun()
 
     with right:
