@@ -28,7 +28,7 @@ def test_snapshot_uses_canonical_schema_and_governance_fields():
         "_mapping": {"resolution_options": []},
     })
 
-    assert snapshot["schema_version"] == "2.1"
+    assert snapshot["schema_version"] == "2.2"
     assert snapshot["study"]["study_id"] == "study-export-001"
     assert snapshot["study"]["methodology_version"] == "SURM-2026.01"
     assert snapshot["governance"]["prepared_by"]["name"] == "Prepared Person"
