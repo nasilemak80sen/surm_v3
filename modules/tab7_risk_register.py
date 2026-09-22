@@ -1,3 +1,4 @@
+import json
 """Tab 7 — Risk Register: assessment workspace with live risk and Bowtie view."""
 
 from __future__ import annotations
@@ -285,7 +286,7 @@ def render():
             use_container_width=True,
         )
     with action_cols[2]:
-        json_payload = pd.io.json.dumps(document, indent=2)
+        json_payload = json.dumps(document, indent=2, ensure_ascii=False)
         st.download_button(
             "Download JSON",
             data=json_payload,
