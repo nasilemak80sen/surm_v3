@@ -5,6 +5,7 @@ Session persistence — delegates to SQLite or PostgreSQL via db.py
 import json
 from datetime import datetime
 import streamlit as st
+from utils.coercion import safe_int
 from utils.db import get_db
 from utils.session import DEFAULT_SESSION_STATE, normalize_entity_ids
 from utils.study_document import StudyDocument
@@ -62,7 +63,7 @@ def save_session(auto: bool = False) -> bool:
             return ""
 
     document = StudyDocument.from_session({str(key): value for key, value in st.session_state.items()})
-    document.study_revision = int(st.session_state.get("study_revision", 0)) + 1
+    document.study_revision = safe_int(st.session_state.get("study_revision", 0), default=0) + 1
     document.study_change_log = list(document.study_change_log or []) + [{
         "revision": document.study_revision,
         "saved_at": datetime.now().isoformat(timespec="seconds"),
@@ -170,7 +171,7 @@ def load_session(project_name: str, field_name: str, phase_name: str = "") -> bo
         )
         st.session_state["_last_saved"] = meta.get("saved_at", "")
         st.session_state["_last_save_auto"] = bool(meta.get("auto_saved", False))
-        st.session_state["study_revision"] = int(meta.get("study_revision", data.get("session", {}).get("study_revision", 0)) or 0)
+        st.session_state["study_revision"] = safe_int(meta.get("study_revision", data.get("session", {}).get("study_revision", 0)), default=0)
         st.session_state["study_lifecycle"] = meta.get("study_lifecycle", data.get("session", {}).get("study_lifecycle", "Draft"))
         st.session_state["study_mode"] = "loaded"
         st.session_state["study_access_mode"] = "view"
