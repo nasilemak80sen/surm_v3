@@ -4,6 +4,7 @@ from utils.logic import (
     compute_weighted_score,
     is_risk_assessed,
     score_to_bin,
+    build_impact_table,
 )
 
 
@@ -61,3 +62,24 @@ def test_assessed_risk_uses_existing_matrix():
         "Likelihood (H/M/L)": "M",
         "Impact (H/M/L)": "H",
     }) is True
+
+
+def test_weighted_score_accepts_numeric_string_weights():
+    decisions = [
+        {"Key Decision": "Decision A", "Weight (1-3)": "3.0"},
+        {"Key Decision": "Decision B", "Weight (1-3)": "1"},
+    ]
+    row = {"Decision A": "H", "Decision B": "L"}
+    assert compute_weighted_score(row, decisions) == 2.5
+
+
+def test_new_impact_rows_do_not_invent_a_degree_rating():
+    import streamlit as st
+
+    st.session_state["uncertainties"] = [{"name": "U1", "selected": True}]
+    st.session_state["key_decisions"] = [{"Key Decision": "D1", "Weight (1-3)": 3}]
+    st.session_state["impact_assessment"] = []
+
+    table = build_impact_table()
+
+    assert table.loc[0, "Degree of Uncertainty"] == ""
