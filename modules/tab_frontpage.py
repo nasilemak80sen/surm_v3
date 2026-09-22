@@ -17,6 +17,17 @@ from utils.workflow import current_stage, stage_results
 _PHASES = ["", "PGR0", "PGR1", "PGR2", "PGR3/FID", "ITR2a", "ITR2b", "SBS", "SIR2a", "SIR2b", "PGR4"]
 
 
+def _sync_widget_value(target_key: str, widget_key: str) -> None:
+    """Copy a page widget's value into durable study state before rerun."""
+    st.session_state[target_key] = st.session_state.get(widget_key, "")
+
+
+def _ensure_widget_value(widget_key: str, target_key: str) -> None:
+    """Seed a page-local widget from the durable study field when it reappears."""
+    if widget_key not in st.session_state:
+        st.session_state[widget_key] = st.session_state.get(target_key, "")
+
+
 def _parse_signoff_date(value: str) -> date | None:
     if not value:
         return None
@@ -30,16 +41,41 @@ def _parse_signoff_date(value: str) -> date | None:
 def _signoff_row(label: str, key: str) -> None:
     st.markdown(f"**{label}**")
     cols = st.columns([1.2, 1.2, 0.85])
+
+    name_widget_key = f"{key}_name_input"
+    role_widget_key = f"{key}_role_input"
+    date_widget_key = f"{key}_date_picker_{st.session_state.get('study_id', 'new')}"
+
+    _ensure_widget_value(name_widget_key, f"{key}_name")
+    _ensure_widget_value(role_widget_key, f"{key}_role")
+
     with cols[0]:
-        st.text_input("Name", key=f"{key}_name", placeholder="Full name", label_visibility="collapsed")
+        st.text_input(
+            "Name",
+            key=name_widget_key,
+            placeholder="Full name",
+            label_visibility="collapsed",
+            on_change=_sync_widget_value,
+            args=(f"{key}_name", name_widget_key),
+        )
     with cols[1]:
-        st.text_input("Role", key=f"{key}_role", placeholder="Role / designation", label_visibility="collapsed")
+        st.text_input(
+            "Role",
+            key=role_widget_key,
+            placeholder="Role / designation",
+            label_visibility="collapsed",
+            on_change=_sync_widget_value,
+            args=(f"{key}_role", role_widget_key),
+        )
     with cols[2]:
+        if date_widget_key not in st.session_state:
+            st.session_state[date_widget_key] = _parse_signoff_date(
+                st.session_state.get(f"{key}_date", "")
+            )
         value = st.date_input(
             "Date",
-            value=_parse_signoff_date(st.session_state.get(f"{key}_date", "")),
             format="DD/MM/YYYY",
-            key=f"{key}_date_picker_{st.session_state.get('study_id', 'new')}",
+            key=date_widget_key,
             label_visibility="collapsed",
         )
         st.session_state[f"{key}_date"] = value.strftime("%d/%m/%Y") if value else ""
@@ -85,12 +121,35 @@ def render():
             "Exports reflect the current session draft; they do not persist it to the saved study."
         )
         c1, c2, c3 = st.columns(3)
+
+        _ensure_widget_value("project_name_input", "project_name")
+        _ensure_widget_value("field_name_input", "field_name")
+        _ensure_widget_value("project_phase_input", "project_phase")
+
         with c1:
-            st.text_input("Project Name", key="project_name", placeholder="e.g. Ledang FDP")
+            st.text_input(
+                "Project Name",
+                key="project_name_input",
+                placeholder="e.g. Ledang FDP",
+                on_change=_sync_widget_value,
+                args=("project_name", "project_name_input"),
+            )
         with c2:
-            st.text_input("Field Name", key="field_name", placeholder="e.g. Ledang")
+            st.text_input(
+                "Field Name",
+                key="field_name_input",
+                placeholder="e.g. Ledang",
+                on_change=_sync_widget_value,
+                args=("field_name", "field_name_input"),
+            )
         with c3:
-            st.selectbox("Project Phase", _PHASES, key="project_phase")
+            st.selectbox(
+                "Project Phase",
+                _PHASES,
+                key="project_phase_input",
+                on_change=_sync_widget_value,
+                args=("project_phase", "project_phase_input"),
+            )
 
         save_col, clear_col, _ = st.columns([1.2, 1.1, 3])
         with save_col:
@@ -106,6 +165,9 @@ def render():
                 ss["project_name"] = ""
                 ss["field_name"] = ""
                 ss["project_phase"] = ""
+                ss["project_name_input"] = ""
+                ss["field_name_input"] = ""
+                ss["project_phase_input"] = ""
                 st.rerun()
 
     with right:
@@ -139,10 +201,13 @@ def render():
     )
     life_col, rev_col = st.columns([1.2, 2])
     with life_col:
+        _ensure_widget_value("study_lifecycle_input", "study_lifecycle")
         st.selectbox(
             "Study lifecycle",
             ["Draft", "In Review", "Reviewed", "Approved", "Archived"],
-            key="study_lifecycle",
+            key="study_lifecycle_input",
+            on_change=_sync_widget_value,
+            args=("study_lifecycle", "study_lifecycle_input"),
         )
         st.caption(f"Revision {ss.get('study_revision', 0)}")
     with rev_col:
