@@ -8,37 +8,121 @@ def study_fixture():
     return {
         "project_name": "Alpha",
         "uncertainties": [
-            {"name": "Fault seal", "selected": True, "discipline": "Geology"},
-            {"name": "Ignored", "selected": False, "discipline": "Geophysics"},
+            {
+                "name": "Fault seal",
+                "selected": True,
+                "discipline": "Geology",
+            },
+            {
+                "name": "Ignored",
+                "selected": False,
+                "discipline": "Geophysics",
+            },
         ],
-        "key_decisions": [{"Key Decision": "Well placement", "Weight (1-3)": 3}],
-        "impact_assessment": [{"Uncertainty": "Fault seal", "Well placement": "H"}],
-        "key_uncertainties": [{"Uncertainty": "Fault seal", "Include in Plan": True, "Rank": 1, "Impact (Weighted)": 2.8}],
-        "resolution_list": {"Fault seal": {"Pressure transient analysis": "Y"}},
-        "resolution_planner": [{"Resolution Action": "Pressure transient analysis", "Status": "In Progress"}],
-        "risk_register": [{"Risk": "Poor well positioning", "Uncertainty/Causes": "1. Fault seal"}],
+        "key_decisions": [
+            {
+                "Key Decision": "Well placement",
+                "Weight (1-3)": 3,
+            }
+        ],
+        "impact_assessment": [
+            {
+                "Uncertainty": "Fault seal",
+                "Degree of Uncertainty": "H",
+                "Well placement": "H",
+            }
+        ],
+        "key_uncertainties": [
+            {
+                "Uncertainty": "Fault seal",
+                "Include in Plan": True,
+                "Rank": 1,
+                "Impact (Weighted)": 3.0,
+            }
+        ],
+        "_mapping": {
+            "resolution_options": [
+                "Pressure transient analysis",
+            ],
+        },
+        "resolution_list": {
+            "Fault seal": {
+                "Pressure transient analysis": "Y",
+            },
+        },
+        "resolution_planner": [
+            {
+                "Resolution Action": "Pressure transient analysis",
+                "Associated Uncertainties": "Fault seal",
+                "Status": "In Progress",
+                "Action Owner": "Engineer A",
+                "Part of Workplan": True,
+            }
+        ],
+        "risk_register": [
+            {
+                "Risk": "Poor well positioning",
+                "Uncertainty/Causes": "1. Fault seal",
+                "Likelihood (H/M/L)": "M",
+                "Impact (H/M/L)": "H",
+                "Action Owner": "Engineer A",
+                "Contingency Plan": "Review well placement and update the plan.",
+                "Impact/Consequence": "Material impact to expected recovery.",
+                "Risk Rating": "High",
+            }
+        ],
+        "pra_output": [
+            {
+                "Risk": "Poor well positioning",
+                "Risk Rating": "High",
+            }
+        ],
     }
 
 
 class WorkflowAnalyticsTests(unittest.TestCase):
     def test_stage_validation_protects_downstream_pages(self):
         session = {"uncertainties": [], "key_decisions": []}
-        allowed, reason = validate_stage(session, "key_decisions")
+        allowed, reason = validate_stage(
+            session,
+            "key_decisions",
+        )
         self.assertFalse(allowed)
         self.assertIn("uncertainty", reason)
-        self.assertEqual(current_stage(session).key, "uncertainties")
+        self.assertEqual(
+            current_stage(session).key,
+            "uncertainties",
+        )
 
     def test_relationships_trace_uncertainty_to_decision_and_risk(self):
         relationships = build_relationships(study_fixture())
-        targets = {item["target"] for item in relationships}
-        self.assertEqual(targets, {"Well placement", "Poor well positioning"})
+        targets = {
+            item["target"]
+            for item in relationships
+        }
+        self.assertEqual(
+            targets,
+            {"Well placement", "Poor well positioning"},
+        )
 
     def test_analytics_reports_progress_and_status(self):
         analytics = build_study_analytics(study_fixture())
-        self.assertEqual(analytics["completion"], 100)
-        self.assertEqual(analytics["resolution_status"], {"In Progress": 1})
-        self.assertEqual(analytics["critical_uncertainties"], ["Fault seal"])
-        self.assertEqual(completion_percent(study_fixture()), 100)
+        self.assertEqual(
+            analytics["completion"],
+            100,
+        )
+        self.assertEqual(
+            analytics["resolution_status"],
+            {"In Progress": 1},
+        )
+        self.assertEqual(
+            analytics["critical_uncertainties"],
+            ["Fault seal"],
+        )
+        self.assertEqual(
+            completion_percent(study_fixture()),
+            100,
+        )
 
 
 if __name__ == "__main__":
