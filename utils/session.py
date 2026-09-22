@@ -12,6 +12,8 @@ from uuid import uuid4
 
 import streamlit as st
 
+from utils.coercion import safe_int
+
 
 SURM_METHODOLOGY_VERSION = "SURM-2026.01"
 
@@ -186,7 +188,7 @@ def create_new_study() -> None:
 def _build_default_uncertainties(mapping):
     rows = []
     for u in mapping["uncertainties"]:
-        numeric_id = int(u["id"])
+        numeric_id = safe_int(u.get("id"), default=len(rows) + 1)
         rows.append({
             "id": numeric_id,
             "uncertainty_id": f"UNC-{numeric_id:03d}",
