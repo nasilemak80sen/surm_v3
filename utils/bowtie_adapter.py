@@ -153,6 +153,8 @@ def build_bowtie_document(
                 "description": str(planner_match.get("Description", "") or ""),
                 "owner": str(planner_match.get("Action Owner", "") or ""),
                 "effectiveness": "",
+                "degradation_factors": [],
+                "controls": [],
                 "surm_source": {
                     "type": "resolution",
                     "resolution_action": option,
@@ -177,8 +179,8 @@ def build_bowtie_document(
             "nodeId": item["node"]["id"],
             "x": 380 + ((index - 1) % 3) * 130,
             "y": 115 + ((index - 1) // 3) * 145,
-            "w": 46,
-            "h": 96,
+            "w": 120,
+            "h": 112,
             "pageId": "PAGE_1",
         }
         preventative.append(placement)
@@ -243,6 +245,8 @@ def build_bowtie_document(
             "description": str(planner_match.get("Description", "") or ""),
             "owner": str(planner_match.get("Action Owner", "") or ""),
             "effectiveness": "",
+            "degradation_factors": [],
+            "controls": [],
             "surm_source": {"type": "risk_contingency"},
         }
         library["mitigativeBarrier"].append(node)
