@@ -145,17 +145,23 @@ svg{width:100%;height:100%;display:block}
     });
     value.preventativeBarriers.forEach((p,i)=>{
       p.type='preventativeBarrier';
+      const legacySize=Number(p.w||0)<80;
       p.w=120;
       p.h=112;
-      p.x=410+(i%3)*90;
-      p.y=150+Math.floor(i/3)*190;
+      if(legacySize){
+        p.x=410+(i%3)*90;
+        p.y=150+Math.floor(i/3)*190;
+      }
     });
     value.mitigativeBarriers.forEach((p,i)=>{
       p.type='mitigativeBarrier';
+      const legacySize=Number(p.w||0)<80;
       p.w=120;
       p.h=112;
-      p.x=1040+(i%3)*90;
-      p.y=150+Math.floor(i/3)*190;
+      if(legacySize){
+        p.x=1040+(i%3)*90;
+        p.y=150+Math.floor(i/3)*190;
+      }
     });
     value.outcomes.forEach(p=>{
       p.type='outcome';
