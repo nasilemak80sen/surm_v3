@@ -158,183 +158,328 @@ def build_tornado_chart(key_unc_df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def build_bowtie(risk_row: dict) -> go.Figure:
-    risk_name    = risk_row.get("Risk", "Risk Event")
-    causes_raw   = risk_row.get("Uncertainty/Causes", "")
-    controls_raw = risk_row.get("Resolution Plan", "")
-    contingency  = risk_row.get("Contingency Plan", "")
-    consequence  = risk_row.get("Impact/Consequence", "")
+def _wrap_label(value: object, width: int = 24, max_lines: int = 3) -> str:
+    """Wrap annotation text so Plotly boxes remain readable at normal widths."""
+    import html
+    import textwrap
 
-    causes    = [c.strip().lstrip("0123456789. ") for c in causes_raw.split("\n") if c.strip()][:7]
-    ctrl_list = [c.strip().lstrip("- ") for c in controls_raw.split("\n") if c.strip()][:5]
-    cons_list = [c.strip() for c in consequence.split(";") if c.strip()] if consequence else []
-    if not cons_list:
-        cons_list = ["Impact not yet defined"]
-    cons_list = cons_list[:5]
+    text = html.escape(str(value or "").strip())
+    if not text:
+        return ""
+
+    lines = textwrap.wrap(
+        text,
+        width=width,
+        break_long_words=False,
+        break_on_hyphens=False,
+    )
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+        lines[-1] = lines[-1].rstrip(" .") + "…"
+    return "<br>".join(lines)
+
+
+def build_bowtie(risk_row: dict) -> go.Figure:
+    risk_name = str(risk_row.get("Risk", "Risk Event"))
+    causes_raw = str(risk_row.get("Uncertainty/Causes", "") or "")
+    controls_raw = str(risk_row.get("Resolution Plan", "") or "")
+    contingency = str(risk_row.get("Contingency Plan", "") or "")
+    consequence = str(risk_row.get("Impact/Consequence", "") or "")
+
+    causes = [
+        c.strip().lstrip("0123456789. ")
+        for c in causes_raw.split("\n")
+        if c.strip()
+    ][:7]
+    ctrl_list = [
+        c.strip().lstrip("- ")
+        for c in controls_raw.split("\n")
+        if c.strip()
+    ][:5]
+    cons_list = (
+        [c.strip() for c in consequence.split(";") if c.strip()]
+        if consequence
+        else []
+    )[:5]
+
     if not causes:
         causes = ["(no causes listed)"]
+    if not cons_list:
+        cons_list = ["Impact not yet defined"]
 
-    EVENT_CX     = 7.0
-    EVENT_CY     = 5.0
-    EVENT_LEFT   = 4.6
-    EVENT_RIGHT  = 9.4
-    EVENT_HALF_H = 1.1
-    THREAT_X     = 2.2
-    CONS_X       = 11.8
-    BOX_W        = 2.05
-    BOX_H        = 0.76
-    BAR_L        = 3.4
-    BAR_R        = 10.6
+    EVENT_CX = 8.1
+    EVENT_CY = 6.0
+    EVENT_LEFT = 5.7
+    EVENT_RIGHT = 10.5
+    EVENT_HALF_H = 1.05
+    THREAT_X = 3.1
+    CONS_X = 13.1
+    BAR_L = 4.55
+    BAR_R = 11.75
+    THREAT_RIGHT = BAR_L - 0.25
+    CONS_LEFT = BAR_R + 0.25
+    BOX_H = 0.92
+    X_MAX = 17.5
 
     n_c = max(len(causes), 1)
     n_k = max(len(cons_list), 1)
-    cause_ys = _even_spacing(n_c, 0.6, 9.4)
-    cons_ys  = _even_spacing(n_k, 0.6, 9.4)
-    tl_top   = min(cause_ys) - BOX_H
-    tl_bot   = max(cause_ys) + BOX_H
-    tr_top   = min(cons_ys)  - BOX_H
-    tr_bot   = max(cons_ys)  + BOX_H
+    cause_ys = _even_spacing(n_c, 1.0, 10.0)
+    cons_ys = _even_spacing(n_k, 1.0, 10.0)
+
+    tl_top = min(cause_ys) - BOX_H
+    tl_bot = max(cause_ys) + BOX_H
+    tr_top = min(cons_ys) - BOX_H
+    tr_bot = max(cons_ys) + BOX_H
 
     fig = go.Figure()
 
-    # Triangle fills
-    fig.add_trace(go.Scatter(
-        x=[THREAT_X, EVENT_LEFT, THREAT_X, THREAT_X],
-        y=[tl_top, EVENT_CY, tl_bot, tl_top],
-        fill="toself", fillcolor="rgba(250,206,100,0.18)",
-        line=dict(width=0), hoverinfo="skip", showlegend=False,
-    ))
-    fig.add_trace(go.Scatter(
-        x=[EVENT_RIGHT, CONS_X, CONS_X, EVENT_RIGHT],
-        y=[EVENT_CY, tr_top, tr_bot, EVENT_CY],
-        fill="toself", fillcolor="rgba(200,60,60,0.10)",
-        line=dict(width=0), hoverinfo="skip", showlegend=False,
-    ))
+    # Directional threat/consequence fields make the flow easier to scan.
+    fig.add_trace(
+        go.Scatter(
+            x=[THREAT_X, EVENT_LEFT, THREAT_X, THREAT_X],
+            y=[tl_top, EVENT_CY, tl_bot, tl_top],
+            fill="toself",
+            fillcolor="rgba(250,206,100,0.16)",
+            line=dict(width=0),
+            hoverinfo="skip",
+            showlegend=False,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[EVENT_RIGHT, CONS_X, CONS_X, EVENT_RIGHT],
+            y=[EVENT_CY, tr_top, tr_bot, EVENT_CY],
+            fill="toself",
+            fillcolor="rgba(200,60,60,0.09)",
+            line=dict(width=0),
+            hoverinfo="skip",
+            showlegend=False,
+        )
+    )
 
-    # Threat → event arrows
+    # Threat → event arrows.
     for y in cause_ys:
         fig.add_annotation(
-            x=EVENT_LEFT + 0.06, y=EVENT_CY,
-            ax=THREAT_X, ay=y,
-            axref="x", ayref="y", xref="x", yref="y",
-            arrowhead=2, arrowsize=1.2, arrowwidth=2.2,
-            arrowcolor="#BA7517", showarrow=True,
+            x=EVENT_LEFT + 0.08,
+            y=EVENT_CY,
+            ax=THREAT_X,
+            ay=y,
+            axref="x",
+            ayref="y",
+            xref="x",
+            yref="y",
+            arrowhead=2,
+            arrowsize=1.25,
+            arrowwidth=2.4,
+            arrowcolor="#BA7517",
+            showarrow=True,
         )
 
-    # Event → consequence arrows
+    # Event → consequence arrows.
     for y in cons_ys:
         fig.add_annotation(
-            x=CONS_X - 0.06, y=y,
-            ax=EVENT_RIGHT, ay=EVENT_CY,
-            axref="x", ayref="y", xref="x", yref="y",
-            arrowhead=2, arrowsize=1.2, arrowwidth=2.2,
-            arrowcolor="#993C1D", showarrow=True,
+            x=CONS_X - 0.08,
+            y=y,
+            ax=EVENT_RIGHT,
+            ay=EVENT_CY,
+            axref="x",
+            ayref="y",
+            xref="x",
+            yref="y",
+            arrowhead=2,
+            arrowsize=1.25,
+            arrowwidth=2.4,
+            arrowcolor="#993C1D",
+            showarrow=True,
         )
 
-    # Control barrier (teal pillar)
-    fig.add_shape(type="rect",
-        x0=BAR_L - 0.15, x1=BAR_L + 0.15,
-        y0=tl_top - 0.4,  y1=tl_bot + 0.4,
-        fillcolor="#1D9E75", line=dict(width=0), layer="above",
+    # Barrier pillars.
+    fig.add_shape(
+        type="rect",
+        x0=BAR_L - 0.16,
+        x1=BAR_L + 0.16,
+        y0=tl_top - 0.35,
+        y1=tl_bot + 0.35,
+        fillcolor="#1D9E75",
+        line=dict(width=0),
+        layer="above",
     )
-    fig.add_annotation(x=BAR_L, y=tl_top - 0.75, text="<b>Controls</b>",
-        showarrow=False, xanchor="center",
-        font=dict(size=12, color="#0F6E56", family=FONT_FAMILY))
-
-    # Recovery barrier (purple pillar)
-    fig.add_shape(type="rect",
-        x0=BAR_R - 0.15, x1=BAR_R + 0.15,
-        y0=tr_top - 0.4,  y1=tr_bot + 0.4,
-        fillcolor="#534AB7", line=dict(width=0), layer="above",
+    fig.add_annotation(
+        x=BAR_L,
+        y=tl_top - 0.62,
+        text="<b>Controls</b>",
+        showarrow=False,
+        xanchor="center",
+        font=dict(size=13, color="#0F6E56", family=FONT_FAMILY),
     )
-    fig.add_annotation(x=BAR_R, y=tr_top - 0.75, text="<b>Recovery</b>",
-        showarrow=False, xanchor="center",
-        font=dict(size=12, color="#3C3489", family=FONT_FAMILY))
 
-    # Threat boxes
+    fig.add_shape(
+        type="rect",
+        x0=BAR_R - 0.16,
+        x1=BAR_R + 0.16,
+        y0=tr_top - 0.35,
+        y1=tr_bot + 0.35,
+        fillcolor="#534AB7",
+        line=dict(width=0),
+        layer="above",
+    )
+    fig.add_annotation(
+        x=BAR_R,
+        y=tr_top - 0.62,
+        text="<b>Recovery</b>",
+        showarrow=False,
+        xanchor="center",
+        font=dict(size=13, color="#3C3489", family=FONT_FAMILY),
+    )
+
+    # Cause boxes.
     for cause, y in zip(causes, cause_ys):
-        label = cause[:38] + "…" if len(cause) > 40 else cause
-        fig.add_shape(type="rect",
-            x0=0.1, x1=THREAT_X - 0.06,
-            y0=y - BOX_H / 2, y1=y + BOX_H / 2,
-            fillcolor="#FAEEDA", line=dict(color="#BA7517", width=0.8),
+        fig.add_shape(
+            type="rect",
+            x0=0.35,
+            x1=THREAT_RIGHT,
+            y0=y - BOX_H / 2,
+            y1=y + BOX_H / 2,
+            fillcolor="#FAEEDA",
+            line=dict(color="#BA7517", width=1.1),
+            layer="above",
         )
         fig.add_annotation(
-            x=(0.1 + THREAT_X - 0.06) / 2, y=y,
-            text=label, showarrow=False, xanchor="center", yanchor="middle",
+            x=(0.35 + THREAT_RIGHT) / 2,
+            y=y,
+            text=_wrap_label(cause, width=25, max_lines=3),
+            showarrow=False,
+            xanchor="center",
+            yanchor="middle",
+            align="center",
             font=dict(size=11, color="#412402", family=FONT_FAMILY),
         )
 
-    # Central event box
-    fig.add_shape(type="rect",
-        x0=EVENT_LEFT, x1=EVENT_RIGHT,
-        y0=EVENT_CY - EVENT_HALF_H, y1=EVENT_CY + EVENT_HALF_H,
-        fillcolor="#C00000", line=dict(color="#800000", width=2),
+    # Central event box.
+    fig.add_shape(
+        type="rect",
+        x0=EVENT_LEFT,
+        x1=EVENT_RIGHT,
+        y0=EVENT_CY - EVENT_HALF_H,
+        y1=EVENT_CY + EVENT_HALF_H,
+        fillcolor="#C00000",
+        line=dict(color="#800000", width=2),
+        layer="above",
     )
-    risk_short = risk_name[:26] + "…" if len(risk_name) > 28 else risk_name
-    fig.add_annotation(x=EVENT_CX, y=EVENT_CY + 0.3,
-        text=f"<b>{risk_short}</b>", showarrow=False,
-        xanchor="center", yanchor="middle",
-        font=dict(size=13, color="white", family=FONT_FAMILY))
-    fig.add_annotation(x=EVENT_CX, y=EVENT_CY - 0.4,
-        text="Risk Event", showarrow=False,
-        xanchor="center", yanchor="middle",
-        font=dict(size=10, color="rgba(255,200,200,0.9)", family=FONT_FAMILY))
+    fig.add_annotation(
+        x=EVENT_CX,
+        y=EVENT_CY + 0.22,
+        text=f"<b>{_wrap_label(risk_name, width=30, max_lines=2)}</b>",
+        showarrow=False,
+        xanchor="center",
+        yanchor="middle",
+        align="center",
+        font=dict(size=14, color="white", family=FONT_FAMILY),
+    )
+    fig.add_annotation(
+        x=EVENT_CX,
+        y=EVENT_CY - 0.45,
+        text="Risk Event",
+        showarrow=False,
+        xanchor="center",
+        yanchor="middle",
+        font=dict(size=10, color="rgba(255,220,220,0.92)", family=FONT_FAMILY),
+    )
 
-    # Consequence boxes
+    # Consequence boxes.
     for cons, y in zip(cons_list, cons_ys):
-        label = cons[:38] + "…" if len(cons) > 40 else cons
-        fig.add_shape(type="rect",
-            x0=CONS_X + 0.06, x1=13.9,
-            y0=y - BOX_H / 2, y1=y + BOX_H / 2,
-            fillcolor="#FAECE7", line=dict(color="#993C1D", width=0.8),
+        fig.add_shape(
+            type="rect",
+            x0=CONS_LEFT,
+            x1=X_MAX - 0.35,
+            y0=y - BOX_H / 2,
+            y1=y + BOX_H / 2,
+            fillcolor="#FAECE7",
+            line=dict(color="#993C1D", width=1.1),
+            layer="above",
         )
         fig.add_annotation(
-            x=(CONS_X + 0.06 + 13.9) / 2, y=y,
-            text=label, showarrow=False, xanchor="center", yanchor="middle",
+            x=(CONS_LEFT + X_MAX - 0.35) / 2,
+            y=y,
+            text=_wrap_label(cons, width=25, max_lines=3),
+            showarrow=False,
+            xanchor="center",
+            yanchor="middle",
+            align="center",
             font=dict(size=11, color="#4A1B0C", family=FONT_FAMILY),
         )
 
-    # Controls list below left barrier
+    # Controls and contingency are now wider, boxed reporting areas instead of
+    # tiny annotations competing with the main bowtie flow.
     if ctrl_list:
-        ctrl_text = "<br>".join("• " + c[:38] for c in ctrl_list[:4])
-        fig.add_annotation(x=BAR_L, y=tl_bot + 0.6, text=ctrl_text,
-            showarrow=False, xanchor="center", yanchor="top",
+        ctrl_text = "<br>".join(f"• {_wrap_label(c, 29, 2)}" for c in ctrl_list[:4])
+        fig.add_annotation(
+            x=BAR_L,
+            y=tl_bot + 0.55,
+            text=f"<b>Controls</b><br>{ctrl_text}",
+            showarrow=False,
+            xanchor="center",
+            yanchor="top",
+            align="left",
             font=dict(size=10, color="#0F6E56", family=FONT_FAMILY),
-            bgcolor="rgba(200,245,220,0.85)", bordercolor="#1D9E75",
-            borderwidth=1, borderpad=4)
+            bgcolor="rgba(232,250,241,0.96)",
+            bordercolor="#1D9E75",
+            borderwidth=1,
+            borderpad=7,
+        )
 
-    # Contingency below right barrier
     if contingency:
-        fig.add_annotation(x=BAR_R, y=tr_bot + 0.6,
-            text="Contingency:<br>" + contingency[:55],
-            showarrow=False, xanchor="center", yanchor="top",
+        fig.add_annotation(
+            x=BAR_R,
+            y=tr_bot + 0.55,
+            text=f"<b>Contingency</b><br>{_wrap_label(contingency, 31, 3)}",
+            showarrow=False,
+            xanchor="center",
+            yanchor="top",
+            align="left",
             font=dict(size=10, color="#3C3489", family=FONT_FAMILY),
-            bgcolor="rgba(220,215,245,0.85)", bordercolor="#534AB7",
-            borderwidth=1, borderpad=4)
+            bgcolor="rgba(241,238,252,0.96)",
+            bordercolor="#534AB7",
+            borderwidth=1,
+            borderpad=7,
+        )
 
-    # Section labels
-    fig.add_annotation(x=1.15, y=10.5, text="<b>Threats / Causes</b>",
-        showarrow=False, xanchor="center",
-        font=dict(size=13, color="#BA7517", family=FONT_FAMILY))
-    fig.add_annotation(x=12.85, y=10.5, text="<b>Consequences</b>",
-        showarrow=False, xanchor="center",
-        font=dict(size=13, color="#993C1D", family=FONT_FAMILY))
+    # Section labels.
+    fig.add_annotation(
+        x=1.7,
+        y=11.4,
+        text="<b>Threats / Causes</b>",
+        showarrow=False,
+        xanchor="center",
+        font=dict(size=14, color="#9A5B10", family=FONT_FAMILY),
+    )
+    fig.add_annotation(
+        x=15.3,
+        y=11.4,
+        text="<b>Consequences</b>",
+        showarrow=False,
+        xanchor="center",
+        font=dict(size=14, color="#8D341D", family=FONT_FAMILY),
+    )
 
-    height = max(520, max(n_c, n_k) * 100 + 220)
+    height = max(640, max(n_c, n_k) * 80 + 250)
     fig.update_layout(
-        title=dict(text=f"Bowtie Diagram — {risk_name}",
-                   font=dict(size=15, color="#1F6B3A", family=FONT_FAMILY), x=0.5),
-        xaxis=dict(visible=False, range=[-0.3, 14.3]),
-        yaxis=dict(visible=False, range=[-1.5, 11.5]),
-        plot_bgcolor="white", paper_bgcolor="white",
+        title=dict(
+            text=f"Bowtie Diagram — {risk_name}",
+            font=dict(size=18, color="#1F6B3A", family=FONT_FAMILY),
+            x=0.5,
+            xanchor="center",
+        ),
+        xaxis=dict(visible=False, range=[0.0, X_MAX]),
+        yaxis=dict(visible=False, range=[-1.8, 12.4]),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
         height=height,
-        margin=dict(l=20, r=20, t=70, b=40),
+        margin=dict(l=26, r=26, t=88, b=36),
         font=dict(family=FONT_FAMILY, size=13),
         showlegend=False,
     )
     return fig
-
 
 def _even_spacing(n: int, y_min: float, y_max: float) -> list:
     if n == 1:
