@@ -250,7 +250,7 @@ def _split_diagram_items(value: object, limit: int = 5) -> list[str]:
     raw = str(value or "")
     items = [
         item.strip().lstrip("0123456789. -•")
-        for item in re.split(r"[\\n;]+", raw)
+        for item in re.split(r"[\n;]+", raw)
         if item.strip()
     ]
     return items[:limit]
