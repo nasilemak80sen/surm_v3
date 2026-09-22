@@ -18,7 +18,20 @@ SURM Toolkit is a guided web implementation of the PETRONAS Carigali subsurface 
 | 7️⃣ Risk Register | Complete owner, consequence, contingency, likelihood and impact | Assessed risk register |
 | 📄 PRA Output | Review the read-only final risk view | PRA-ready output + workbook |
 
-Supporting pages include Study Repository, Study Overview, Team/Documentation and How to Use.
+Supporting pages are ordered for users as: Study Repository → How to Use → Overview (report front page) → Team. The workflow then runs from Uncertainties through PRA Output.
+
+
+
+## UI / UX direction
+
+P2 focuses on information density without changing the engineering methodology:
+
+- **How to Use** is a visual onboarding page with a study-flow figure instead of a text-only manual.
+- **Overview** is treated as the report front page: study identity, readiness, governance and export live together without duplicating every downstream detail.
+- Workflow pages use a **work-left / inspect-right** layout where practical, keeping the user's primary input alongside the immediate chart, coverage, execution or risk output.
+- The global navigation is the navigation mechanism. Redundant previous/next text at the bottom of pages has been removed.
+- Workflow pages use a compact task header and reserve visual emphasis for the active form and its decision-support output.
+- Sidebar content is intentionally reduced to study context, workflow state, session controls and export.
 
 ## Design principles
 
