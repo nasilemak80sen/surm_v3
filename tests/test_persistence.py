@@ -17,6 +17,7 @@ class PersistenceTests(unittest.TestCase):
         self.assertIn("project_name", DEFAULT_SESSION_STATE)
         self.assertIn("field_name", DEFAULT_SESSION_STATE)
         self.assertIn("team_members", DEFAULT_SESSION_STATE)
+        self.assertIn("bowtie_register", DEFAULT_SESSION_STATE)
 
     def test_load_session_record_uses_project_and_field(self):
         with patch("utils.persistence.load_session", return_value=True) as mock_load:
@@ -60,6 +61,7 @@ class PersistenceTests(unittest.TestCase):
                 "project_phase": "PGR1",
                 "team_members": [{"Name": "Engineer", "Function / Role": "RE", "Date": "19/08/2026"}],
                 "key_decisions": [{"Key Decision": "Well placement", "Weight (1-3)": 3, "Description": ""}],
+                "bowtie_register": {"RSK-001": {"risk_id": "RSK-001", "version": "SURM-BOWTIE-1"}},
             }
             record = {
                 "session": payload,
