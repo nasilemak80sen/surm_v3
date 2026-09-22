@@ -255,11 +255,38 @@ def render():
             "Degree of uncertainty is plotted against decision impact. Each point represents an uncertainty selected for the plan."
         )
 
-        matrix_figure = build_uncertainty_matrix(active)
+        matrix_display = active.reset_index(drop=True).copy()
+        matrix_display.insert(0, "Matrix #", range(1, len(matrix_display) + 1))
+
+        matrix_figure = build_uncertainty_matrix(matrix_display)
         st.plotly_chart(
             matrix_figure,
             use_container_width=True,
             config={"displayModeBar": False, "responsive": True},
+        )
+        st.caption("Numbers in the matrix map directly to the detail table below.")
+        st.dataframe(
+            matrix_display[
+                [
+                    "Matrix #",
+                    "Uncertainty",
+                    "Degree of Uncertainty",
+                    "Impact Bin",
+                    "Combined Rating",
+                    "Impact (Weighted)",
+                    "Rank",
+                ]
+            ].rename(
+                columns={
+                    "Degree of Uncertainty": "Degree",
+                    "Impact Bin": "Impact",
+                    "Combined Rating": "Rating",
+                    "Impact (Weighted)": "Weighted Score",
+                }
+            ),
+            hide_index=True,
+            use_container_width=True,
+            height=min(420, max(120, len(matrix_display) * 48 + 48)),
         )
         try:
             st.download_button(
