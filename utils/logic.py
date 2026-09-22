@@ -89,13 +89,12 @@ def compute_weighted_score(impact_row: dict, decisions: list) -> float:
 
 def compute_combined_rating(deg_uncertainty: str, impact_bin: str) -> str:
     """Return the two-letter degree × impact rating used by SURM."""
-    degree = deg_uncertainty.strip().upper() if deg_uncertainty else "L"
-    impact = impact_bin.strip().upper() if impact_bin else "L"
+    degree = deg_uncertainty.strip().upper() if deg_uncertainty else ""
+    impact = impact_bin.strip().upper() if impact_bin else ""
 
-    if degree not in ("H", "M", "L"):
-        degree = "L"
-    if impact not in ("H", "M", "L"):
-        impact = "L"
+    # A blank assessment is a draft state, not a Low rating.
+    if degree not in ("H", "M", "L") or impact not in ("H", "M", "L"):
+        return ""
 
     return degree + impact
 
@@ -153,7 +152,7 @@ def build_impact_table() -> pd.DataFrame:
             ),
         }
         for decision_name in decision_names:
-            row[decision_name] = existing_row.get(decision_name, "NA")
+            row[decision_name] = existing_row.get(decision_name, "")
         rows.append(row)
 
     return pd.DataFrame(rows) if rows else pd.DataFrame()
@@ -185,7 +184,7 @@ def compute_key_uncertainties(
 
     rows = []
     for _, row in impact_df.iterrows():
-        degree = row.get(degree_col, "L")
+        degree = row.get(degree_col, "")
         score = compute_weighted_score(row.to_dict(), decisions)
         impact_bin = score_to_bin(score)
         rating = compute_combined_rating(degree, impact_bin)
