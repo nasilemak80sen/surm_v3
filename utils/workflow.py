@@ -9,7 +9,7 @@ This module is intentionally UI-agnostic. It answers:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -117,13 +117,34 @@ def _decision_count(session: dict[str, Any]) -> int:
     return len(_decision_names(session))
 
 
+def _decision_weight(value: Any) -> int:
+    try:
+        number = int(float(value))
+    except (TypeError, ValueError):
+        return 0
+    return number
+
+
+def _key_decisions_complete(session: dict[str, Any]) -> bool:
+    named = [
+        item
+        for item in session.get("key_decisions", [])
+        if isinstance(item, dict)
+        and str(item.get("Key Decision", "")).strip()
+    ]
+    return bool(named) and all(
+        _decision_weight(item.get("Weight (1-3)", 0)) in {1, 2, 3}
+        for item in named
+    )
+
+
 def _active_decision_names(session: dict[str, Any]) -> list[str]:
     return [
         str(item.get("Key Decision", "")).strip()
         for item in session.get("key_decisions", [])
         if isinstance(item, dict)
         and str(item.get("Key Decision", "")).strip()
-        and int(item.get("Weight (1-3)", 0) or 0) >= 1
+        and _decision_weight(item.get("Weight (1-3)", 0)) >= 1
     ]
 
 
@@ -307,6 +328,7 @@ def stage_results(session: dict[str, Any]) -> list[WorkflowStage]:
     """Return completion and access state for every study stage."""
     selected = _selected_uncertainties(session)
     decisions = _decision_count(session)
+    key_decisions_complete = _key_decisions_complete(session)
 
     impact_complete, impact_reason = _impact_complete(session)
     key_uncertainties_complete, key_uncertainties_reason = _key_uncertainties_complete(session)
@@ -316,14 +338,7 @@ def stage_results(session: dict[str, Any]) -> list[WorkflowStage]:
 
     completed = {
         "uncertainties": selected > 0,
-        "key_decisions": decisions > 0
-        and all(
-            str(item.get("Key Decision", "")).strip()
-            and int(item.get("Weight (1-3)", 0) or 0) in {1, 2, 3}
-            for item in session.get("key_decisions", [])
-            if isinstance(item, dict)
-            and str(item.get("Key Decision", "")).strip()
-        ),
+        "key_decisions": key_decisions_complete,
         "impact_assessment": impact_complete,
         "key_uncertainties": key_uncertainties_complete,
         "resolution_list": resolution_coverage_ok
@@ -343,8 +358,8 @@ def stage_results(session: dict[str, Any]) -> list[WorkflowStage]:
             "Select at least one uncertainty first.",
         ),
         "impact_assessment": (
-            decisions > 0,
-            "Define at least one key decision first.",
+            key_decisions_complete,
+            "Define at least one valid weighted key decision first.",
         ),
         "key_uncertainties": (
             impact_complete,
@@ -377,7 +392,7 @@ def stage_results(session: dict[str, Any]) -> list[WorkflowStage]:
             "Select the uncertainties that matter for this field and project."
         ),
         "key_decisions": (
-            "Confirm the decisions this study needs to support and their weights."
+            "Confirm the decisions this study needs to support and assign valid weights from 1 to 3."
         ),
         "impact_assessment": (
             impact_reason
