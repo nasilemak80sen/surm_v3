@@ -11,6 +11,7 @@ from utils import auth
 from utils.db import SQLiteDB
 from utils.intelligence import build_risk_intelligence
 from utils.performance import profile_call
+from utils.assurance import validate_transition
 from utils.workflow import completion_percent, stage_results
 
 
@@ -328,3 +329,25 @@ def test_phase9_intelligence_profiles_larger_study():
     assert result.elapsed_ms >= 0
     assert result.result["risk_count"] == 500
     assert result.result["action_count"] == 500
+
+
+def test_phase9_lifecycle_transition_matrix_blocks_skips_and_backwards_moves():
+    cases = [
+        ("Draft", "In Review", "Author", True),
+        ("Draft", "Reviewed", "Reviewer", False),
+        ("Reviewed", "Approved", "Reviewer", False),
+        ("Reviewed", "Archived", "Approver", False),
+        ("Approved", "Archived", "Approver", True),
+        ("Approved", "Draft", "Approver", False),
+    ]
+
+    for current, target, role, expected in cases:
+        allowed, reasons = validate_transition(
+            {
+                "study_lifecycle": current,
+                "study_role": role,
+                "study_access_mode": "edit",
+            },
+            target,
+        )
+        assert allowed is expected, (current, target, role, reasons)
