@@ -10,29 +10,9 @@ import streamlit as st
 from utils.analytics import validation_warnings
 from utils.form_ui import render_save_hint
 from utils.intelligence import build_bowtie_qa
+from utils.assurance import LIFECYCLE_ORDER, validate_transition, signoff_complete
 from utils.persistence import save_session
 from utils.workflow import completion_percent, stage_results
-
-
-_LIFECYCLE_ORDER = ["Draft", "In Review", "Reviewed", "Approved", "Archived"]
-
-
-def _signoff_complete(session):
-    return all(
-        str(session.get(key, "")).strip()
-        for key in (
-            "prep_name", "prep_role", "prep_date",
-            "rev_gg_name", "rev_gg_role", "rev_gg_date",
-            "rev_re_name", "rev_re_role", "rev_re_date",
-        )
-    )
-
-
-def _approval_ready(session):
-    stages_ok = all(stage.complete for stage in stage_results(session))
-    qa = build_bowtie_qa(session)
-    qa_errors = [item for item in qa if item.get("severity") == "error"]
-    return stages_ok and _signoff_complete(session) and not qa_errors
 
 
 def render():
@@ -64,7 +44,7 @@ def render():
         current = session.get("study_lifecycle", "Draft")
         desired = st.selectbox(
             "Target lifecycle",
-            _LIFECYCLE_ORDER,
+            LIFECYCLE_ORDER,
             index=_LIFECYCLE_ORDER.index(current) if current in _LIFECYCLE_ORDER else 0,
             key="assurance_target_lifecycle",
         )
@@ -74,17 +54,7 @@ def render():
         )
 
         if st.button("Record lifecycle decision", type="primary", key="record_lifecycle"):
-            current_index = _LIFECYCLE_ORDER.index(current)
-            target_index = _LIFECYCLE_ORDER.index(desired)
-            allowed = target_index >= current_index
-            reasons = []
-
-            if desired == "In Review" and not all(stage.complete for stage in stages):
-                allowed = False
-                reasons.append("Complete the core workflow before moving the study to In Review.")
-            if desired == "Approved" and not _approval_ready(dict(session)):
-                allowed = False
-                reasons.append("Approval requires complete workflow, governance sign-off and no QA errors.")
+            allowed, reasons = validate_transition(dict(session), desired)
 
             if allowed:
                 session["study_lifecycle"] = desired
