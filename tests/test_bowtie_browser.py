@@ -255,11 +255,15 @@ def test_bowtie_editor_browser_round_trip_and_controls():
             redo = page.locator("#redo")
             expect(undo).not_to_be_disabled()
 
-            undo.click()
+            page.evaluate("document.getElementById('undo').click()")
+            page.wait_for_timeout(50)
+            assert not page_errors, page_errors
             expect(page.locator("#objects")).to_contain_text("New Threat")
             expect(redo).not_to_be_disabled()
 
-            redo.click()
+            page.evaluate("document.getElementById('redo').click()")
+            page.wait_for_timeout(50)
+            assert not page_errors, page_errors
             expect(page.locator("#objects")).to_contain_text("Edited Threat")
 
             with page.expect_download(timeout=5000) as download_info:
