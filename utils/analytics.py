@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from typing import Any
 
+from utils.coercion import safe_float
 from utils.workflow import completion_percent, stage_results
 
 
@@ -69,7 +70,7 @@ def build_study_analytics(session: dict[str, Any]) -> dict[str, Any]:
         status_counts = Counter()
     critical = sorted(
         key_uncertainties,
-        key=lambda item: (item.get("Rank", 999), -float(item.get("Impact (Weighted)", 0) or 0)),
+        key=lambda item: (safe_float(item.get("Rank", 999), default=999), -safe_float(item.get("Impact (Weighted)", 0), default=0.0)),
     )[:5]
     by_discipline = Counter(str(item.get("discipline", "Unclassified")) for item in _selected_uncertainties(session))
     return {
