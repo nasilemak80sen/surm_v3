@@ -359,3 +359,16 @@ def test_risk_register_form_is_explicit_save_transaction():
 def test_form_modules_import(page_path):
     module_name = page_path[:-3].replace("/", ".")
     __import__(module_name)
+
+
+@pytest.mark.parametrize(
+    "module_name",
+    [
+        "modules.tab_intelligence",
+        "modules.tab_barrier_management",
+        "modules.tab_assurance",
+        "modules.tab_revision_history",
+    ],
+)
+def test_next_wave_modules_import(module_name):
+    __import__(module_name)
