@@ -46,9 +46,9 @@ svg{width:100%;height:100%;display:block}
 .lane{fill:#fff;stroke:#d8e1db}
 .lane-title{font-size:15px;font-weight:700}
 .event{fill:var(--event);stroke:#850000;stroke-width:2}
-.node-text{font-size:13px;fill:#1c2b24;pointer-events:none}
-.event-text{font-size:16px;font-weight:700;fill:#fff;pointer-events:none}
-.barrier-text{font-size:11px;fill:#1c2b24;pointer-events:none}
+.node-text{font-size:14px;font-weight:600;fill:#1c2b24;pointer-events:none}
+.event-text{font-size:17px;font-weight:700;fill:#fff;pointer-events:none}
+.barrier-text{font-size:12px;font-weight:600;fill:#1c2b24;pointer-events:none}
 .arrow{stroke:#8a9891;stroke-width:2.2;fill:none}
 .node{cursor:grab}
 .node:active{cursor:grabbing}
@@ -138,10 +138,30 @@ svg{width:100%;height:100%;display:block}
     value.library.preventativeBarrier=Array.isArray(value.library.preventativeBarrier)?value.library.preventativeBarrier:[];
     value.library.mitigativeBarrier=Array.isArray(value.library.mitigativeBarrier)?value.library.mitigativeBarrier:[];
     value.library.outcome=Array.isArray(value.library.outcome)?value.library.outcome:[];
-    value.causes.forEach(p=>p.type='cause');
-    value.preventativeBarriers.forEach(p=>p.type='preventativeBarrier');
-    value.mitigativeBarriers.forEach(p=>p.type='mitigativeBarrier');
-    value.outcomes.forEach(p=>p.type='outcome');
+    value.causes.forEach(p=>{
+      p.type='cause';
+      p.w=Math.max(Number(p.w)||210,210);
+      p.h=Math.max(Number(p.h)||72,80);
+    });
+    value.preventativeBarriers.forEach((p,i)=>{
+      p.type='preventativeBarrier';
+      p.w=120;
+      p.h=112;
+      p.x=410+(i%3)*90;
+      p.y=150+Math.floor(i/3)*190;
+    });
+    value.mitigativeBarriers.forEach((p,i)=>{
+      p.type='mitigativeBarrier';
+      p.w=120;
+      p.h=112;
+      p.x=1040+(i%3)*90;
+      p.y=150+Math.floor(i/3)*190;
+    });
+    value.outcomes.forEach(p=>{
+      p.type='outcome';
+      p.w=Math.max(Number(p.w)||210,210);
+      p.h=Math.max(Number(p.h)||72,80);
+    });
     return value;
   }
 
@@ -196,7 +216,12 @@ svg{width:100%;height:100%;display:block}
   function barrierPlacement(type,nodeId,index){
     return {
       id:makeId(type==='preventativeBarrier'?'PREVENTIVE-PLACEMENT':'MITIGATIVE-PLACEMENT'),
-      nodeId,x:type==='preventativeBarrier'?460:930,y:150+index*115,w:54,h:96,pageId:'PAGE_1'
+      nodeId,
+      x:type==='preventativeBarrier' ? 410+(index%3)*90 : 1040+(index%3)*90,
+      y:150+Math.floor(index/3)*190,
+      w:100,
+      h:110,
+      pageId:'PAGE_1'
     };
   }
 
@@ -228,26 +253,69 @@ svg{width:100%;height:100%;display:block}
   }
 
   function removeSelected(){
-    if(!selected) return;
-    const placement=allPlacements().find(p=>p.id===selected.id);
-    if(!placement) return;
-    const type=placement.type;
-    doc[type==='cause'?'causes':type==='outcome'?'outcomes':type==='preventativeBarrier'?'preventativeBarriers':'mitigativeBarriers']
-      = itemsFor(type).filter(p=>p.id!==placement.id);
-    const lib=doc.library[type]||[];
-    doc.library[type]=lib.filter(n=>n.id!==placement.nodeId);
-    doc.lines=doc.lines.filter(l=>l.originId!==placement.id);
-    doc.lines.forEach(l=>l.stops=(l.stops||[]).filter(id=>id!==placement.id));
+    if(!selected || !doc) return false;
+
+    const buckets=[
+      ['cause',doc.causes],
+      ['preventativeBarrier',doc.preventativeBarriers],
+      ['mitigativeBarrier',doc.mitigativeBarriers],
+      ['outcome',doc.outcomes]
+    ];
+    let type=null;
+    let placement=null;
+
+    for(const [bucketType,list] of buckets){
+      const found=list.find(p=>p.id===selected.id);
+      if(found){
+        type=bucketType;
+        placement=found;
+        break;
+      }
+    }
+
+    if(!placement || !type) return false;
+
+    const list=itemsFor(type);
+    const beforeCount=list.length;
+    const key=type==='cause'?'causes':type==='outcome'?'outcomes':type==='preventativeBarrier'?'preventativeBarriers':'mitigativeBarriers';
+    doc[key]=list.filter(p=>p.id!==placement.id);
+
+    if(placement.nodeId){
+      doc.library[type]=(doc.library[type]||[]).filter(n=>n.id!==placement.nodeId);
+    }
+
+    // Remove an origin line owned by the deleted Cause/Consequence and
+    // remove the placement from any other line's barrier stops.
+    doc.lines=(doc.lines||[])
+      .filter(line=>line.originId!==placement.id)
+      .map(line=>Object.assign({},line,{
+        stops:(line.stops||[]).filter(stopId=>stopId!==placement.id)
+      }));
+
     selected=null;
-    emitChange();render();
+    if(doc[key].length!==beforeCount){
+      emitChange();
+      render();
+      setStatus('Deleted '+type+' from the Bowtie draft');
+      return true;
+    }
+    return false;
   }
 
   function autoArrange(){
     const causes=doc.causes, prev=doc.preventativeBarriers, mit=doc.mitigativeBarriers, outs=doc.outcomes;
-    causes.forEach((p,i)=>{p.x=120;p.y=150+i*125;});
-    outs.forEach((p,i)=>{p.x=1260;p.y=150+i*125;});
-    prev.forEach((p,i)=>{p.x=430+(i%3)*95;p.y=160+Math.floor(i/3)*200;});
-    mit.forEach((p,i)=>{p.x=1030+(i%3)*95;p.y=160+Math.floor(i/3)*200;});
+    causes.forEach((p,i)=>{
+      p.w=210;p.h=80;p.x=120;p.y=150+i*135;
+    });
+    outs.forEach((p,i)=>{
+      p.w=210;p.h=80;p.x=1440;p.y=150+i*135;
+    });
+    prev.forEach((p,i)=>{
+      p.w=120;p.h=112;p.x=410+(i%3)*90;p.y=150+Math.floor(i/3)*190;
+    });
+    mit.forEach((p,i)=>{
+      p.w=120;p.h=112;p.x=1040+(i%3)*90;p.y=150+Math.floor(i/3)*190;
+    });
     emitChange();render();
   }
 
@@ -327,10 +395,24 @@ svg{width:100%;height:100%;display:block}
     }));
   }
 
-  function textWrap(text,max=25){
-    const words=String(text||'').split(/\s+/);const out=[];let line='';
-    words.forEach(w=>{const next=line?line+' '+w:w;if(next.length>max){if(line)out.push(line);line=w;}else line=next;});
-    if(line)out.push(line);return out.slice(0,3);
+  function textWrap(text,max=25,limit=4){
+    const words=String(text||'').trim().split(/\s+/).filter(Boolean);
+    if(!words.length) return [''];
+    const out=[];let line='';
+    words.forEach(word=>{
+      const next=line?line+' '+word:word;
+      if(next.length>max && line){
+        out.push(line);
+        line=word;
+      } else {
+        line=next;
+      }
+    });
+    if(line) out.push(line);
+    if(out.length<=limit) return out;
+    const clipped=out.slice(0,limit);
+    clipped[limit-1]=clipped[limit-1].replace(/[\s.,;:]+$/,'')+'…';
+    return clipped;
   }
 
   function card(g,x,y,w,h,text,cls,kind,id){
@@ -338,10 +420,15 @@ svg{width:100%;height:100%;display:block}
     r.setAttribute('x',x-w/2);r.setAttribute('y',y-h/2);r.setAttribute('width',w);r.setAttribute('height',h);
     r.setAttribute('rx',8);r.setAttribute('fill',cls==='cause'?'#fff5df':'#fff0e9');r.setAttribute('stroke',cls==='cause'?'#c9972e':'#b95a36');r.setAttribute('stroke-width',selected&&selected.id===id?3:1.5);r.setAttribute('class','node '+cls+(selected&&selected.id===id?' selected':''));
     r.dataset.id=id;r.dataset.kind=kind;g.appendChild(r);
-    textWrap(text).forEach((line,i)=>{
+    const lines=textWrap(text,28,4);
+    lines.forEach((line,i)=>{
       const t=document.createElementNS('http://www.w3.org/2000/svg','text');
-      t.setAttribute('x',x);t.setAttribute('y',y+(i-(textWrap(text).length-1)/2)*16);
-      t.setAttribute('text-anchor','middle');t.setAttribute('class','node-text');t.textContent=line;g.appendChild(t);
+      t.setAttribute('x',x);
+      t.setAttribute('y',y+(i-(lines.length-1)/2)*18);
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('class','node-text');
+      t.textContent=line;
+      g.appendChild(t);
     });
   }
 
@@ -352,10 +439,15 @@ svg{width:100%;height:100%;display:block}
     r.setAttribute('stroke',kind==='preventativeBarrier'?'#1d9e75':'#534ab7');
     r.setAttribute('stroke-width',selected&&selected.id===p.id?3:1.5);
     r.classList.add('node');r.dataset.id=p.id;r.dataset.kind=kind;g.appendChild(r);
-    textWrap(n?n.name:p.nodeId,15).forEach((line,i)=>{
+    const lines=textWrap(n?n.name:p.nodeId,15,5);
+    lines.forEach((line,i)=>{
       const t=document.createElementNS('http://www.w3.org/2000/svg','text');
-      t.setAttribute('x',p.x);t.setAttribute('y',p.y+(i-(textWrap(n?n.name:p.nodeId,15).length-1)/2)*14);
-      t.setAttribute('text-anchor','middle');t.setAttribute('class','barrier-text');t.textContent=line;g.appendChild(t);
+      t.setAttribute('x',p.x);
+      t.setAttribute('y',p.y+(i-(lines.length-1)/2)*15);
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('class','barrier-text');
+      t.textContent=line;
+      g.appendChild(t);
     });
   }
 
