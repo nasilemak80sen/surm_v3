@@ -142,7 +142,7 @@ def test_key_uncertainty_save_does_not_invalidate_on_metadata_only_submission():
             "Impact Bin": "H",
             "Combined Rating": "HH",
             "Rank": 1,
-            "Include in Plan": True,
+            "Include in Plan": False,
             "Resolution Achieved": False,
         }]
         st.session_state["resolution_list"] = {uncertainty_name: {"Option A": "Y"}}
