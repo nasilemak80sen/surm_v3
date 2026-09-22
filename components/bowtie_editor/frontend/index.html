@@ -273,6 +273,7 @@ svg{width:100%;height:100%;display:block}
   function barrierPlacement(type,nodeId,index){
     return {
       id:makeId(type==='preventativeBarrier'?'PREVENTIVE-PLACEMENT':'MITIGATIVE-PLACEMENT'),
+      type,
       nodeId,
       x:type==='preventativeBarrier' ? 410+(index%3)*90 : 1040+(index%3)*90,
       y:150+Math.floor(index/3)*190,
@@ -302,6 +303,7 @@ svg{width:100%;height:100%;display:block}
       type==='outcome'?
       {id:makeId('OUTCOME-PLACEMENT'),nodeId,x:1260,y:160+list.length*115,w:220,h:72,pageId:'PAGE_1'}:
       barrierPlacement(type,nodeId,list.length);
+    p.type=type;
     list.push(p);
     if(type==='cause'){
       doc.lines.push({id:makeId('LINE-CAUSE'),originType:'cause',originId:p.id,stops:[],pageId:'PAGE_1'});
