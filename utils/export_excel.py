@@ -10,6 +10,7 @@ from openpyxl.styles import (Font, PatternFill, Alignment, Border, Side,
 from openpyxl.utils import get_column_letter
 import streamlit as st
 from utils.study_document import StudyDocument
+from utils.intelligence import build_traceability
 
 # ── Colour palette matching SURM Excel ───────────────────────────────
 GREEN_DARK   = "1F6B3A"
@@ -228,6 +229,15 @@ def build_excel_export() -> bytes:
         ws10c,
         reviews_df,
         "Study Lifecycle & Review History",
+    )
+
+    # ── Sheet: Traceability ─────────────────────────────────────────
+    ws10d = wb.create_sheet("10. Traceability")
+    traceability = build_traceability({**study, **{"_mapping": st.session_state.get("_mapping", {})}})
+    _write_df_to_sheet(
+        ws10d,
+        pd.DataFrame(traceability) if traceability else pd.DataFrame(),
+        "Risk Traceability — Risk → Uncertainty → Resolution → Barrier",
     )
 
     # ── Sheet: PRA Output ─────────────────────────────────────────────
