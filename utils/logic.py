@@ -13,6 +13,8 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from utils.coercion import safe_float, safe_int
+
 
 RATING_VALUE = {"H": 3, "M": 2, "L": 1, "NA": 0}
 RATING_RANK = {
@@ -68,8 +70,13 @@ def compute_weighted_score(impact_row: dict, decisions: list) -> float:
 
     for decision in decisions:
         name = decision["Key Decision"]
-        weight = decision.get("Weight (1-3)", 1)
-        value = RATING_VALUE.get(impact_row.get(name, "NA"), 0)
+        weight = safe_int(decision.get("Weight (1-3)", 1), default=1)
+        if weight not in {1, 2, 3}:
+            weight = 1
+        value = RATING_VALUE.get(
+            str(impact_row.get(name, "NA") or "NA").strip().upper(),
+            0,
+        )
         if value > 0:
             weighted_sum += value * weight
             total_weight += weight
@@ -142,7 +149,7 @@ def build_impact_table() -> pd.DataFrame:
             "Uncertainty": name,
             "Degree of Uncertainty": existing_row.get(
                 "Degree of Uncertainty",
-                existing_row.get("Degree of Uncertainty (H/M/L)", "L"),
+                existing_row.get("Degree of Uncertainty (H/M/L)", ""),
             ),
         }
         for decision_name in decision_names:
@@ -268,12 +275,12 @@ def build_resolution_planner(
             "Associated Uncertainties": "; ".join(associated),
             "Ratings": "; ".join(ratings),
             "Description": existing_row.get("Description", ""),
-            "Duration (months)": existing_row.get("Duration (months)", 0),
+            "Duration (months)": max(safe_int(existing_row.get("Duration (months)", 0), default=0), 0),
             "Resources": existing_row.get("Resources", ""),
             "Constraints": existing_row.get("Constraints", ""),
             "Start Date": existing_row.get("Start Date", ""),
             "Required Completion": existing_row.get("Required Completion", ""),
-            "Progress (0-1)": existing_row.get("Progress (0-1)", 0.0),
+            "Progress (0-1)": min(max(safe_float(existing_row.get("Progress (0-1)", 0.0), default=0.0), 0.0), 1.0),
             "Status": existing_row.get("Status", "Open"),
             "Action Owner": existing_row.get("Action Owner", ""),
             "Part of Workplan": existing_row.get("Part of Workplan", True),
