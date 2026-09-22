@@ -11,6 +11,12 @@ from utils.workflow import stage_results
 
 LIFECYCLE_ORDER = ["Draft", "In Review", "Reviewed", "Approved", "Archived"]
 ROLE_RANK = {"Viewer": 0, "Author": 1, "Reviewer": 2, "Approver": 3}
+LIFECYCLE_NEXT = {
+    "Draft": "In Review",
+    "In Review": "Reviewed",
+    "Reviewed": "Approved",
+    "Approved": "Archived",
+}
 
 
 def signoff_complete(session: dict[str, Any]) -> bool:
@@ -69,6 +75,10 @@ def validate_transition(
 
     if LIFECYCLE_ORDER.index(target) < LIFECYCLE_ORDER.index(current):
         errors.append("Lifecycle cannot move backward.")
+    elif target != current and LIFECYCLE_NEXT.get(current) != target:
+        errors.append(
+            f"Lifecycle must advance from {current} to {LIFECYCLE_NEXT.get(current, 'no further state')} first."
+        )
 
     editable, edit_reason = can_edit_study(session)
     if not editable:
