@@ -11,7 +11,9 @@ def test_streamlit_v1_component_handshake_uses_top_level_protocol_fields():
     assert "Object.assign(" in source
     assert "{isStreamlitMessage:true, type:type}" in source
     assert "post('streamlit:componentReady',{apiVersion:1})" in source
-    assert "post('streamlit:setFrameHeight',{height:document.documentElement.scrollHeight || 720})" in source
+    assert "function ready(height)" in source
+    assert "post('streamlit:setFrameHeight',{height:Number(height)||760})" in source
+
     assert "{isStreamlitMessage:true,type,value}" not in source
 
 
@@ -26,7 +28,9 @@ def test_bowtie_frontend_normalizes_saved_placements_and_uses_fixed_viewport():
     source = FRONTEND.read_text(encoding="utf-8")
 
     assert "function normalizeDocument(raw)" in source
-    assert "value.causes.forEach(p=>p.type='cause')" in source
+    assert "value.causes.forEach(p=>{" in source
+    assert "p.type='cause';" in source
+
     assert "value.preventativeBarriers.forEach(p=>p.type='preventativeBarrier')" in source
     assert "value.mitigativeBarriers.forEach(p=>p.type='mitigativeBarrier')" in source
     assert "value.outcomes.forEach(p=>p.type='outcome')" in source
