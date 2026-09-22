@@ -48,6 +48,14 @@ class SessionDB(ABC):
         """Return immutable study revisions, newest first."""
         return []
 
+    def load_version(self, project_name: str, field_name: str, revision: int) -> dict:
+        """Load one immutable study revision."""
+        return {}
+
+    def list_all_records(self) -> list:
+        """Return full saved study records without mutating Streamlit state."""
+        return []
+
     def save_bundle(self, project_name: str, field_name: str, revision: int, session_data: dict) -> bool:
         """Save current state and immutable revision as one logical operation."""
         return self.save(project_name, field_name, session_data) and self.save_version(
@@ -194,6 +202,56 @@ class SQLiteDB(SessionDB):
             return [{"revision": row[0], "saved_at": row[1]} for row in rows]
         except Exception as e:
             st.warning(f"SQLite version list: {e}")
+            return []
+
+    def load_version(self, project_name: str, field_name: str, revision: int) -> dict:
+        import sqlite3
+        try:
+            conn = sqlite3.connect(self.db_path)
+            row = conn.execute(
+                "SELECT session_json, saved_at FROM study_versions WHERE project_name = ? AND field_name = ? AND revision = ?",
+                (project_name, field_name, revision),
+            ).fetchone()
+            conn.close()
+            if not row:
+                return {}
+            return {
+                "session": json.loads(row[0] or "{}"),
+                "meta": {
+                    "project_name": project_name,
+                    "field_name": field_name,
+                    "saved_at": row[1],
+                    "study_revision": revision,
+                },
+            }
+        except Exception as e:
+            st.warning(f"SQLite version load: {e}")
+            return {}
+
+    def list_all_records(self) -> list:
+        import sqlite3
+        try:
+            conn = sqlite3.connect(self.db_path)
+            rows = conn.execute(
+                "SELECT project_name, field_name, phase, session_json, completion_pct, auto_saved, saved_at FROM sessions ORDER BY saved_at DESC"
+            ).fetchall()
+            conn.close()
+            result = []
+            for row in rows:
+                result.append({
+                    "session": json.loads(row[3] or "{}"),
+                    "meta": {
+                        "project_name": row[0],
+                        "field_name": row[1],
+                        "project_phase": row[2] or "",
+                        "completion": row[4],
+                        "auto_saved": bool(row[5]),
+                        "saved_at": row[6],
+                    },
+                })
+            return result
+        except Exception as e:
+            st.warning(f"SQLite record list: {e}")
             return []
 
     def load(self, project_name: str, field_name: str) -> dict:
@@ -411,6 +469,64 @@ class PostgresDB(SessionDB):
             return [{"revision": row[0], "saved_at": row[1].isoformat() if hasattr(row[1], "isoformat") else str(row[1])} for row in rows]
         except Exception as e:
             st.warning(f"PostgreSQL version list: {e}")
+            return []
+
+    def load_version(self, project_name: str, field_name: str, revision: int) -> dict:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(self.db_url)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT session_json, saved_at FROM study_versions WHERE project_name = %s AND field_name = %s AND revision = %s",
+                (project_name, field_name, revision),
+            )
+            row = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            if not row:
+                return {}
+            saved_at = row[1].isoformat() if hasattr(row[1], "isoformat") else str(row[1])
+            return {
+                "session": json.loads(row[0] or "{}"),
+                "meta": {
+                    "project_name": project_name,
+                    "field_name": field_name,
+                    "saved_at": saved_at,
+                    "study_revision": revision,
+                },
+            }
+        except Exception as e:
+            st.warning(f"PostgreSQL version load: {e}")
+            return {}
+
+    def list_all_records(self) -> list:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(self.db_url)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT project_name, field_name, phase, session_json, completion_pct, auto_saved, saved_at FROM sessions ORDER BY saved_at DESC"
+            )
+            rows = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            result = []
+            for row in rows:
+                saved_at = row[6].isoformat() if hasattr(row[6], "isoformat") else str(row[6])
+                result.append({
+                    "session": json.loads(row[3] or "{}"),
+                    "meta": {
+                        "project_name": row[0],
+                        "field_name": row[1],
+                        "project_phase": row[2] or "",
+                        "completion": row[4],
+                        "auto_saved": bool(row[5]),
+                        "saved_at": saved_at,
+                    },
+                })
+            return result
+        except Exception as e:
+            st.warning(f"PostgreSQL record list: {e}")
             return []
 
     def load(self, project_name: str, field_name: str) -> dict:
