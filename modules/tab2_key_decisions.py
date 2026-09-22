@@ -160,7 +160,7 @@ def render():
         (
             str(row.get("decision_id", "")),
             str(row.get("Key Decision", "")).strip(),
-            int(row.get("Weight (1-3)", 0) or 0),
+            _weight_value(row.get("Weight (1-3)", 0)),
             str(row.get("Description", "") or "").strip(),
         )
         for row in updated_records
