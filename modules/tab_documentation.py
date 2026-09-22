@@ -28,7 +28,7 @@ def render():
     edited = st.data_editor(
         df,
         num_rows="dynamic",
-        width="stretch",
+                use_container_width=True,
         column_config={
             "Name": st.column_config.TextColumn("Name", width="medium"),
             "Function / Role": st.column_config.SelectboxColumn(
