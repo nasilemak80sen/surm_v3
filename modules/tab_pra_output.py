@@ -137,7 +137,7 @@ def render():
 
     st.dataframe(
         styled,
-        width="stretch",
+                use_container_width=True,
         hide_index=True,
         height=480,
     )
