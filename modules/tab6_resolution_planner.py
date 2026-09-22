@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from utils.coercion import safe_float
-from utils.form_ui import render_form_header, render_stage_status
+from utils.form_ui import render_form_header, render_save_hint, render_stage_status
 from utils.logic import build_resolution_planner
 from utils.persistence import save_session
 from utils.workflow import mark_stage_changed
@@ -25,6 +25,20 @@ def _build_resolution_dataframe(ku_list: list[dict], resolution_list: dict) -> p
         row.update(resolution_list.get(uncertainty["Uncertainty"], {}))
         rows.append(row)
     return pd.DataFrame(rows)
+
+
+def _planner_structure_signature(rows: list[dict]) -> tuple:
+    """Return the part of planner state that can change downstream risk structure."""
+    return tuple(
+        (
+            str(row.get("resolution_id", "")),
+            str(row.get("Resolution Action", "")),
+            str(row.get("Associated Uncertainties", "")),
+            str(row.get("Ratings", "")),
+        )
+        for row in rows
+        if isinstance(row, dict)
+    )
 
 
 def _planner_quality(rows: list[dict]) -> tuple[int, int]:
@@ -81,9 +95,16 @@ def render():
                 st.warning("No resolution actions were selected in Tab 5.")
                 return
 
-            st.session_state["resolution_planner"] = planner_df.to_dict("records")
-            mark_stage_changed(st.session_state, "resolution_planner")
-            save_session(auto=True)
+            previous = st.session_state.get("resolution_planner", [])
+            updated = planner_df.to_dict("records")
+            st.session_state["resolution_planner"] = updated
+
+            # Only a structural refresh should invalidate the generated risk
+            # register. Owner/progress/remarks edits are execution metadata.
+            if _planner_structure_signature(previous) != _planner_structure_signature(updated):
+                mark_stage_changed(st.session_state, "resolution_planner")
+
+            st.info("Planner draft updated from Tab 5. Review it, then click **Save planner** to persist.")
             st.rerun()
 
         planner_data = st.session_state.get("resolution_planner", [])
@@ -95,14 +116,18 @@ def render():
             )
         else:
             df_in = pd.DataFrame(planner_data)
-            with st.form("planner_form"):
+            render_save_hint(
+                "Planner edits are a session draft until you click Save planner. "
+                "Execution fields such as owner, dates, progress and remarks do not invalidate the risk register."
+            )
+            with st.form("planner_form", enter_to_submit=False):
                 button_cols = st.columns([1, 1, 2.2])
                 with button_cols[0]:
-                    add_all = st.form_submit_button("Add all")
+                    add_all = st.form_submit_button("Add all", key="planner_add_all")
                 with button_cols[1]:
-                    remove_all = st.form_submit_button("Remove all")
+                    remove_all = st.form_submit_button("Remove all", key="planner_remove_all")
                 with button_cols[2]:
-                    save_clicked = st.form_submit_button("Save planner", type="primary")
+                    save_clicked = st.form_submit_button("Save planner", key="save_resolution_planner", type="primary")
 
                 edited = st.data_editor(
                     df_in,
@@ -140,11 +165,21 @@ def render():
                         row["Part of Workplan"] = False
 
                 st.session_state["resolution_planner"] = data
-                mark_stage_changed(st.session_state, "resolution_planner")
-                ok = save_session(auto=not save_clicked)
-                if not ok:
-                    st.error("Planner could not be saved.")
-                    return
+
+                # Planner execution metadata does not alter the generated risk
+                # structure, so do not clear Risk Register/PRA for owner,
+                # progress, description, status or workplan-flag edits.
+                if save_clicked:
+                    if not st.session_state.get("project_name", "").strip():
+                        st.warning("Enter a Project Name on Overview before saving the planner.")
+                        return
+                    ok = save_session(auto=False)
+                    if not ok:
+                        st.error("Planner could not be saved.")
+                        return
+                    st.success("✅ Resolution planner saved.")
+                else:
+                    st.info("Draft updated. Click **Save planner** to persist the planner.")
                 st.rerun()
 
     planner_data = st.session_state.get("resolution_planner", [])
