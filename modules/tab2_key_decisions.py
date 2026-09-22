@@ -115,7 +115,7 @@ def render():
             if not str(df.at[index, "decision_id"] or "").strip():
                 df.at[index, "decision_id"] = f"DEC-{index + 1:03d}"
 
-    df = _normalize_decisions(df)
+    normalized = _normalize_decisions(df)
     editor_key = f"kd_editor_{st.session_state.get('study_id', 'new')}"
 
     render_save_hint(
