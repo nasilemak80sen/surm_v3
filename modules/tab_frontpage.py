@@ -6,6 +6,7 @@ from datetime import date
 import streamlit as st
 
 from utils.analytics import build_study_analytics, validation_warnings
+from utils.form_ui import render_save_hint
 from utils.export_excel import build_excel_export
 from utils.persistence import delete_session, list_sessions, load_session_record, save_session
 from utils.session import create_new_study
@@ -79,6 +80,10 @@ def render():
     left, right = st.columns([1.45, 1], gap="large")
     with left:
         st.markdown("### Study identity")
+        render_save_hint(
+            "Study identity and governance inputs are session drafts until you click Save study. "
+            "Exports reflect the current session draft; they do not persist it to the saved study."
+        )
         c1, c2, c3 = st.columns(3)
         with c1:
             st.text_input("Project Name", key="project_name", placeholder="e.g. Ledang FDP")
@@ -129,6 +134,9 @@ def render():
         col.caption("Complete" if stage.complete else ("Ready" if stage.available else "Locked"))
 
     st.markdown("### Governance")
+    render_save_hint(
+        "Lifecycle and sign-off fields are also session drafts. Use Save study above to persist the complete front-page record."
+    )
     life_col, rev_col = st.columns([1.2, 2])
     with life_col:
         st.selectbox(
