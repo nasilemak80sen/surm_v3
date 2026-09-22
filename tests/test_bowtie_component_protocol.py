@@ -39,3 +39,25 @@ def test_bowtie_frontend_accepts_streamlit_render_without_inbound_marker():
 
     assert "if(data.type!=='streamlit:render')return;" in source
     assert "if(!data.isStreamlitMessage)return;" not in source
+
+
+def test_bowtie_delete_is_type_safe_and_removes_placement_library_and_lines():
+    source = FRONTEND.read_text(encoding="utf-8")
+
+    assert "const buckets=[" in source
+    assert "doc[key]=list.filter(p=>p.id!==placement.id);" in source
+    assert "doc.library[type]=(doc.library[type]||[]).filter(n=>n.id!==placement.nodeId);" in source
+    assert ".filter(line=>line.originId!==placement.id)" in source
+    assert "stops:(line.stops||[]).filter(stopId=>stopId!==placement.id)" in source
+
+
+def test_bowtie_nodes_use_readable_dimensions_and_text_wrapping():
+    source = FRONTEND.read_text(encoding="utf-8")
+
+    assert "p.w=120;" in source
+    assert "p.h=112;" in source
+    assert ".node-text{font-size:14px;font-weight:600;" in source
+    assert ".barrier-text{font-size:12px;font-weight:600;" in source
+    assert "const lines=textWrap(n?n.name:p.nodeId,15,5);" in source
+    assert "const lines=textWrap(text,28,4);" in source
+    assert "const legacySize=Number(p.w||0)<80;" in source
