@@ -53,6 +53,7 @@ DEFAULT_SESSION_STATE = {
     "resolution_planner",
     "risk_register",
     "pra_output",
+    "bowtie_register",
     "study_lifecycle",
     "study_revision",
     "study_change_log",
@@ -146,6 +147,7 @@ def init_session():
         "resolution_planner": [],
         "risk_register": [],
         "pra_output": [],
+        "bowtie_register": {},
 
         # Study governance
         "study_lifecycle": "Draft",
