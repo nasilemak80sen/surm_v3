@@ -14,6 +14,39 @@ TARGET_FORM_FILES = [
 ]
 
 
+def test_project_identity_survives_overview_to_team_save_rerun():
+    def app():
+        import streamlit as st
+        from modules import tab_frontpage, tab_documentation
+        from utils.session import init_session
+        from unittest.mock import patch
+
+        init_session()
+        page = st.selectbox(
+            "Test page",
+            ["Overview", "Team"],
+            key="interaction_page",
+        )
+
+        if page == "Overview":
+            tab_frontpage.render()
+        else:
+            with patch.object(tab_documentation, "save_session", lambda auto=False: True):
+                tab_documentation.render()
+
+    at = _run_app(app)
+
+    at.text_input(key="project_name_input").set_value("Ledang FDP").run()
+    assert at.session_state["project_name"] == "Ledang FDP"
+
+    at.selectbox(key="interaction_page").set_value("Team").run()
+    assert at.session_state["project_name"] == "Ledang FDP"
+
+    at.button(key="save_team").click().run()
+    assert not at.exception
+    assert at.session_state["project_name"] == "Ledang FDP"
+
+
 def test_multi_action_forms_disable_accidental_enter_submission():
     project_root = Path(__file__).resolve().parents[1]
 
