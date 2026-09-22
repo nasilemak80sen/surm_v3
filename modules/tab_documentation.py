@@ -25,53 +25,61 @@ def render():
     if "Date (DD/MM/YYYY)" not in df.columns:
         df["Date (DD/MM/YYYY)"] = df.pop("Date") if "Date" in df.columns else ""
 
-    edited = st.data_editor(
-        df,
-        num_rows="dynamic",
-                use_container_width=True,
-        column_config={
-            "Name": st.column_config.TextColumn("Name", width="medium"),
-            "Function / Role": st.column_config.SelectboxColumn(
-                "Function / Role",
-                width="medium",
-                options=["", "ES", "PE", "RE", "G&G", "PT", "PP", "FE", "D&C", "FDP Lead", "Other"],
-            ),
-            "Date (DD/MM/YYYY)": st.column_config.TextColumn(
-                "Date (DD/MM/YYYY)",
-                width="small",
-            ),
-        },
-        hide_index=True,
-        key=f"team_editor_{st.session_state.get('study_id', 'new')}",
+    render_save_hint(
+        "Edits are staged in this form until you submit them. "
+        "Save team persists the roster; Remove empty rows only changes the current session draft."
     )
 
-    raw = edited.to_dict("records")
-    st.session_state["team_members"] = [
-        {
-            "Name": str(row.get("Name") or "").strip(),
-            "Function / Role": str(row.get("Function / Role") or "").strip(),
-            "Date": str(row.get("Date (DD/MM/YYYY)") or "").strip(),
-        }
-        for row in raw
-    ] or [{"Name": "", "Function / Role": "", "Date": ""}]
+    with st.form("team_form", enter_to_submit=False):
+        edited = st.data_editor(
+            df,
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "Name": st.column_config.TextColumn("Name", width="medium"),
+                "Function / Role": st.column_config.SelectboxColumn(
+                    "Function / Role",
+                    width="medium",
+                    options=["", "ES", "PE", "RE", "G&G", "PT", "PP", "FE", "D&C", "FDP Lead", "Other"],
+                ),
+                "Date (DD/MM/YYYY)": st.column_config.TextColumn(
+                    "Date (DD/MM/YYYY)",
+                    width="small",
+                ),
+            },
+            hide_index=True,
+            key=f"team_editor_{st.session_state.get('study_id', 'new')}",
+        )
+        save_clicked = st.form_submit_button("Save team", type="primary", key="save_team")
+        clean_clicked = st.form_submit_button("Remove empty rows", key="remove_empty_team_rows")
 
-    left, right = st.columns([1, 3], gap="large")
-    with left:
-        st.metric("Team size", len([r for r in raw if str(r.get("Name") or "").strip()]))
-    with right:
-        save_col, clean_col = st.columns(2)
-        with save_col:
-            if st.button("Save team", type="primary", key="save_team"):
-                if not st.session_state.get("project_name", "").strip():
-                    st.warning("Enter a Project Name on Overview first.")
-                elif save_session(auto=False):
-                    st.success("Saved.")
-                else:
-                    st.error("Save failed.")
-        with clean_col:
-            if st.button("Remove empty rows", key="remove_empty_team_rows"):
-                st.session_state["team_members"] = [
-                    row for row in st.session_state["team_members"]
-                    if any(str(value).strip() for value in row.values())
-                ] or [{"Name": "", "Function / Role": "", "Date": ""}]
-                st.rerun()
+    if save_clicked or clean_clicked:
+        raw = edited.to_dict("records")
+        if clean_clicked:
+            raw = [
+                row for row in raw
+                if any(str(value or "").strip() for value in row.values())
+            ]
+
+        st.session_state["team_members"] = [
+            {
+                "Name": str(row.get("Name") or "").strip(),
+                "Function / Role": str(row.get("Function / Role") or "").strip(),
+                "Date": str(row.get("Date (DD/MM/YYYY)") or "").strip(),
+            }
+            for row in raw
+        ] or [{"Name": "", "Function / Role": "", "Date": ""}]
+
+        if save_clicked:
+            if not st.session_state.get("project_name", "").strip():
+                st.warning("Enter a Project Name on Overview before saving the team roster.")
+                return
+            if not save_session(auto=False):
+                st.error("Team roster could not be saved.")
+                return
+            st.success("✅ Team roster saved.")
+        else:
+            st.info("Draft updated. Click **Save team** to persist the roster.")
+        st.rerun()
+
+    raw = st.session_state.get("team_members", [])
