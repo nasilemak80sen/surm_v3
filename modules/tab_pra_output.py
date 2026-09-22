@@ -5,6 +5,8 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from components.bowtie_editor import render_readonly as render_bowtie_readonly
+
 from utils.analytics import build_executive_summary
 from utils.export_excel import build_excel_export
 from utils.form_ui import render_form_header, render_stage_status
@@ -137,10 +139,35 @@ def render():
 
     st.dataframe(
         styled,
-                use_container_width=True,
+        use_container_width=True,
         hide_index=True,
         height=480,
     )
+
+    bowtie_register = st.session_state.get("bowtie_register", {})
+    if bowtie_register:
+        st.markdown(
+            '<div class="surm-section-header">📐 Bowtie Risk Reporting</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "Read-only Bowtie diagrams registered against each Risk ID. "
+            "The diagram is sourced from Tab 7 and does not recalculate risk."
+        )
+        for risk_row in risk_data:
+            risk_id = str(risk_row.get("risk_id", "")).strip()
+            document = bowtie_register.get(risk_id)
+            if not document:
+                continue
+            with st.expander(
+                f'{risk_id} — {risk_row.get("Risk", "Risk")}',
+                expanded=False,
+            ):
+                render_bowtie_readonly(
+                    document,
+                    key=f"pra_bowtie_{risk_id}_{st.session_state.get('study_id', 'new')}",
+                    height=720,
+                )
 
     st.divider()
     st.markdown(
