@@ -318,6 +318,10 @@ class SQLiteDB(SessionDB):
                 "DELETE FROM sessions WHERE project_name = ? AND field_name = ?",
                 (project_name, field_name)
             )
+            conn.execute(
+                "DELETE FROM study_versions WHERE project_name = ? AND field_name = ?",
+                (project_name, field_name)
+            )
             conn.commit()
             conn.close()
             return True
@@ -598,6 +602,10 @@ class PostgresDB(SessionDB):
             cursor = conn.cursor()
             cursor.execute(
                 "DELETE FROM sessions WHERE project_name = %s AND field_name = %s",
+                (project_name, field_name)
+            )
+            cursor.execute(
+                "DELETE FROM study_versions WHERE project_name = %s AND field_name = %s",
                 (project_name, field_name)
             )
             conn.commit()
