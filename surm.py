@@ -29,7 +29,7 @@ from utils.workflow import current_stage, stage_results, validate_stage
 # ============================================================================
 
 APP_NAME = "SURM Toolkit"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 APP_SUBTITLE = "Subsurface Uncertainty & Risk Management"
 
 BASE_DIR = Path(__file__).resolve().parent
