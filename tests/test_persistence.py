@@ -151,3 +151,17 @@ if __name__ == "__main__":
         self.assertEqual(versions[0]["revision"], 2)
         self.assertEqual(revision["session"]["study_revision"], 2)
         self.assertEqual(records[0]["session"]["project_name"], "Alpha")
+
+
+    def test_delete_removes_current_study_and_its_revision_history(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = SQLiteDB()
+            database.db_path = f"{directory}\\delete-history.db"
+            database.init()
+            record = {
+                "session": {"project_name": "Alpha", "field_name": "Beta", "study_revision": 1},
+                "meta": {"project_phase": "PGR1", "completion": 20, "auto_saved": False, "saved_at": "2026-09-22T12:00:00"},
+            }
+            self.assertTrue(database.save_bundle("Alpha", "Beta", 1, record))
+            self.assertTrue(database.delete("Alpha", "Beta"))
+            self.assertEqual(database.list_versions("Alpha", "Beta"), [])
