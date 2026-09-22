@@ -54,6 +54,8 @@ DEFAULT_SESSION_STATE = {
     "study_lifecycle",
     "study_revision",
     "study_change_log",
+    "workflow_revisions",
+    "workflow_snapshots",
     "ui_primary_color",
     "ui_background_color",
 }
@@ -147,6 +149,8 @@ def init_session():
         "study_lifecycle": "Draft",
         "study_revision": 0,
         "study_change_log": [],
+        "workflow_revisions": {},
+        "workflow_snapshots": {},
 
         # Master reference data
         "_mapping": mapping,
@@ -170,7 +174,7 @@ def init_session():
     if "_mapping" not in st.session_state:
         st.session_state["_mapping"] = mapping
 
-    _normalize_entity_ids()
+    normalize_entity_ids()
 
 
 def create_new_study() -> None:
@@ -195,7 +199,7 @@ def _build_default_uncertainties(mapping):
     return rows
 
 
-def _normalize_entity_ids() -> None:
+def normalize_entity_ids() -> None:
     """Backfill stable IDs for legacy studies without changing their names/data."""
     uncertainties = st.session_state.get("uncertainties", [])
     used_uncertainty_ids = set()
