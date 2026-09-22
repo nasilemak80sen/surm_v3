@@ -54,6 +54,9 @@ DEFAULT_SESSION_STATE = {
     "risk_register",
     "pra_output",
     "bowtie_register",
+    "barrier_register",
+    "study_role",
+    "study_reviews",
     "study_lifecycle",
     "study_revision",
     "study_change_log",
@@ -148,6 +151,9 @@ def init_session():
         "risk_register": [],
         "pra_output": [],
         "bowtie_register": {},
+        "barrier_register": {},
+        "study_role": "Author",
+        "study_reviews": [],
 
         # Study governance
         "study_lifecycle": "Draft",
