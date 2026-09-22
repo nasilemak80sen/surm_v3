@@ -34,20 +34,17 @@ def test_team_editor_submit_captures_active_editor_state():
         from modules import tab_documentation as page
         from utils.session import init_session
 
-        st.session_state["study_id"] = "interaction-team"
         init_session()
         st.session_state["project_name"] = "Interaction Test"
-        st.session_state["team_editor_interaction-team"] = {
-            "edited_rows": {
-                0: {
-                    "Name": "Active Cell User",
-                    "Function / Role": "RE",
-                    "Date (DD/MM/YYYY)": "22/09/2026",
-                }
-            },
-            "added_rows": [],
-            "deleted_rows": [],
-        }
+
+        def fake_editor(df, **kwargs):
+            edited = df.copy()
+            edited.loc[0, "Name"] = "Active Cell User"
+            edited.loc[0, "Function / Role"] = "RE"
+            edited.loc[0, "Date (DD/MM/YYYY)"] = "22/09/2026"
+            return edited
+
+        page.st.data_editor = fake_editor
         page.save_session = lambda auto=False: True
         page.render()
 
@@ -117,7 +114,6 @@ def test_key_uncertainty_resolution_tracking_does_not_clear_resolution_list():
         from modules import tab4_key_uncertainties as page
         from utils.session import init_session
 
-        st.session_state["study_id"] = "interaction-ku"
         init_session()
         st.session_state["project_name"] = "Interaction Test"
         st.session_state["uncertainties"][0]["selected"] = True
@@ -143,9 +139,7 @@ def test_key_uncertainty_resolution_tracking_does_not_clear_resolution_list():
             "Include in Plan": True,
             "Resolution Achieved": False,
         }]
-        st.session_state["resolution_list"] = {
-            uncertainty_name: {"Option A": "Y"}
-        }
+        st.session_state["resolution_list"] = {uncertainty_name: {"Option A": "Y"}}
         st.session_state["resolution_planner"] = [{
             "resolution_id": "RES-001",
             "Resolution Action": "Option A",
@@ -153,13 +147,13 @@ def test_key_uncertainty_resolution_tracking_does_not_clear_resolution_list():
             "Action Owner": "Owner",
         }]
         st.session_state["risk_register"] = [{"Risk": "Risk A"}]
-        st.session_state["ku_editor_interaction-ku"] = {
-            "edited_rows": {
-                0: {"Resolution Achieved": True}
-            },
-            "added_rows": [],
-            "deleted_rows": [],
-        }
+
+        def fake_editor(df, **kwargs):
+            edited = df.copy()
+            edited.loc[0, "Resolution Achieved"] = True
+            return edited
+
+        page.st.data_editor = fake_editor
         page.save_session = lambda auto=False: True
         page.render()
 
@@ -228,7 +222,6 @@ def test_planner_execution_metadata_save_preserves_existing_risk_register():
         from modules import tab6_resolution_planner as page
         from utils.session import init_session
 
-        st.session_state["study_id"] = "interaction-planner"
         init_session()
         st.session_state["project_name"] = "Interaction Test"
         uncertainty = st.session_state["uncertainties"][0]
@@ -261,13 +254,13 @@ def test_planner_execution_metadata_save_preserves_existing_risk_register():
             "Remarks": "Existing remarks",
         }]
         st.session_state["risk_register"] = [{"Risk": "Risk A"}]
-        st.session_state["planner_editor_interaction-planner"] = {
-            "edited_rows": {
-                0: {"Remarks": "Updated remarks"}
-            },
-            "added_rows": [],
-            "deleted_rows": [],
-        }
+
+        def fake_editor(df, **kwargs):
+            edited = df.copy()
+            edited.loc[0, "Remarks"] = "Updated remarks"
+            return edited
+
+        page.st.data_editor = fake_editor
         page.save_session = lambda auto=False: True
         page.render()
 
