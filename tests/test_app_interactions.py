@@ -34,30 +34,30 @@ def test_team_editor_submit_captures_active_editor_state():
         from modules import tab_documentation as page
         from utils.session import init_session
 
+        st.session_state["study_id"] = "interaction-team"
         init_session()
         st.session_state["project_name"] = "Interaction Test"
+        st.session_state["team_editor_interaction-team"] = {
+            "edited_rows": {
+                0: {
+                    "Name": "Active Cell User",
+                    "Function / Role": "RE",
+                    "Date (DD/MM/YYYY)": "22/09/2026",
+                }
+            },
+            "added_rows": [],
+            "deleted_rows": [],
+        }
         page.save_session = lambda auto=False: True
         page.render()
 
     at = _run_app(app)
-    editor_key = f"team_editor_{at.session_state['study_id']}"
-    at.session_state[editor_key] = {
-        "edited_rows": {
-            0: {
-                "Name": "Active Cell User",
-                "Function / Role": "RE",
-                "Date (DD/MM/YYYY)": "22/09/2026",
-            }
-        },
-        "added_rows": [],
-        "deleted_rows": [],
-    }
-
     at.button(key="save_team").click().run()
 
     assert not at.exception
     assert at.session_state["team_members"][0]["Name"] == "Active Cell User"
     assert at.session_state["team_members"][0]["Function / Role"] == "RE"
+
 
 
 def test_key_decision_duplicate_is_rejected_on_save():
@@ -117,6 +117,7 @@ def test_key_uncertainty_resolution_tracking_does_not_clear_resolution_list():
         from modules import tab4_key_uncertainties as page
         from utils.session import init_session
 
+        st.session_state["study_id"] = "interaction-ku"
         init_session()
         st.session_state["project_name"] = "Interaction Test"
         st.session_state["uncertainties"][0]["selected"] = True
@@ -152,26 +153,26 @@ def test_key_uncertainty_resolution_tracking_does_not_clear_resolution_list():
             "Action Owner": "Owner",
         }]
         st.session_state["risk_register"] = [{"Risk": "Risk A"}]
+        st.session_state["ku_editor_interaction-ku"] = {
+            "edited_rows": {
+                0: {"Resolution Achieved": True}
+            },
+            "added_rows": [],
+            "deleted_rows": [],
+        }
         page.save_session = lambda auto=False: True
         page.render()
 
     at = _run_app(app)
-    editor_key = f"ku_editor_{at.session_state['study_id']}"
-    at.session_state[editor_key] = {
-        "edited_rows": {
-            0: {"Resolution Achieved": True}
-        },
-        "added_rows": [],
-        "deleted_rows": [],
-    }
-
-    at.button(key="save_key_uncertainties").click().run()
 
     uncertainty_name = at.session_state["key_uncertainties"][0]["Uncertainty"]
+    at.button(key="save_key_uncertainties").click().run()
+
     assert at.session_state["key_uncertainties"][0]["Resolution Achieved"] is True
     assert at.session_state["resolution_list"] == {uncertainty_name: {"Option A": "Y"}}
     assert at.session_state["resolution_planner"]
     assert at.session_state["risk_register"]
+
 
 
 def test_resolution_list_bulk_action_stays_draft_until_save():
@@ -227,6 +228,7 @@ def test_planner_execution_metadata_save_preserves_existing_risk_register():
         from modules import tab6_resolution_planner as page
         from utils.session import init_session
 
+        st.session_state["study_id"] = "interaction-planner"
         init_session()
         st.session_state["project_name"] = "Interaction Test"
         uncertainty = st.session_state["uncertainties"][0]
@@ -259,23 +261,22 @@ def test_planner_execution_metadata_save_preserves_existing_risk_register():
             "Remarks": "Existing remarks",
         }]
         st.session_state["risk_register"] = [{"Risk": "Risk A"}]
+        st.session_state["planner_editor_interaction-planner"] = {
+            "edited_rows": {
+                0: {"Remarks": "Updated remarks"}
+            },
+            "added_rows": [],
+            "deleted_rows": [],
+        }
         page.save_session = lambda auto=False: True
         page.render()
 
     at = _run_app(app)
-    editor_key = f"planner_editor_{at.session_state['study_id']}"
-    at.session_state[editor_key] = {
-        "edited_rows": {
-            0: {"Remarks": "Updated remarks"}
-        },
-        "added_rows": [],
-        "deleted_rows": [],
-    }
-
     at.button(key="save_resolution_planner").click().run()
 
     assert at.session_state["resolution_planner"][0]["Remarks"] == "Updated remarks"
     assert at.session_state["risk_register"] == [{"Risk": "Risk A"}]
+
 
 
 def test_risk_register_form_is_explicit_save_transaction():
