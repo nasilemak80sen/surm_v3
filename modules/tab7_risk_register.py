@@ -12,6 +12,7 @@ from utils.bowtie_adapter import (
     ensure_bowtie_register,
     refresh_bowtie_document,
 )
+from utils.intelligence import sync_barrier_register
 from utils.logic import (
     build_pra_output,
     build_risk_register,
@@ -123,6 +124,7 @@ def render():
             resolution_list=st.session_state.get("resolution_list", {}),
             resolution_planner=st.session_state.get("resolution_planner", []),
         )
+        sync_barrier_register(st.session_state)
         if previous != updated:
             mark_stage_changed(st.session_state, "risk_register")
         st.info("Risk register draft populated. Review it, then click **Save risk register** to persist.")
@@ -198,6 +200,7 @@ def render():
             resolution_list=st.session_state.get("resolution_list", {}),
             resolution_planner=st.session_state.get("resolution_planner", []),
         )
+        sync_barrier_register(st.session_state)
         mark_stage_changed(st.session_state, "risk_register")
         st.session_state["pra_output"] = (
             build_pra_output(edited).to_dict("records")
