@@ -124,6 +124,7 @@ def render():
         ):
             for uncertainty in st.session_state["uncertainties"]:
                 uncertainty["selected"] = True
+            mark_stage_changed(st.session_state, "uncertainties")
             st.rerun()
 
     with button_cols[1]:
@@ -134,6 +135,7 @@ def render():
         ):
             for uncertainty in st.session_state["uncertainties"]:
                 uncertainty["selected"] = False
+            mark_stage_changed(st.session_state, "uncertainties")
             st.rerun()
 
     with button_cols[2]:
@@ -187,6 +189,7 @@ def render():
             ):
                 for uncertainty in items:
                     uncertainty["selected"] = True
+                mark_stage_changed(st.session_state, "uncertainties")
                 st.rerun()
 
         with deselect_col:
@@ -197,6 +200,7 @@ def render():
             ):
                 for uncertainty in items:
                     uncertainty["selected"] = False
+                mark_stage_changed(st.session_state, "uncertainties")
                 st.rerun()
 
         for uncertainty in items:
@@ -331,6 +335,7 @@ def render():
                 "risks": custom_risks,
             })
 
+            mark_stage_changed(st.session_state, "uncertainties")
             st.success(
                 f"✅ Added: **{custom_name.strip()}**"
             )
