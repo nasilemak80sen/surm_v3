@@ -9,6 +9,7 @@ from openpyxl.styles import (Font, PatternFill, Alignment, Border, Side,
                               GradientFill)
 from openpyxl.utils import get_column_letter
 import streamlit as st
+from utils.study_document import StudyDocument
 
 # ── Colour palette matching SURM Excel ───────────────────────────────
 GREEN_DARK   = "1F6B3A"
@@ -81,7 +82,8 @@ def build_excel_export() -> bytes:
     wb = Workbook()
     wb.remove(wb.active)  # remove default blank sheet
 
-    ss = st.session_state
+    document = StudyDocument.from_session(dict(st.session_state))
+    study = document.to_dict()
 
     # ── Sheet: Front Page ─────────────────────────────────────────────
     ws = wb.create_sheet("Front Page")
@@ -98,13 +100,15 @@ def build_excel_export() -> bytes:
     ws.row_dimensions[1].height = 36
 
     fields = [
-        ("Project Name",  ss.get("project_name",  "")),
+        ("Project Name",  study.get("project_name",  "")),
         ("Field Name",    ss.get("field_name",    "")),
         ("Project Phase", ss.get("project_phase", "")),
     ]
     for i, (label, val) in enumerate(fields, 3):
         ws.cell(row=i, column=1, value=label).font = Font(name="Calibri", bold=True, size=11)
         ws.cell(row=i, column=2, value=val).font   = Font(name="Calibri", size=11)
+
+    ws["B2"].value = study.get("methodology_version", "")
 
     # Sign-off block
     signoff_headers = ["Role", "Name", "Date"]
