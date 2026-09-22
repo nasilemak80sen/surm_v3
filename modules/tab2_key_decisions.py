@@ -6,7 +6,9 @@ import pandas as pd
 import streamlit as st
 
 from utils.coercion import safe_int
-from utils.form_ui import render_form_header, render_stage_status
+from utils.form_ui import render_form_header, render_save_hint, render_stage_status
+from utils.identity import duplicate_message
+from utils.persistence import save_session
 from utils.workflow import mark_stage_changed
 
 
@@ -114,76 +116,113 @@ def render():
                 df.at[index, "decision_id"] = f"DEC-{index + 1:03d}"
 
     df = _normalize_decisions(df)
-
     editor_key = f"kd_editor_{st.session_state.get('study_id', 'new')}"
 
-    edited = st.data_editor(
-        df,
-        num_rows="dynamic",
-                use_container_width=True,
-        column_config={
-            "decision_id": st.column_config.TextColumn(
-                "Decision ID",
-                width="small",
-                disabled=True,
-            ),
-            "Key Decision": st.column_config.TextColumn(
-                "Key Decision",
-                width="large",
-                help="What decision will this study help the team make?",
-            ),
-            "Weight (1-3)": st.column_config.NumberColumn(
-                "Weight (1–3)",
-                min_value=1,
-                max_value=3,
-                step=1,
-                format="%d",
-                help="1 = Low importance, 2 = Medium, 3 = High importance.",
-            ),
-            "Description": st.column_config.TextColumn(
-                "Description",
-                width="large",
-                help="Brief context so other reviewers understand the decision.",
-            ),
-        },
-        hide_index=True,
-        key=editor_key,
+    render_save_hint(
+        "Edits are a session draft until you click Save decisions. "
+        "Remove Empty Rows also applies a draft change, but does not persist it to the saved study."
     )
 
-    normalized = _normalize_decisions(edited)
-
-    # Preserve current responsive behaviour: edits are immediately reflected
-    # in the workspace. The workflow validator decides when the stage is ready.
-    updated_records = normalized.to_dict("records")
-    st.session_state["key_decisions"] = updated_records
-    after_signature = tuple(
-        (
-            str(row.get("decision_id", "")),
-            str(row.get("Key Decision", "")).strip(),
-            _weight_value(row.get("Weight (1-3)", 0)),
-            str(row.get("Description", "") or "").strip(),
+    with st.form("key_decisions_form", enter_to_submit=False):
+        edited = st.data_editor(
+            df,
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "decision_id": st.column_config.TextColumn(
+                    "Decision ID",
+                    width="small",
+                    disabled=True,
+                ),
+                "Key Decision": st.column_config.TextColumn(
+                    "Key Decision",
+                    width="large",
+                    help="What decision will this study help the team make?",
+                ),
+                "Weight (1-3)": st.column_config.NumberColumn(
+                    "Weight (1–3)",
+                    min_value=1,
+                    max_value=3,
+                    step=1,
+                    format="%d",
+                    help="1 = Low importance, 2 = Medium, 3 = High importance.",
+                ),
+                "Description": st.column_config.TextColumn(
+                    "Description",
+                    width="large",
+                    help="Brief context so other reviewers understand the decision.",
+                ),
+            },
+            hide_index=True,
+            key=editor_key,
         )
-        for row in updated_records
-    )
-    if before_signature != after_signature:
-        mark_stage_changed(st.session_state, "key_decisions")
 
-    if st.button(
-        "Remove Empty Decision Rows",
-        key="remove_empty_decision_rows",
-        help="Remove blank rows created by the dynamic editor.",
-    ):
-        cleaned = [
-            row
-            for row in st.session_state["key_decisions"]
-            if str(row.get("Key Decision") or "").strip()
-        ]
-        st.session_state["key_decisions"] = cleaned or [{
-            "decision_id": "DEC-001",
-            "Key Decision": "",
-            "Weight (1-3)": 1,
-            "Description": "",
-        }]
+        remove_clicked = st.form_submit_button(
+            "Remove Empty Decision Rows",
+            key="remove_empty_decision_rows",
+            help="Remove blank rows created by the dynamic editor.",
+        )
+        save_clicked = st.form_submit_button(
+            "Save decisions",
+            key="save_key_decisions",
+            type="primary",
+        )
+
+    submitted = remove_clicked or save_clicked
+    if submitted:
+        updated_records = _normalize_decisions(edited).to_dict("records")
+        if remove_clicked:
+            updated_records = [
+                row
+                for row in updated_records
+                if str(row.get("Key Decision") or "").strip()
+            ] or [{
+                "decision_id": "DEC-001",
+                "Key Decision": "",
+                "Weight (1-3)": 1,
+                "Description": "",
+            }]
+
+        duplicate_error = duplicate_message(updated_records, "Key Decision")
+        if duplicate_error:
+            st.warning(duplicate_error)
+            return
+
+        before_records = st.session_state.get("key_decisions", [])
+        before_signature = tuple(
+            (
+                str(row.get("decision_id", "")),
+                str(row.get("Key Decision", "")).strip(),
+                _weight_value(row.get("Weight (1-3)", 0)),
+                str(row.get("Description", "") or "").strip(),
+            )
+            for row in before_records
+            if isinstance(row, dict)
+        )
+        after_signature = tuple(
+            (
+                str(row.get("decision_id", "")),
+                str(row.get("Key Decision", "")).strip(),
+                _weight_value(row.get("Weight (1-3)", 0)),
+                str(row.get("Description", "") or "").strip(),
+            )
+            for row in updated_records
+        )
+
+        st.session_state["key_decisions"] = updated_records
+        if before_signature != after_signature:
+            mark_stage_changed(st.session_state, "key_decisions")
+
+        if save_clicked:
+            if not st.session_state.get("project_name", "").strip():
+                st.warning("Enter a Project Name on Overview before saving the decision set.")
+                return
+            if not save_session(auto=False):
+                st.error("Decision set could not be saved.")
+                return
+            st.success("✅ Key decisions saved.")
+        else:
+            st.info("Draft updated. Click **Save decisions** to persist the decision set.")
         st.rerun()
 
     st.divider()
