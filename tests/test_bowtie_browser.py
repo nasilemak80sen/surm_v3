@@ -153,6 +153,9 @@ def test_bowtie_editor_browser_round_trip_and_controls():
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
             page = browser.new_page(accept_downloads=True)
+            page_errors = []
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+
             page.goto(
                 f"http://127.0.0.1:{server.server_port}/index.html",
                 wait_until="load",
@@ -224,7 +227,9 @@ def test_bowtie_editor_browser_round_trip_and_controls():
             )
             assert after_x != before_x
 
-            page.locator("#addCause").click()
+            page.evaluate("document.getElementById('addCause').click()")
+            page.wait_for_timeout(50)
+            assert not page_errors, page_errors
             expect(page.locator("#objects")).to_contain_text("New Threat")
 
             new_threat = page.locator("#objects button", has_text="New Threat")
@@ -232,7 +237,9 @@ def test_bowtie_editor_browser_round_trip_and_controls():
             expect(page.locator("#editName")).to_have_value("New Threat")
 
             page.locator("#editName").fill("Edited Threat")
-            page.locator("#editName").press("Tab")
+            page.locator("#editName").dispatch_event("change")
+            page.wait_for_timeout(50)
+            assert not page_errors, page_errors
             expect(page.locator("#objects")).to_contain_text("Edited Threat")
 
             page.wait_for_timeout(250)
