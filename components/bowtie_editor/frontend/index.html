@@ -97,6 +97,7 @@ svg{width:100%;height:100%;display:block}
 <script>
 (function(){
   let args = null;
+  let editable = true;
   let doc = null;
   let selected = null;
   let dirtyTimer = null;
@@ -139,6 +140,7 @@ svg{width:100%;height:100%;display:block}
   function clone(o){ return JSON.parse(JSON.stringify(o)); }
 
   function emitChange(){
+    if(!editable) return;
     doc.editor_revision = Number(doc.editor_revision||0)+1;
     if(dirtyTimer) clearTimeout(dirtyTimer);
     dirtyTimer=setTimeout(()=>{
@@ -231,6 +233,10 @@ svg{width:100%;height:100%;display:block}
     if(!p){ editorEl.innerHTML='<div class="small">Select a node to edit.</div>'; return; }
     const n=nodeFor(p);
     if(!n){editorEl.innerHTML='';return;}
+    if(!editable){
+      editorEl.innerHTML='<div class="small">Read-only reporting view.</div>';
+      return;
+    }
     editorEl.innerHTML=
       '<label>Name</label><input id="editName" value="'+esc(n.name)+'">'+
       '<label>Description</label><textarea id="editDesc">'+esc(n.description||'')+'</textarea>'+
@@ -260,6 +266,10 @@ svg{width:100%;height:100%;display:block}
     if(!line){relationshipsEl.innerHTML='<div class="small">No line exists.</div>';return;}
     const barrierType=p.type==='cause'?'preventativeBarrier':'mitigativeBarrier';
     const barriers=itemsFor(barrierType);
+    if(!editable){
+      relationshipsEl.innerHTML='<div class="small">Read-only reporting view.</div>';
+      return;
+    }
     const checks=barriers.map(b=>{
       const n=nodeFor(b);
       const checked=(line.stops||[]).includes(b.id);
@@ -391,6 +401,7 @@ svg{width:100%;height:100%;display:block}
       el.addEventListener('click',e=>{e.stopPropagation();selected={id:el.dataset.id};render();});
       let dragging=false,startX=0,startY=0,origX=0,origY=0;
       el.addEventListener('pointerdown',e=>{
+        if(!editable)return;
         const p=allPlacements().find(x=>x.id===el.dataset.id);if(!p)return;
         dragging=true;selected={id:p.id};startX=e.clientX;startY=e.clientY;origX=p.x;origY=p.y;el.setPointerCapture(e.pointerId);
       });
@@ -399,9 +410,10 @@ svg{width:100%;height:100%;display:block}
         const rect=svg.getBoundingClientRect();
         const dx=(e.clientX-startX)*(1600/rect.width),dy=(e.clientY-startY)*(900/rect.height);
         const p=allPlacements().find(x=>x.id===el.dataset.id);if(!p)return;
-        p.x=origX+dx;p.y=origY+dy;render();
+        p.x=origX+dx;p.y=origY+dy;
+        el.setAttribute('transform','translate('+dx+' '+dy+')');
       });
-      el.addEventListener('pointerup',()=>{if(dragging){dragging=false;emitChange();}});
+      el.addEventListener('pointerup',()=>{if(dragging){dragging=false;render();emitChange();}});
     });
 
     document.getElementById('title').textContent=doc.name||'SURM Bowtie';
@@ -415,6 +427,11 @@ svg{width:100%;height:100%;display:block}
     if(!data.isStreamlitMessage)return;
     if(data.type==='streamlit:render'){
       args=data.args||{};
+      editable=args.editable!==false;
+      ['addCause','addPrevent','addMitigate','addOutcome','delete'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.style.display=editable?'inline-block':'none';
+      });
       const incoming=args.document;
       if(incoming) {
         if(!doc || Number(incoming.editor_revision||0)>=Number(doc.editor_revision||0)){
