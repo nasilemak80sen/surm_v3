@@ -78,3 +78,12 @@ def test_governance_metadata_and_signoffs_round_trip():
     assert restored.endorsed_name == "FDP Lead"
     assert restored.methodology_version == "SURM-2026.01"
     assert restored.workflow_revisions == {"impact_assessment": 3}
+
+
+def test_legacy_string_revision_is_coerced():
+    document = StudyDocument.from_session({
+        "study_id": "string-revision",
+        "study_revision": "7.0",
+    })
+
+    assert document.study_revision == 7
