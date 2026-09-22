@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
 
+from utils.coercion import safe_int
+
 
 STUDY_KEYS = (
     "project_name",
@@ -158,10 +160,10 @@ class StudyDocument:
             _text(values.get("study_lifecycle")) or "Draft"
         )
 
-        try:
-            values["study_revision"] = int(values.get("study_revision") or 0)
-        except (TypeError, ValueError):
-            values["study_revision"] = 0
+        values["study_revision"] = safe_int(
+            values.get("study_revision"),
+            default=0,
+        )
 
         return cls(**values)
 
