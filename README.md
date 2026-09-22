@@ -62,7 +62,7 @@ Saved studies record:
 - Study lifecycle
 - Full workflow data
 
-Current study schema: 2.1
+Current study schema: 2.2
 Current methodology identifier: SURM-2026.01
 
 Sessions use SQLite locally and PostgreSQL when DATABASE_URL is configured.
