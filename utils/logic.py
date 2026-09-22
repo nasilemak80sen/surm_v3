@@ -116,10 +116,10 @@ def calculate_risk_rating(
 
 def is_risk_assessed(row: dict[str, Any]) -> bool:
     """Return True only when both dimensions have been explicitly assessed."""
-    return bool(
-        str(row.get("Likelihood (H/M/L)", "") or "").strip()
-        and str(row.get("Impact (H/M/L)", "") or "").strip()
-    )
+    likelihood_value = str(row.get("Likelihood (H/M/L)", "") or "").strip().upper()
+    impact_value = str(row.get("Impact (H/M/L)", "") or "").strip().upper()
+
+    return likelihood_value in {"H", "M", "L"} and impact_value in {"H", "M", "L"}
 
 
 def build_impact_table() -> pd.DataFrame:
