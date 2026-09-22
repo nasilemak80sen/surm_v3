@@ -69,7 +69,7 @@ Sessions use SQLite locally and PostgreSQL when DATABASE_URL is configured.
 
 ## Excel output
 
-The exporter currently produces 10 worksheets:
+The exporter currently produces 13 worksheets:
 
 1. Front Page
 2. Documentation
@@ -80,9 +80,30 @@ The exporter currently produces 10 worksheets:
 7. 5. Resolution List
 8. 6. Resolution Planner
 9. 7. Risk Register
-10. PRA Output
+10. 7b. Bowtie Register
+11. 8. Barrier Management
+12. 9. Assurance & Reviews
+13. PRA Output
 
 The workbook is an output projection of the canonical study model; it is not the application's source of truth.
+
+## Development maturity — Phase 4 onward
+
+The current branch has moved beyond workflow-only UX into a decision-intelligence
+layer:
+
+- **Study Intelligence** consolidates risk, action, barrier, QA, traceability and saved-study portfolio signals.
+- **Barrier Management** turns Bowtie barriers into managed records with owner, status, progress, due date, effectiveness, criticality and verification.
+- **Bowtie QA** checks structural completeness without changing SURM risk scoring.
+- **Assurance & Review** controls lifecycle transitions and records review decisions.
+- **Revision History** supports immutable revision listing and durable-field comparison.
+- **Historical Intelligence** provides descriptive recurring-pattern analysis across saved studies.
+
+Corporate-data integrations are intentionally **shelved** for this development
+wave. SURM remains self-contained around its canonical study model and local /
+configured database backends.
+
+See `docs/ROADMAP_PHASE4_10.md` for the active roadmap.
 
 ## Regression protection
 
