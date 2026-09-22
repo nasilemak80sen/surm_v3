@@ -1,89 +1,177 @@
-"""modules/tab_pra_output.py — Final PRA-formatted output with colour coding"""
-import streamlit as st
-import pandas as pd
-from utils.logic import build_pra_output
-from utils.export_excel import build_excel_export
-from utils.analytics import build_executive_summary
+"""Final PRA output — read-only reporting view generated from the Risk Register."""
 
-_RISK_BG  = {"Extreme":"#FFEBEE","High":"#FFF3E0","Medium":"#FFFDE7","Low":"#E8F5E9"}
-_RISK_CLR = {"Extreme":"#C00000","High":"#E64A19","Medium":"#F57F17","Low":"#2E7D32"}
+from __future__ import annotations
+
+import pandas as pd
+import streamlit as st
+
+from utils.analytics import build_executive_summary
+from utils.export_excel import build_excel_export
+from utils.form_ui import render_form_header, render_stage_status
+from utils.logic import build_pra_output, is_risk_assessed
+from utils.workflow import stage_results
+
+
+_RISK_BG = {
+    "Extreme": "#FFEBEE",
+    "High": "#FFF3E0",
+    "Medium": "#FFFDE7",
+    "Low": "#E8F5E9",
+}
+_RISK_CLR = {
+    "Extreme": "#C00000",
+    "High": "#E64A19",
+    "Medium": "#F57F17",
+    "Low": "#2E7D32",
+}
+
 
 def render():
-    rr_data = st.session_state.get("risk_register", [])
+    risk_data = st.session_state.get("risk_register", [])
 
-    if not rr_data:
-        st.info("⬅️ Complete **Tab 7 – Risk Register** first.")
+    if not risk_data:
+        st.info(
+            "⬅️ Complete **Tab 7 – Risk Register** first."
+        )
         return
 
-    st.markdown('<div class="surm-instruction">ℹ️ Read-only PRA output — auto-generated from Tab 7. Edit data there. Download the full SURM workbook using the button below.</div>', unsafe_allow_html=True)
+    stages = stage_results(dict(st.session_state))
+    risk_stage = next(
+        stage for stage in stages
+        if stage.key == "risk_register"
+    )
 
-    pra_df = build_pra_output(pd.DataFrame(rr_data))
+    if not risk_stage.complete:
+        render_form_header(
+            "PRA OUTPUT",
+            "PRA Not Ready",
+            "The PRA is a read-only report generated from the Risk Register. "
+            "Complete the remaining risk assessment and governance fields before "
+            "using this output as a study deliverable.",
+        )
+        render_stage_status(
+            label="PRA readiness",
+            value=risk_stage.guidance,
+            tone="warning",
+        )
+        st.info(
+            "Return to **Tab 7 → Risk Register** to complete the outstanding fields."
+        )
+        return
+
+    render_form_header(
+        "PRA OUTPUT",
+        "PRA Output",
+        "Read-only summary generated from the saved Risk Register. "
+        "Edit source data in Tab 7; this page never creates a second editable copy.",
+    )
+
+    render_stage_status(
+        label="PRA readiness",
+        value="All mandatory Risk Register assessment and governance fields are complete.",
+        tone="success",
+    )
+
+    st.caption(
+        f"Methodology: {st.session_state.get('methodology_version', 'SURM-2026.01')} · "
+        f"Study revision: {st.session_state.get('study_revision', 0)}"
+    )
+
+    pra_df = build_pra_output(pd.DataFrame(risk_data))
 
     if pra_df.empty:
         st.warning("No PRA data to display.")
         return
 
-    st.markdown('<div class="surm-section-header">Executive Summary</div>', unsafe_allow_html=True)
-    st.info(build_executive_summary(dict(st.session_state)))
+    st.markdown(
+        '<div class="surm-section-header">Executive Summary</div>',
+        unsafe_allow_html=True,
+    )
+    st.info(
+        build_executive_summary(dict(st.session_state))
+    )
 
-    # ── Summary metrics ───────────────────────────────────────────────
-    st.markdown('<div class="surm-section-header">📊 Risk Portfolio Summary</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="surm-section-header">📊 Risk Portfolio Summary</div>',
+        unsafe_allow_html=True,
+    )
 
-    for lvl in ["Extreme", "High", "Medium", "Low"]:
-        count = int((pra_df.get("Risk Rating", pd.Series()) == lvl).sum()) if "Risk Rating" in pra_df.columns else 0
-        if count == 0:
-            continue
-        bg  = _RISK_BG.get(lvl,"#FFF")
-        clr = _RISK_CLR.get(lvl,"#333")
-        risks_at_level = pra_df[pra_df["Risk Rating"]==lvl]["Risk"].tolist() if "Risk Rating" in pra_df.columns else []
-        labels = " · ".join(risks_at_level)
+    metric_cols = st.columns(4)
+    for column, level in zip(
+        metric_cols,
+        ["Extreme", "High", "Medium", "Low"],
+    ):
+        count = int(
+            (
+                pra_df.get(
+                    "Risk Rating",
+                    pd.Series(dtype=str),
+                ) == level
+            ).sum()
+        )
+        column.metric(level, count)
 
-        st.markdown(f"""
-            <div style="background:{bg};border-left:5px solid {clr};border-radius:0 4px 4px 0;
-            padding:10px 16px;margin-bottom:8px;display:flex;align-items:center;gap:16px;">
-                <div style="min-width:80px;">
-                    <span style="font-size:22px;font-weight:700;color:{clr};">{count}</span>
-                    <span style="font-size:12px;font-weight:700;color:{clr};margin-left:4px;">{lvl}</span>
-                </div>
-                <div style="font-size:11px;color:{clr};opacity:0.8;overflow:hidden;
-                white-space:nowrap;text-overflow:ellipsis;">{labels}</div>
-            </div>
-        """, unsafe_allow_html=True)
+    st.markdown(
+        '<div class="surm-section-header">📄 PRA Output Table</div>',
+        unsafe_allow_html=True,
+    )
 
-    # ── PRA table ─────────────────────────────────────────────────────
-    st.markdown('<div class="surm-section-header">📄 PRA Output Table</div>', unsafe_allow_html=True)
-
-    # Colour-code Risk Rating column using pandas Styler
-    def _style_rr(val):
-        bg  = _RISK_BG.get(val,"")
-        clr = _RISK_CLR.get(val,"")
-        if bg:
-            return f"background-color:{bg};color:{clr};font-weight:700;"
+    def style_risk_rating(value):
+        background = _RISK_BG.get(value, "")
+        color = _RISK_CLR.get(value, "")
+        if background:
+            return (
+                f"background-color:{background};"
+                f"color:{color};font-weight:700;"
+            )
         return ""
 
-    styled = pra_df.style.map(_style_rr, subset=["Risk Rating"]) if "Risk Rating" in pra_df.columns else pra_df.style
-    st.dataframe(styled, width="stretch", hide_index=True, height=480)
+    styled = (
+        pra_df.style.map(
+            style_risk_rating,
+            subset=["Risk Rating"],
+        )
+        if "Risk Rating" in pra_df.columns
+        else pra_df.style
+    )
 
-    # ── Export ────────────────────────────────────────────────────────
+    st.dataframe(
+        styled,
+        width="stretch",
+        hide_index=True,
+        height=480,
+    )
+
     st.divider()
-    st.markdown('<div class="surm-section-header">📥 Export</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="surm-section-header">📥 Export</div>',
+        unsafe_allow_html=True,
+    )
 
-    col_a, col_b = st.columns([1, 3])
-    with col_a:
-        xlsx  = build_excel_export()
-        field = st.session_state.get("field_name","") or "Output"
+    export_col, info_col = st.columns([1, 3])
+
+    with export_col:
+        workbook = build_excel_export()
+        field = st.session_state.get("field_name", "") or "Output"
         st.download_button(
             "📥 Download Full SURM Workbook (.xlsx)",
-            data=xlsx,
-            file_name=f"SURM_{field.replace(' ','_')}_Complete.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            data=workbook,
+            file_name=f"SURM_{field.replace(' ', '_')}_Complete.xlsx",
+            mime=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
         )
-    with col_b:
-        st.markdown("""
-            <div style="background:#E8F5E9;border-left:4px solid #1F6B3A;padding:10px 14px;
-            border-radius:0 4px 4px 0;font-size:12px;color:#2E7D32;margin-top:4px;">
-                📄 Exports all 9 sheets: Front Page · Team · Uncertainties · Decisions · 
-                Impact Assessment · Key Uncertainties · Resolution List · Resolution Planner · 
-                Risk Register · PRA Output — all in styled SURM Excel format.
+
+    with info_col:
+        st.markdown(
+            """
+            <div style="background:#E8F5E9;border-left:4px solid #1F6B3A;
+            padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;
+            color:#2E7D32;margin-top:4px;">
+                📄 The workbook exports the current canonical study outputs,
+                including governance metadata and the Risk Register.
             </div>
-        """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True,
+        )
