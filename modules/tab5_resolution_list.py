@@ -87,7 +87,7 @@ def render():
                 pd.DataFrame(rows),
                 column_config=column_config,
                 hide_index=True,
-                width="stretch",
+                use_container_width=True,
                 num_rows="fixed",
                 key=f"res_list_editor_{st.session_state.get('study_id', 'new')}",
             )
