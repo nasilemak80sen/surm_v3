@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from utils.coercion import safe_int
+from utils.identity import duplicate_values
 
 
 @dataclass(frozen=True)
@@ -98,6 +99,15 @@ def _selected_uncertainties(session: dict[str, Any]) -> int:
     )
 
 
+def _uncertainties_unique(session: dict[str, Any]) -> bool:
+    named = [
+        item
+        for item in session.get("uncertainties", [])
+        if isinstance(item, dict) and str(item.get("name", "") or "").strip()
+    ]
+    return not duplicate_values(named, "name")
+
+
 def _selected_uncertainty_names(session: dict[str, Any]) -> set[str]:
     return {
         str(item.get("name", "")).strip()
@@ -130,7 +140,13 @@ def _key_decisions_complete(session: dict[str, Any]) -> bool:
         if isinstance(item, dict)
         and str(item.get("Key Decision", "")).strip()
     ]
-    return bool(named) and all(
+    if not named:
+        return False
+
+    if duplicate_values(named, "Key Decision"):
+        return False
+
+    return all(
         _decision_weight(item.get("Weight (1-3)", 0)) in {1, 2, 3}
         for item in named
     )
@@ -335,7 +351,7 @@ def stage_results(session: dict[str, Any]) -> list[WorkflowStage]:
     risk_complete, risk_reason = _risk_assessment_complete(session)
 
     completed = {
-        "uncertainties": selected > 0,
+        "uncertainties": selected > 0 and _uncertainties_unique(session),
         "key_decisions": key_decisions_complete,
         "impact_assessment": impact_complete,
         "key_uncertainties": key_uncertainties_complete,
@@ -350,7 +366,12 @@ def stage_results(session: dict[str, Any]) -> list[WorkflowStage]:
     }
 
     prerequisites = {
-        "uncertainties": (True, ""),
+        "uncertainties": (
+            _uncertainties_unique(session),
+            "Remove duplicate uncertainty names before continuing."
+            if not _uncertainties_unique(session)
+            else "",
+        ),
         "key_decisions": (
             selected > 0,
             "Select at least one uncertainty first.",
