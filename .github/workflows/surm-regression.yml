@@ -32,4 +32,31 @@ jobs:
           python -m pip install pytest
 
       - name: Run regression tests
-        run: python -m pytest -q
+        run: python -m pytest -q -m "not browser"
+
+  browser_regression:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest
+
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run browser regression tests
+        run: python -m pytest -q tests/test_bowtie_browser.py -m browser
