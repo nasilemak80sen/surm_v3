@@ -58,7 +58,7 @@ svg{width:100%;height:100%;display:block}
 <body>
 <div class="toolbar">
   <div class="title" id="title">SURM Bowtie</div>
-  <button id="auto">Auto-arrange</button>
+  <button id="auto">Auto-arrange</button><button id="exportSvg">Export SVG</button>
   <button id="addCause">+ Cause</button>
   <button id="addPrevent">+ Preventive</button>
   <button id="addMitigate">+ Mitigative</button>
@@ -444,6 +444,18 @@ svg{width:100%;height:100%;display:block}
     }
   });
 
+  document.getElementById('exportSvg').onclick=()=>{
+    const cloneSvg=svg.cloneNode(true);
+    cloneSvg.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    const source='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(cloneSvg);
+    const blob=new Blob([source],{type:'image/svg+xml;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=(doc && doc.risk_id ? 'SURM_'+doc.risk_id+'_Bowtie.svg' : 'SURM_Bowtie.svg');
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   document.getElementById('auto').onclick=autoArrange;
   document.getElementById('addCause').onclick=()=>addObject('cause');
   document.getElementById('addPrevent').onclick=()=>addObject('preventativeBarrier');
