@@ -197,7 +197,7 @@ def render():
             df_in,
             column_config=column_config,
             hide_index=True,
-            width="stretch",
+                use_container_width=True,
             num_rows="fixed",
             key=f"impact_editor_{st.session_state.get('study_id', 'new')}",
         )
@@ -329,7 +329,7 @@ def render():
                 style_rating,
                 subset=["Rating"],
             ),
-            width="stretch",
+                use_container_width=True,
             hide_index=True,
         )
 
