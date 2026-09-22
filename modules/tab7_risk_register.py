@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import pandas as pd/
+import pandas as pd
 import streamlit as st
 
 from utils.form_ui import render_form_header, render_save_hint, render_stage_status
