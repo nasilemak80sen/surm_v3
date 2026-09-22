@@ -267,6 +267,32 @@ def sync_barrier_register(session: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return synced
 
 
+def apply_barrier_register_to_bowties(session: dict[str, Any]) -> None:
+    """Project managed barrier metadata back into Bowtie node metadata."""
+    register = session.get("barrier_register", {}) or {}
+    for document in (session.get("bowtie_register", {}) or {}).values():
+        if not isinstance(document, dict):
+            continue
+        library = document.get("library", {}) or {}
+        for node_type in ("preventativeBarrier", "mitigativeBarrier"):
+            for node in library.get(node_type, []) or []:
+                if not isinstance(node, dict):
+                    continue
+                record = register.get(_text(node.get("id")), {})
+                if not record:
+                    continue
+                if _text(record.get("owner")):
+                    node["owner"] = _text(record.get("owner"))
+                if _text(record.get("effectiveness")):
+                    node["effectiveness"] = _text(record.get("effectiveness"))
+                node["surm_management"] = {
+                    "status": _text(record.get("status")),
+                    "health": _text(record.get("health")),
+                    "criticality": _text(record.get("criticality")),
+                    "verification_status": _text(record.get("verification_status")),
+                }
+
+
 def build_bowtie_qa(session: dict[str, Any]) -> list[dict[str, Any]]:
     """Return non-scoring Bowtie completeness findings for every risk."""
     findings: list[dict[str, Any]] = []
