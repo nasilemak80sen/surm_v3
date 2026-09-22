@@ -74,3 +74,11 @@ def test_approval_requires_bowtie_coverage_for_assessed_risks():
 
     assert not ready
     assert any("Bowtie documents" in reason for reason in reasons)
+
+
+def test_study_editability_policy_handles_viewer_and_archived_modes():
+    from utils.assurance import study_is_editable
+
+    assert study_is_editable({"study_access_mode": "edit", "study_role": "Author", "study_lifecycle": "Draft"})
+    assert not study_is_editable({"study_access_mode": "edit", "study_role": "Viewer", "study_lifecycle": "Draft"})
+    assert not study_is_editable({"study_access_mode": "edit", "study_role": "Approver", "study_lifecycle": "Archived"})
