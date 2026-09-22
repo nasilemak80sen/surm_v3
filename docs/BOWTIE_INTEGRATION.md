@@ -40,6 +40,8 @@ remain SURM-owned logic.
 | Cause / barrier / consequence topology | Bowtie document |
 | Diagram positions and connections | Bowtie document |
 | Study persistence | SURM StudyDocument |
+| Managed barrier state | SURM barrier_register |
+| Barrier owner/status/verification | SURM Barrier Management |
 | PRA report | SURM |
 
 ## Refresh rule
@@ -60,7 +62,22 @@ Bowtie relationships.
 - auto-arrange
 - manage which barriers sit on each Cause/Consequence path
 - continuous draft synchronisation to Streamlit session state
-- SVG export
+- degradation-factor and barrier-control metadata
+- managed barrier-health indicators
+- undo/redo history
+- SVG and PNG export
 
 The component intentionally does not implement SURM risk scoring. That remains
 outside the editor.
+
+## Assurance and intelligence
+
+The Bowtie layer now feeds the broader SURM intelligence services:
+
+- Bowtie QA checks structural completeness without recalculating risk.
+- Barriers can be synchronised into a durable managed-barrier register.
+- Barrier degradation factors and controls are retained with the barrier.
+- Risk → uncertainty → resolution → action → barrier traceability is exposed in
+  the Study Intelligence page.
+- Managed barrier metadata is projected back into the Bowtie node metadata so
+  reporting views stay aligned with the managed barrier register.
