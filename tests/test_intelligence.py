@@ -117,3 +117,16 @@ def test_portfolio_and_history_are_deterministic():
 
     historical = build_historical_patterns([fixture(), fixture()])
     assert historical["recurring_uncertainties"][0] == ("Fault seal", 2)
+
+
+def test_bowtie_qa_flags_degradation_without_controls():
+    session = fixture()
+    session["bowtie_register"]["RSK-001"]["library"]["preventativeBarrier"][0]["degradation_factors"] = [
+        "Poor seismic resolution"
+    ]
+    findings = build_bowtie_qa(session)
+
+    assert any(
+        "degradation factors but no controls" in row["message"]
+        for row in findings
+    )
