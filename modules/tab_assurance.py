@@ -45,7 +45,7 @@ def render():
         desired = st.selectbox(
             "Target lifecycle",
             LIFECYCLE_ORDER,
-            index=_LIFECYCLE_ORDER.index(current) if current in _LIFECYCLE_ORDER else 0,
+            index=LIFECYCLE_ORDER.index(current) if current in LIFECYCLE_ORDER else 0,
             key="assurance_target_lifecycle",
         )
         comment = st.text_area("Review / decision comment", key="assurance_comment")
