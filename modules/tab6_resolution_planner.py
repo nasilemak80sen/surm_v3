@@ -125,7 +125,7 @@ def render():
                         "Remarks": st.column_config.TextColumn("Remarks", width="large"),
                     },
                     hide_index=True,
-                    width="stretch",
+                use_container_width=True,
                     num_rows="fixed",
                     key=f"planner_editor_{st.session_state.get('study_id', 'new')}",
                 )
