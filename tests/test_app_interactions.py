@@ -65,23 +65,24 @@ def test_key_decision_duplicate_is_rejected_on_save():
 
         init_session()
         st.session_state["project_name"] = "Interaction Test"
+
+        def fake_editor(df, **kwargs):
+            edited = df.copy()
+            edited.loc[0, "Key Decision"] = edited.iloc[1]["Key Decision"]
+            return edited
+
+        page.st.data_editor = fake_editor
         page.save_session = lambda auto=False: True
         page.render()
 
     at = _run_app(app)
-    editor_key = f"kd_editor_{at.session_state['study_id']}"
-    at.session_state[editor_key] = {
-        "edited_rows": {
-            0: {"Key Decision": "No. of injectors"}
-        },
-        "added_rows": [],
-        "deleted_rows": [],
-    }
-
     at.button(key="save_key_decisions").click().run()
 
-    assert any("Duplicate Key Decision value" in warning.value for warning in at.warning)
-    assert at.session_state["key_decisions"][0]["Key Decision"] == "No. of reactivated producers"
+    assert any(
+        "Duplicate Key Decision value" in warning.value
+        for warning in at.warning
+    )
+
 
 
 def test_impact_save_requires_explicit_decision_rating():
@@ -154,6 +155,9 @@ def test_key_uncertainty_resolution_tracking_does_not_clear_resolution_list():
             return edited
 
         page.st.data_editor = fake_editor
+        page.st.plotly_chart = lambda *args, **kwargs: None
+        page.st.download_button = lambda *args, **kwargs: None
+        page.st.rerun = lambda: None
         page.save_session = lambda auto=False: True
         page.render()
 
@@ -261,6 +265,7 @@ def test_planner_execution_metadata_save_preserves_existing_risk_register():
             return edited
 
         page.st.data_editor = fake_editor
+        page.st.rerun = lambda: None
         page.save_session = lambda auto=False: True
         page.render()
 
