@@ -207,6 +207,29 @@ def build_excel_export() -> bytes:
         "Registered Bowtie Diagrams",
     )
 
+    # ── Sheet: Barrier Management ───────────────────────────────────
+    ws10b = wb.create_sheet("8. Barrier Management")
+    barrier_rows = []
+    for barrier_id, barrier in study.get("barrier_register", {}).items():
+        row = dict(barrier)
+        row["barrier_id"] = barrier_id
+        row["risk_ids"] = ", ".join(str(x) for x in row.get("risk_ids", []))
+        barrier_rows.append(row)
+    _write_df_to_sheet(
+        ws10b,
+        pd.DataFrame(barrier_rows) if barrier_rows else pd.DataFrame(),
+        "Managed Barrier Register",
+    )
+
+    # ── Sheet: Assurance & Reviews ──────────────────────────────────
+    ws10c = wb.create_sheet("9. Assurance & Reviews")
+    reviews_df = pd.DataFrame(study.get("study_reviews", []))
+    _write_df_to_sheet(
+        ws10c,
+        reviews_df,
+        "Study Lifecycle & Review History",
+    )
+
     # ── Sheet: PRA Output ─────────────────────────────────────────────
     ws10 = wb.create_sheet("PRA Output")
     pra_df = pd.DataFrame(study.get("pra_output", []))
