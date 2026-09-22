@@ -332,11 +332,15 @@ svg{width:100%;height:100%;display:block}
     });
   }
 
-  function arrow(x1,y1,x2,y2){
-    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
-    l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);l.setAttribute('class','arrow');
-    l.setAttribute('marker-end','url(#arrowhead)');svg.appendChild(l);
+  function route(points, arrowEnd=true){
+    if(!points || points.length<2)return;
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d','M '+points.map(pt=>pt[0]+' '+pt[1]).join(' L '));
+    p.setAttribute('class','arrow');
+    if(arrowEnd)p.setAttribute('marker-end','url(#arrowhead)');
+    svg.appendChild(p);
   }
+  function arrow(x1,y1,x2,y2){ route([[x1,y1],[x2,y2]],true); }
 
   function render(){
     if(!doc)return;
@@ -377,24 +381,30 @@ svg{width:100%;height:100%;display:block}
 
     doc.lines.filter(l=>l.originType==='cause').forEach(l=>{
       const o=doc.causes.find(p=>p.id===l.originId);if(!o)return;
-      const y=o.y;
       let lastX=o.x+o.w/2;
+      let lastY=o.y;
       (l.stops||[]).forEach(stopId=>{
         const b=doc.preventativeBarriers.find(p=>p.id===stopId);if(!b)return;
-        arrow(lastX,y,b.x-b.w/2,y);lastX=b.x+b.w/2;
+        const entryX=b.x-b.w/2;
+        route([[lastX,lastY],[entryX,lastY],[entryX,b.y]],false);
+        lastX=b.x+b.w/2;
+        lastY=b.y;
       });
-      arrow(lastX,y,665,eventY);
+      route([[lastX,lastY],[665,eventY]],true);
     });
     doc.lines.filter(l=>l.originType==='outcome').forEach(l=>{
       const o=doc.outcomes.find(p=>p.id===l.originId);if(!o)return;
-      const y=o.y;
       let lastX=o.x-o.w/2;
+      let lastY=o.y;
       (l.stops||[]).slice().reverse().forEach(stopId=>{
         const b=doc.mitigativeBarriers.find(p=>p.id===stopId);if(!b)return;
-        arrow(lastX,y,b.x+b.w/2,y);lastX=b.x-b.w/2;
+        const entryX=b.x+b.w/2;
+        route([[lastX,lastY],[entryX,lastY],[entryX,b.y]],false);
+        lastX=b.x-b.w/2;
+        lastY=b.y;
       });
-      arrow(935,eventY,lastX,y);
-      arrow(lastX,y,o.x-o.w/2,y);
+      route([[935,eventY],[lastX,lastY]],true);
+      route([[lastX,lastY],[o.x-o.w/2,o.y]],true);
     });
 
     svg.querySelectorAll('.node').forEach(el=>{
