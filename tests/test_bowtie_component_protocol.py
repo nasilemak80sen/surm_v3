@@ -33,7 +33,8 @@ def test_bowtie_frontend_normalizes_saved_placements_and_uses_fixed_viewport():
 
     assert "value.preventativeBarriers.forEach(p=>p.type='preventativeBarrier')" in source
     assert "value.mitigativeBarriers.forEach(p=>p.type='mitigativeBarrier')" in source
-    assert "value.outcomes.forEach(p=>p.type='outcome')" in source
+    assert "value.outcomes.forEach(p=>{" in source
+    assert "p.type='outcome';" in source
     assert "post('streamlit:setFrameHeight',{height:Number(height)||760})" in source
     assert "setTimeout(()=>ready(args.height),0)" in source
 
