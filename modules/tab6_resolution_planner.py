@@ -17,6 +17,7 @@ import streamlit as st
 from utils.form_ui import render_form_header, render_save_hint, render_stage_status
 from utils.logic import build_resolution_planner
 from utils.persistence import save_session
+from utils.workflow import mark_stage_changed
 
 
 _STATUS_OPTIONS = [
@@ -132,8 +133,7 @@ def render():
             return
 
         st.session_state["resolution_planner"] = planner_df.to_dict("records")
-        st.session_state["risk_register"] = []
-        st.session_state["pra_output"] = []
+        mark_stage_changed(st.session_state, "resolution_planner")
         save_session(auto=True)
         st.success(
             f"✅ {len(planner_df)} resolution actions loaded into the planner."
@@ -297,8 +297,7 @@ def render():
         # The old Add All branch changed only the local dataframe and then
         # reran, which discarded the bulk selection.
         st.session_state["resolution_planner"] = data
-        st.session_state["risk_register"] = []
-        st.session_state["pra_output"] = []
+        mark_stage_changed(st.session_state, "resolution_planner")
 
         ok = save_session(auto=not save_clicked)
         if not ok:
