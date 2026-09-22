@@ -14,6 +14,7 @@ import streamlit as st
 
 from utils.form_ui import render_form_header, render_save_hint, render_stage_status
 from utils.persistence import save_session
+from utils.workflow import mark_stage_changed
 
 
 def _coverage(rows: list[dict], options: list[str]) -> tuple[int, int, list[str]]:
@@ -183,11 +184,8 @@ def render():
             }
 
         st.session_state["resolution_list"] = resolution_dict
-        st.session_state["resolution_planner"] = []
-        st.session_state["risk_register"] = []
-        st.session_state["pra_output"] = []
-
-        save_session(auto=True)
+        mark_stage_changed(st.session_state, "resolution_list")
+        save_session(auto=not save_clicked)
 
         covered, total, uncovered = _coverage(data, options)
         if uncovered:
