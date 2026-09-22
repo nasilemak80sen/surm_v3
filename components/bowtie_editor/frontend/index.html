@@ -116,11 +116,34 @@ svg{width:100%;height:100%;display:block}
     );
     window.parent.postMessage(message,'*');
   }
-  function ready(){
+  function ready(height){
     post('streamlit:componentReady',{apiVersion:1});
-    post('streamlit:setFrameHeight',{height:document.documentElement.scrollHeight || 720});
+    post('streamlit:setFrameHeight',{height:Number(height)||760});
   }
   function setStatus(text){ statusEl.textContent = text || ''; }
+
+  function normalizeDocument(raw){
+    const value=clone(raw||{});
+    value.name=String(value.name||'SURM Bowtie');
+    value.risk_id=String(value.risk_id||'');
+    value.editor_revision=Number(value.editor_revision||0);
+    value.pages=Array.isArray(value.pages)?value.pages:[];
+    value.lines=Array.isArray(value.lines)?value.lines:[];
+    value.causes=Array.isArray(value.causes)?value.causes:[];
+    value.preventativeBarriers=Array.isArray(value.preventativeBarriers)?value.preventativeBarriers:[];
+    value.mitigativeBarriers=Array.isArray(value.mitigativeBarriers)?value.mitigativeBarriers:[];
+    value.outcomes=Array.isArray(value.outcomes)?value.outcomes:[];
+    value.library=value.library||{};
+    value.library.cause=Array.isArray(value.library.cause)?value.library.cause:[];
+    value.library.preventativeBarrier=Array.isArray(value.library.preventativeBarrier)?value.library.preventativeBarrier:[];
+    value.library.mitigativeBarrier=Array.isArray(value.library.mitigativeBarrier)?value.library.mitigativeBarrier:[];
+    value.library.outcome=Array.isArray(value.library.outcome)?value.library.outcome:[];
+    value.causes.forEach(p=>p.type='cause');
+    value.preventativeBarriers.forEach(p=>p.type='preventativeBarrier');
+    value.mitigativeBarriers.forEach(p=>p.type='mitigativeBarrier');
+    value.outcomes.forEach(p=>p.type='outcome');
+    return value;
+  }
 
   function esc(s){
     return String(s ?? '').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
@@ -313,7 +336,7 @@ svg{width:100%;height:100%;display:block}
   function card(g,x,y,w,h,text,cls,kind,id){
     const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
     r.setAttribute('x',x-w/2);r.setAttribute('y',y-h/2);r.setAttribute('width',w);r.setAttribute('height',h);
-    r.setAttribute('rx',8);r.setAttribute('class','node '+cls+(selected&&selected.id===id?' selected':''));
+    r.setAttribute('rx',8);r.setAttribute('fill',cls==='cause'?'#fff5df':'#fff0e9');r.setAttribute('stroke',cls==='cause'?'#c9972e':'#b95a36');r.setAttribute('stroke-width',selected&&selected.id===id?3:1.5);r.setAttribute('class','node '+cls+(selected&&selected.id===id?' selected':''));
     r.dataset.id=id;r.dataset.kind=kind;g.appendChild(r);
     textWrap(text).forEach((line,i)=>{
       const t=document.createElementNS('http://www.w3.org/2000/svg','text');
@@ -449,12 +472,11 @@ svg{width:100%;height:100%;display:block}
       const incoming=args.document;
       if(incoming) {
         if(!doc || Number(incoming.editor_revision||0)>=Number(doc.editor_revision||0)){
-          doc=clone(incoming);
-          if(!doc.library){doc.library={cause:[],outcome:[],preventativeBarrier:[],mitigativeBarrier:[]};}
+          doc=normalizeDocument(incoming);
           render();
         }
       }
-      setTimeout(ready,0);
+      setTimeout(()=>ready(args.height),0);
     }
   });
 
@@ -477,8 +499,8 @@ svg{width:100%;height:100%;display:block}
   document.getElementById('addOutcome').onclick=()=>addObject('outcome');
   document.getElementById('delete').onclick=removeSelected;
 
-  // First ready handshake. Streamlit will immediately follow with renderData.
-  ready();
+  // First ready handshake. Streamlit will send the initial render only after this.
+  ready(760);
 })();
 </script>
 </body>
