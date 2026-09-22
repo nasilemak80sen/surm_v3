@@ -63,7 +63,7 @@ class StudyDocument:
     """Durable study state independent of Streamlit widget state."""
 
     study_id: str = field(default_factory=lambda: str(uuid4()))
-    schema_version: str = "2.2"
+    schema_version: str = "2.1"
 
     project_name: str = ""
     field_name: str = ""
