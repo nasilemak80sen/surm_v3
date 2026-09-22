@@ -18,6 +18,7 @@ import streamlit as st
 from components.header import render_header as render_shared_header
 from components.workflow import render_page_frame, render_workflow_list
 from utils.analytics import build_study_analytics
+from utils.assurance import study_is_editable
 from utils.styles import load_css
 from utils.workflow import current_stage, stage_results, validate_stage
 
@@ -674,7 +675,7 @@ def render_navigation() -> None:
         )
 
     if (
-        st.session_state.get("study_access_mode") == "view"
+        not study_is_editable(dict(st.session_state))
         and selected_page != "🗂️ Study Repository"
     ):
         edit_col, _ = st.columns([1, 5])
