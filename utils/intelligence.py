@@ -393,8 +393,8 @@ def build_risk_intelligence(session: dict[str, Any]) -> dict[str, Any]:
     warning_count = sum(item["severity"] == "warning" for item in qa)
 
     assessed = sum(
-        _text(row.get("Likelihood (H/M/L")).upper() in {"H", "M", "L"}
-        and _text(row.get("Impact (H/M/L")).upper() in {"H", "M", "L"}
+        _text(row.get("Likelihood (H/M/L)")).upper() in {"H", "M", "L"}
+        and _text(row.get("Impact (H/M/L)")).upper() in {"H", "M", "L"}
         for row in risks
     )
 
