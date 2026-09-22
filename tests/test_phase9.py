@@ -23,6 +23,7 @@ def _complete_workflow_session() -> dict:
         "uncertainties": [
             {
                 "uncertainty_id": "UNC-001",
+                "discipline": "Geology",
                 "name": "Fault seal",
                 "selected": True,
             }
