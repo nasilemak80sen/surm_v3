@@ -25,100 +25,164 @@ IMPACT_MAP = {"H": 3, "M": 2, "L": 1}
 
 
 def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
+    """Build a clean 3x3 uncertainty/impact matrix with numbered markers.
+
+    Long uncertainty names intentionally stay out of the matrix cells. Each
+    marker maps to the numbered detail table rendered below the chart.
+    """
     fig = go.Figure()
 
-    for deg_i, deg_label in enumerate(["L", "M", "H"], 1):
-        for imp_i, imp_label in enumerate(["L", "M", "H"], 1):
+    degree_labels = ["L", "M", "H"]
+    impact_labels = ["L", "M", "H"]
+
+    for deg_i, deg_label in enumerate(degree_labels, 1):
+        for imp_i, imp_label in enumerate(impact_labels, 1):
             x0, x1 = deg_i - 0.5, deg_i + 0.5
             y0, y1 = imp_i - 0.5, imp_i + 0.5
-            color = CELL_FILL.get((deg_i, imp_i), "#EEE")
-            fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1,
-                          fillcolor=color, line_width=0, layer="below")
-            rating = deg_label + imp_label
-            fig.add_annotation(
-                x=deg_i, y=imp_i, text=rating, showarrow=False,
-                xanchor="center", yanchor="middle",
-                font=dict(size=32, color="rgba(0,0,0,0.09)", family=FONT_FAMILY),
+            color = CELL_FILL.get((deg_i, imp_i), "#EEF2EF")
+
+            fig.add_shape(
+                type="rect",
+                x0=x0,
+                y0=y0,
+                x1=x1,
+                y1=y1,
+                fillcolor=color,
+                line=dict(color="white", width=2),
+                layer="below",
             )
 
-    for v in [0.5, 1.5, 2.5, 3.5]:
-        fig.add_shape(type="line", x0=v, x1=v, y0=0.5, y1=3.5,
-                      line=dict(color="#AAAAAA", width=0.8))
-        fig.add_shape(type="line", x0=0.5, x1=3.5, y0=v, y1=v,
-                      line=dict(color="#AAAAAA", width=0.8))
+            rating = f"{deg_label}{imp_label}"
+            fig.add_annotation(
+                x=x0 + 0.07,
+                y=y1 - 0.07,
+                text=f"<b>{rating}</b>",
+                showarrow=False,
+                xanchor="left",
+                yanchor="top",
+                font=dict(
+                    size=12,
+                    color="rgba(23,32,27,0.52)",
+                    family=FONT_FAMILY,
+                ),
+            )
 
     if not key_unc_df.empty:
         from collections import defaultdict
-        pos_count = defaultdict(int)
-        for _, r in key_unc_df.iterrows():
-            deg    = r.get("Degree of Uncertainty", "L")
-            imp    = r.get("Impact Bin", "L")
-            x_base = DEG_MAP.get(deg, 1)
-            y_base = IMPACT_MAP.get(imp, 1)
-            key    = (x_base, y_base)
-            offset = pos_count[key]
-            pos_count[key] += 1
-            jx = [0, 0.20, -0.20,  0.20, -0.20][min(offset, 4)]
-            jy = [0, 0.20,  0.20, -0.20, -0.20][min(offset, 4)]
-            x      = x_base + jx
-            y      = y_base + jy
-            rating = r.get("Combined Rating", "LL")
-            color  = RATING_COLOR.get(rating, "#888")
-            label  = str(r["Uncertainty"])
-            short  = label[:30] + "…" if len(label) > 32 else label
+        import html
 
-            fig.add_trace(go.Scatter(
-                x=[x], y=[y], mode="markers+text",
-                marker=dict(size=28, color="white",
-                            line=dict(color=color, width=3), symbol="circle"),
-                text=[short], textposition="bottom center",
-                textfont=dict(size=11, color=color, family=FONT_FAMILY),
-                name=label,
-                hovertemplate=(
-                    f"<b>{label}</b><br>Degree: {deg}  |  Impact: {imp}<br>"
-                    f"Rating: <b>{rating}</b><extra></extra>"
+        positions: dict[tuple[int, int], int] = defaultdict(int)
+        x_values = []
+        y_values = []
+        marker_text = []
+        marker_colors = []
+        hover_text = []
+
+        for index, (_, row) in enumerate(key_unc_df.iterrows(), start=1):
+            degree = str(row.get("Degree of Uncertainty", "L") or "L")
+            impact = str(row.get("Impact Bin", "L") or "L")
+            x_base = {"L": 1, "M": 2, "H": 3}.get(degree, 1)
+            y_base = {"L": 1, "M": 2, "H": 3}.get(impact, 1)
+
+            cell_index = positions[(x_base, y_base)]
+            positions[(x_base, y_base)] += 1
+
+            # Arrange crowded cells as a compact 3-column mini-grid.
+            col = cell_index % 3
+            row_offset = cell_index // 3
+            x_offset = (col - 1) * 0.25
+            y_offset = (1 - row_offset) * 0.25
+
+            x_values.append(x_base + x_offset)
+            y_values.append(y_base + y_offset)
+            marker_text.append(str(index))
+            rating = str(row.get("Combined Rating", "") or "")
+            marker_colors.append(RATING_COLOR.get(rating, "#176B3A"))
+
+            label = html.escape(str(row.get("Uncertainty", "") or "Uncertainty"))
+            hover_text.append(
+                f"<b>#{index} — {label}</b>"
+                f"<br>Degree: {html.escape(degree)}"
+                f"<br>Impact: {html.escape(impact)}"
+                f"<br>Rating: <b>{html.escape(rating)}</b>"
+                f"<br>Weighted score: {float(row.get('Impact (Weighted)', 0) or 0):.3f}"
+            )
+
+        fig.add_trace(
+            go.Scatter(
+                x=x_values,
+                y=y_values,
+                mode="markers+text",
+                text=marker_text,
+                textposition="middle center",
+                textfont=dict(
+                    size=15,
+                    color="white",
+                    family=FONT_FAMILY,
+                ),
+                marker=dict(
+                    size=38,
+                    color=marker_colors,
+                    line=dict(color="white", width=3),
+                    symbol="circle",
+                ),
+                hovertemplate=hover_text,
+                hoverlabel=dict(
+                    bgcolor="white",
+                    bordercolor="#C7D3CC",
+                    font=dict(size=13, family=FONT_FAMILY, color="#17201B"),
                 ),
                 showlegend=False,
-            ))
-
-    zone_labels = [
-        (0.78, 3.25, "HIGH RISK",   "#C00000"),
-        (2.0,  2.0,  "MEDIUM RISK", "#FF8C00"),
-        (1.22, 0.75, "LOW RISK",    "#00B050"),
-    ]
-    for xp, yp, text, color in zone_labels:
-        fig.add_annotation(
-            x=xp, y=yp, text=text, showarrow=False, xanchor="center",
-            font=dict(size=10, color=color, family=FONT_FAMILY), opacity=0.45,
+            )
         )
 
     fig.update_layout(
-        title=dict(text="Uncertainty Matrix",
-                   font=dict(size=18, color="#1F6B3A", family=FONT_FAMILY), x=0.5),
+        title=dict(
+            text="Uncertainty Matrix",
+            font=dict(size=22, color="#176B3A", family=FONT_FAMILY),
+            x=0.5,
+            xanchor="center",
+        ),
         xaxis=dict(
-            title=dict(text="Degree of Uncertainty",
-                       font=dict(size=14, family=FONT_FAMILY)),
-            tickvals=[1, 2, 3], ticktext=["Low", "Medium", "High"],
-            tickfont=dict(size=13, family=FONT_FAMILY),
-            range=[0.3, 3.7], showgrid=False, zeroline=False,
-            linecolor="#AAAAAA", linewidth=1,
+            title=dict(
+                text="<b>Degree of Uncertainty</b>",
+                font=dict(size=17, family=FONT_FAMILY),
+                standoff=16,
+            ),
+            tickvals=[1, 2, 3],
+            ticktext=["Low", "Medium", "High"],
+            tickfont=dict(size=15, family=FONT_FAMILY),
+            range=[0.35, 3.65],
+            showgrid=False,
+            zeroline=False,
+            linecolor="#97A49D",
+            linewidth=1.5,
+            fixedrange=True,
         ),
         yaxis=dict(
-            title=dict(text="Impact on Key Decisions",
-                       font=dict(size=14, family=FONT_FAMILY)),
-            tickvals=[1, 2, 3], ticktext=["Low", "Medium", "High"],
-            tickfont=dict(size=13, family=FONT_FAMILY),
-            range=[0.3, 3.7], showgrid=False, zeroline=False,
-            linecolor="#AAAAAA", linewidth=1,
+            title=dict(
+                text="<b>Impact on Key Decisions</b>",
+                font=dict(size=17, family=FONT_FAMILY),
+                standoff=18,
+            ),
+            tickvals=[1, 2, 3],
+            ticktext=["Low", "Medium", "High"],
+            tickfont=dict(size=15, family=FONT_FAMILY),
+            range=[0.35, 3.65],
+            showgrid=False,
+            zeroline=False,
+            linecolor="#97A49D",
+            linewidth=1.5,
+            fixedrange=True,
         ),
-        plot_bgcolor="white", paper_bgcolor="white",
-        height=560,
-        margin=dict(l=90, r=60, t=90, b=90),
-        font=dict(family=FONT_FAMILY, size=13),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        height=700,
+        margin=dict(l=105, r=45, t=90, b=105),
+        font=dict(family=FONT_FAMILY, size=14),
         hoverlabel=dict(font_size=13, font_family=FONT_FAMILY),
     )
     return fig
-
 
 def build_tornado_chart(key_unc_df: pd.DataFrame) -> go.Figure:
     if key_unc_df.empty:
@@ -158,8 +222,8 @@ def build_tornado_chart(key_unc_df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def _wrap_label(value: object, width: int = 24, max_lines: int = 3) -> str:
-    """Wrap annotation text so Plotly boxes remain readable at normal widths."""
+def _wrap_label(value: object, width: int = 20, max_lines: int = 3) -> str:
+    """Wrap diagram labels while preserving complete words."""
     import html
     import textwrap
 
@@ -179,304 +243,266 @@ def _wrap_label(value: object, width: int = 24, max_lines: int = 3) -> str:
     return "<br>".join(lines)
 
 
-def build_bowtie(risk_row: dict) -> go.Figure:
-    risk_name = str(risk_row.get("Risk", "Risk Event"))
-    causes_raw = str(risk_row.get("Uncertainty/Causes", "") or "")
-    controls_raw = str(risk_row.get("Resolution Plan", "") or "")
-    contingency = str(risk_row.get("Contingency Plan", "") or "")
-    consequence = str(risk_row.get("Impact/Consequence", "") or "")
+def _split_diagram_items(value: object, limit: int = 5) -> list[str]:
+    import re
 
-    causes = [
-        c.strip().lstrip("0123456789. ")
-        for c in causes_raw.split("\n")
-        if c.strip()
-    ][:7]
-    ctrl_list = [
-        c.strip().lstrip("- ")
-        for c in controls_raw.split("\n")
-        if c.strip()
-    ][:5]
-    cons_list = (
-        [c.strip() for c in consequence.split(";") if c.strip()]
-        if consequence
-        else []
-    )[:5]
+    raw = str(value or "")
+    items = [
+        item.strip().lstrip("0123456789. -•")
+        for item in re.split(r"[\\n;]+", raw)
+        if item.strip()
+    ]
+    return items[:limit]
 
-    if not causes:
-        causes = ["(no causes listed)"]
-    if not cons_list:
-        cons_list = ["Impact not yet defined"]
 
-    EVENT_CX = 8.1
-    EVENT_CY = 6.0
-    EVENT_LEFT = 5.7
-    EVENT_RIGHT = 10.5
-    EVENT_HALF_H = 1.05
-    THREAT_X = 3.1
-    CONS_X = 13.1
-    BAR_L = 4.55
-    BAR_R = 11.75
-    THREAT_RIGHT = BAR_L - 0.25
-    CONS_LEFT = BAR_R + 0.25
-    BOX_H = 0.92
-    X_MAX = 17.5
-
-    n_c = max(len(causes), 1)
-    n_k = max(len(cons_list), 1)
-    cause_ys = _even_spacing(n_c, 1.0, 10.0)
-    cons_ys = _even_spacing(n_k, 1.0, 10.0)
-
-    tl_top = min(cause_ys) - BOX_H
-    tl_bot = max(cause_ys) + BOX_H
-    tr_top = min(cons_ys) - BOX_H
-    tr_bot = max(cons_ys) + BOX_H
-
-    fig = go.Figure()
-
-    # Directional threat/consequence fields make the flow easier to scan.
-    fig.add_trace(
-        go.Scatter(
-            x=[THREAT_X, EVENT_LEFT, THREAT_X, THREAT_X],
-            y=[tl_top, EVENT_CY, tl_bot, tl_top],
-            fill="toself",
-            fillcolor="rgba(250,206,100,0.16)",
-            line=dict(width=0),
-            hoverinfo="skip",
-            showlegend=False,
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=[EVENT_RIGHT, CONS_X, CONS_X, EVENT_RIGHT],
-            y=[EVENT_CY, tr_top, tr_bot, EVENT_CY],
-            fill="toself",
-            fillcolor="rgba(200,60,60,0.09)",
-            line=dict(width=0),
-            hoverinfo="skip",
-            showlegend=False,
-        )
-    )
-
-    # Threat → event arrows.
-    for y in cause_ys:
-        fig.add_annotation(
-            x=EVENT_LEFT + 0.08,
-            y=EVENT_CY,
-            ax=THREAT_X,
-            ay=y,
-            axref="x",
-            ayref="y",
-            xref="x",
-            yref="y",
-            arrowhead=2,
-            arrowsize=1.25,
-            arrowwidth=2.4,
-            arrowcolor="#BA7517",
-            showarrow=True,
-        )
-
-    # Event → consequence arrows.
-    for y in cons_ys:
-        fig.add_annotation(
-            x=CONS_X - 0.08,
-            y=y,
-            ax=EVENT_RIGHT,
-            ay=EVENT_CY,
-            axref="x",
-            ayref="y",
-            xref="x",
-            yref="y",
-            arrowhead=2,
-            arrowsize=1.25,
-            arrowwidth=2.4,
-            arrowcolor="#993C1D",
-            showarrow=True,
-        )
-
-    # Barrier pillars.
+def _add_lane_card(
+    fig: go.Figure,
+    *,
+    x_center: float,
+    y_center: float,
+    width: float,
+    height: float,
+    text: str,
+    fill: str,
+    line: str,
+    font_color: str,
+    font_size: int = 14,
+) -> None:
     fig.add_shape(
         type="rect",
-        x0=BAR_L - 0.16,
-        x1=BAR_L + 0.16,
-        y0=tl_top - 0.35,
-        y1=tl_bot + 0.35,
-        fillcolor="#1D9E75",
-        line=dict(width=0),
+        x0=x_center - width / 2,
+        x1=x_center + width / 2,
+        y0=y_center - height / 2,
+        y1=y_center + height / 2,
+        fillcolor=fill,
+        line=dict(color=line, width=1.5),
         layer="above",
     )
     fig.add_annotation(
-        x=BAR_L,
-        y=tl_top - 0.62,
-        text="<b>Controls</b>",
-        showarrow=False,
-        xanchor="center",
-        font=dict(size=13, color="#0F6E56", family=FONT_FAMILY),
-    )
-
-    fig.add_shape(
-        type="rect",
-        x0=BAR_R - 0.16,
-        x1=BAR_R + 0.16,
-        y0=tr_top - 0.35,
-        y1=tr_bot + 0.35,
-        fillcolor="#534AB7",
-        line=dict(width=0),
-        layer="above",
-    )
-    fig.add_annotation(
-        x=BAR_R,
-        y=tr_top - 0.62,
-        text="<b>Recovery</b>",
-        showarrow=False,
-        xanchor="center",
-        font=dict(size=13, color="#3C3489", family=FONT_FAMILY),
-    )
-
-    # Cause boxes.
-    for cause, y in zip(causes, cause_ys):
-        fig.add_shape(
-            type="rect",
-            x0=0.35,
-            x1=THREAT_RIGHT,
-            y0=y - BOX_H / 2,
-            y1=y + BOX_H / 2,
-            fillcolor="#FAEEDA",
-            line=dict(color="#BA7517", width=1.1),
-            layer="above",
-        )
-        fig.add_annotation(
-            x=(0.35 + THREAT_RIGHT) / 2,
-            y=y,
-            text=_wrap_label(cause, width=25, max_lines=3),
-            showarrow=False,
-            xanchor="center",
-            yanchor="middle",
-            align="center",
-            font=dict(size=11, color="#412402", family=FONT_FAMILY),
-        )
-
-    # Central event box.
-    fig.add_shape(
-        type="rect",
-        x0=EVENT_LEFT,
-        x1=EVENT_RIGHT,
-        y0=EVENT_CY - EVENT_HALF_H,
-        y1=EVENT_CY + EVENT_HALF_H,
-        fillcolor="#C00000",
-        line=dict(color="#800000", width=2),
-        layer="above",
-    )
-    fig.add_annotation(
-        x=EVENT_CX,
-        y=EVENT_CY + 0.22,
-        text=f"<b>{_wrap_label(risk_name, width=30, max_lines=2)}</b>",
+        x=x_center,
+        y=y_center,
+        text=text,
         showarrow=False,
         xanchor="center",
         yanchor="middle",
         align="center",
-        font=dict(size=14, color="white", family=FONT_FAMILY),
-    )
-    fig.add_annotation(
-        x=EVENT_CX,
-        y=EVENT_CY - 0.45,
-        text="Risk Event",
-        showarrow=False,
-        xanchor="center",
-        yanchor="middle",
-        font=dict(size=10, color="rgba(255,220,220,0.92)", family=FONT_FAMILY),
+        font=dict(
+            size=font_size,
+            color=font_color,
+            family=FONT_FAMILY,
+        ),
     )
 
-    # Consequence boxes.
-    for cons, y in zip(cons_list, cons_ys):
+
+def build_bowtie(risk_row: dict) -> go.Figure:
+    """Build a structured, five-lane Bowtie that prioritises readability."""
+    risk_name = str(risk_row.get("Risk", "Risk Event") or "Risk Event")
+    causes = _split_diagram_items(risk_row.get("Uncertainty/Causes"), limit=5)
+    controls = _split_diagram_items(risk_row.get("Resolution Plan"), limit=5)
+    recovery = _split_diagram_items(risk_row.get("Contingency Plan"), limit=5)
+    consequences = _split_diagram_items(
+        risk_row.get("Impact/Consequence"),
+        limit=5,
+    )
+
+    if not causes:
+        causes = ["No threats listed"]
+    if not controls:
+        controls = ["No preventive barrier listed"]
+    if not recovery:
+        recovery = ["No mitigative barrier listed"]
+    if not consequences:
+        consequences = ["No consequence listed"]
+
+    lane_x = {
+        "threats": 1.5,
+        "prevention": 4.5,
+        "event": 7.5,
+        "mitigation": 10.5,
+        "consequences": 13.5,
+    }
+    lane_width = 2.35
+    card_height = 1.0
+    row_gap = 0.28
+    max_items = max(
+        len(causes),
+        len(controls),
+        len(recovery),
+        len(consequences),
+        1,
+    )
+
+    y_values = [
+        0.9 + index * (card_height + row_gap)
+        for index in range(max_items)
+    ]
+    y_mid = sum(y_values) / len(y_values)
+    top_y = max(y_values) + 1.0
+    bottom_y = 0.2
+
+    fig = go.Figure()
+
+    # Soft lane backgrounds keep the Bowtie visually organised without
+    # forcing every relationship into a crossing arrow.
+    lane_specs = [
+        ("Threats", lane_x["threats"], "#FFF7E8", "#D9A441", "#6B4A12"),
+        ("Preventive Barriers", lane_x["prevention"], "#ECF9F2", "#1D9E75", "#0F6E56"),
+        ("Top Event", lane_x["event"], "#FDEEEE", "#C00000", "#8A0000"),
+        ("Mitigative Barriers", lane_x["mitigation"], "#F2F0FB", "#534AB7", "#3C3489"),
+        ("Consequences", lane_x["consequences"], "#FFF1EC", "#B95A36", "#6B2D1C"),
+    ]
+
+    for title, x, bg, border, text_color in lane_specs:
         fig.add_shape(
             type="rect",
-            x0=CONS_LEFT,
-            x1=X_MAX - 0.35,
-            y0=y - BOX_H / 2,
-            y1=y + BOX_H / 2,
-            fillcolor="#FAECE7",
-            line=dict(color="#993C1D", width=1.1),
-            layer="above",
+            x0=x - lane_width / 2 - 0.08,
+            x1=x + lane_width / 2 + 0.08,
+            y0=bottom_y,
+            y1=top_y,
+            fillcolor=bg,
+            line=dict(color=border, width=1),
+            layer="below",
         )
         fig.add_annotation(
-            x=(CONS_LEFT + X_MAX - 0.35) / 2,
-            y=y,
-            text=_wrap_label(cons, width=25, max_lines=3),
+            x=x,
+            y=top_y + 0.48,
+            text=f"<b>{title}</b>",
             showarrow=False,
             xanchor="center",
-            yanchor="middle",
-            align="center",
-            font=dict(size=11, color="#4A1B0C", family=FONT_FAMILY),
+            font=dict(size=15, color=text_color, family=FONT_FAMILY),
         )
 
-    # Controls and contingency are now wider, boxed reporting areas instead of
-    # tiny annotations competing with the main bowtie flow.
-    if ctrl_list:
-        ctrl_text = "<br>".join(f"• {_wrap_label(c, 29, 2)}" for c in ctrl_list[:4])
+    # Directional arrows between lanes. They communicate Bowtie flow without
+    # drawing one line for every threat, barrier and consequence.
+    for x1, x2 in [
+        (lane_x["threats"] + lane_width / 2 + 0.15, lane_x["prevention"] - lane_width / 2 - 0.15),
+        (lane_x["prevention"] + lane_width / 2 + 0.15, lane_x["event"] - lane_width / 2 - 0.15),
+        (lane_x["event"] + lane_width / 2 + 0.15, lane_x["mitigation"] - lane_width / 2 - 0.15),
+        (lane_x["mitigation"] + lane_width / 2 + 0.15, lane_x["consequences"] - lane_width / 2 - 0.15),
+    ]:
         fig.add_annotation(
-            x=BAR_L,
-            y=tl_bot + 0.55,
-            text=f"<b>Controls</b><br>{ctrl_text}",
-            showarrow=False,
-            xanchor="center",
-            yanchor="top",
-            align="left",
-            font=dict(size=10, color="#0F6E56", family=FONT_FAMILY),
-            bgcolor="rgba(232,250,241,0.96)",
-            bordercolor="#1D9E75",
-            borderwidth=1,
-            borderpad=7,
+            x=(x1 + x2) / 2,
+            y=y_mid,
+            ax=x1,
+            ay=y_mid,
+            axref="x",
+            ayref="y",
+            xref="x",
+            yref="y",
+            arrowhead=2,
+            arrowsize=1.2,
+            arrowwidth=2.3,
+            arrowcolor="#88958E",
+            showarrow=True,
         )
 
-    if contingency:
-        fig.add_annotation(
-            x=BAR_R,
-            y=tr_bot + 0.55,
-            text=f"<b>Contingency</b><br>{_wrap_label(contingency, 31, 3)}",
-            showarrow=False,
-            xanchor="center",
-            yanchor="top",
-            align="left",
-            font=dict(size=10, color="#3C3489", family=FONT_FAMILY),
-            bgcolor="rgba(241,238,252,0.96)",
-            bordercolor="#534AB7",
-            borderwidth=1,
-            borderpad=7,
-        )
+    lane_cards = [
+        (
+            lane_x["threats"],
+            causes,
+            "#FFF7E8",
+            "#D9A441",
+            "#412402",
+        ),
+        (
+            lane_x["prevention"],
+            controls,
+            "#EAF8F0",
+            "#1D9E75",
+            "#0F6E56",
+        ),
+        (
+            lane_x["mitigation"],
+            recovery,
+            "#F3F0FB",
+            "#534AB7",
+            "#3C3489",
+        ),
+        (
+            lane_x["consequences"],
+            consequences,
+            "#FFF1EC",
+            "#B95A36",
+            "#5B2617",
+        ),
+    ]
 
-    # Section labels.
+    for x, items, fill, border, font_color in lane_cards:
+        start_y = y_mid + ((len(items) - 1) * (card_height + row_gap)) / 2
+        for index, item in enumerate(items):
+            y = start_y - index * (card_height + row_gap)
+            _add_lane_card(
+                fig,
+                x_center=x,
+                y_center=y,
+                width=lane_width,
+                height=card_height,
+                text=_wrap_label(item, width=20, max_lines=3),
+                fill=fill,
+                line=border,
+                font_color=font_color,
+                font_size=14,
+            )
+
+    # The event gets a larger, uncluttered center block.
+    event_height = 2.35
+    _add_lane_card(
+        fig,
+        x_center=lane_x["event"],
+        y_center=y_mid,
+        width=2.5,
+        height=event_height,
+        text=(
+            "<b>TOP EVENT</b><br><br>"
+            f"{_wrap_label(risk_name, width=22, max_lines=3)}"
+        ),
+        fill="#C00000",
+        line="#8A0000",
+        font_color="white",
+        font_size=17,
+    )
+
     fig.add_annotation(
-        x=1.7,
-        y=11.4,
-        text="<b>Threats / Causes</b>",
+        x=lane_x["prevention"],
+        y=bottom_y - 0.08,
+        text="Prevent uncertainty from reaching the event",
         showarrow=False,
         xanchor="center",
-        font=dict(size=14, color="#9A5B10", family=FONT_FAMILY),
+        yanchor="top",
+        font=dict(size=11, color="#5A6A61", family=FONT_FAMILY),
     )
     fig.add_annotation(
-        x=15.3,
-        y=11.4,
-        text="<b>Consequences</b>",
+        x=lane_x["mitigation"],
+        y=bottom_y - 0.08,
+        text="Reduce consequence after the event",
         showarrow=False,
         xanchor="center",
-        font=dict(size=14, color="#8D341D", family=FONT_FAMILY),
+        yanchor="top",
+        font=dict(size=11, color="#5A6A61", family=FONT_FAMILY),
     )
 
-    height = max(640, max(n_c, n_k) * 80 + 250)
     fig.update_layout(
         title=dict(
-            text=f"Bowtie Diagram — {risk_name}",
-            font=dict(size=18, color="#1F6B3A", family=FONT_FAMILY),
+            text=f"Bowtie Analysis — {risk_name}",
+            font=dict(size=22, color="#176B3A", family=FONT_FAMILY),
             x=0.5,
             xanchor="center",
         ),
-        xaxis=dict(visible=False, range=[0.0, X_MAX]),
-        yaxis=dict(visible=False, range=[-1.8, 12.4]),
+        xaxis=dict(
+            visible=False,
+            range=[0.0, 15.0],
+            fixedrange=True,
+        ),
+        yaxis=dict(
+            visible=False,
+            range=[-0.75, top_y + 1.05],
+            fixedrange=True,
+        ),
         plot_bgcolor="white",
         paper_bgcolor="white",
-        height=height,
-        margin=dict(l=26, r=26, t=88, b=36),
-        font=dict(family=FONT_FAMILY, size=13),
+        height=max(760, 220 + max_items * 125),
+        margin=dict(l=24, r=24, t=96, b=65),
+        font=dict(family=FONT_FAMILY, size=14),
         showlegend=False,
     )
     return fig
