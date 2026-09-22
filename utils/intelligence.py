@@ -227,6 +227,11 @@ def sync_barrier_register(session: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 action = resolution_by_id.get(resolution_id) or resolution_by_name.get(_text(node.get("name")), {})
                 prev = existing.get(barrier_id, {}) if isinstance(existing, dict) else {}
 
+                existing_risk_ids = prev.get("risk_ids") or []
+                if isinstance(existing_risk_ids, str):
+                    existing_risk_ids = [item.strip() for item in existing_risk_ids.split(",") if item.strip()]
+                elif not isinstance(existing_risk_ids, list):
+                    existing_risk_ids = list(existing_risk_ids) if existing_risk_ids else []
                 status = _text(action.get("Status")) or _text(prev.get("status")) or "Planned"
                 owner = _text(action.get("Action Owner")) or _text(node.get("owner")) or _text(prev.get("owner"))
                 due_date = _text(action.get("Required Completion") or action.get("End Date")) or _text(prev.get("due_date"))
@@ -238,7 +243,7 @@ def sync_barrier_register(session: dict[str, Any]) -> dict[str, dict[str, Any]]:
                     "barrier_id": barrier_id,
                     "name": _text(node.get("name")) or barrier_id,
                     "kind": kind,
-                    "risk_ids": sorted(set((prev.get("risk_ids") or []) + [str(risk_id)])),
+                    "risk_ids": sorted(set(existing_risk_ids + [str(risk_id)])),
                     "resolution_id": resolution_id,
                     "owner": owner,
                     "status": status,
@@ -248,7 +253,7 @@ def sync_barrier_register(session: dict[str, Any]) -> dict[str, dict[str, Any]]:
                     "health": health,
                     "criticality": _text(prev.get("criticality")) or "Standard",
                     "verification_status": _text(prev.get("verification_status")) or "Pending",
-                    "evidence_count": int(prev.get("evidence_count") or 0),
+                    "evidence_count": int(safe_float(prev.get("evidence_count"), default=0)),
                     "notes": _text(prev.get("notes")),
                     "source": "SURM Bowtie / Resolution Planner",
                     "updated_at": datetime.now().isoformat(timespec="seconds"),
