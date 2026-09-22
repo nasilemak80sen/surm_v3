@@ -99,7 +99,7 @@ def render():
                     "Resolution Achieved": st.column_config.CheckboxColumn("Resolved", help="Track whether the uncertainty has been resolved."),
                 },
                 hide_index=True,
-                width="stretch",
+                use_container_width=True,
                 num_rows="fixed",
                 key=f"ku_editor_{st.session_state.get('study_id', 'new')}",
             )
@@ -157,7 +157,7 @@ def render():
             from utils.export_png import fig_to_png_bytes
 
             matrix_figure = build_uncertainty_matrix(active)
-            st.plotly_chart(matrix_figure, width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(matrix_figure, use_container_width=True, config={"displayModeBar": False})
             try:
                 st.download_button(
                     "Download matrix",
@@ -171,7 +171,7 @@ def render():
                 pass
 
             tornado_figure = build_tornado_chart(active)
-            st.plotly_chart(tornado_figure, width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(tornado_figure, use_container_width=True, config={"displayModeBar": False})
             try:
                 st.download_button(
                     "Download tornado",
