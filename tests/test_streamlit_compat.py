@@ -1,6 +1,12 @@
 from pathlib import Path
 
 
+def test_runtime_pins_supported_streamlit_version():
+    project_root = Path(__file__).resolve().parents[1]
+    requirements = (project_root / "requirements.txt").read_text(encoding="utf-8")
+    assert "streamlit==1.62.0" in requirements
+
+
 def test_runtime_ui_does_not_use_newer_width_stretch_api():
     """The project supports Streamlit >=1.35, where width='stretch' is invalid for these APIs."""
     project_root = Path(__file__).resolve().parents[1]
