@@ -18,6 +18,9 @@ class PersistenceTests(unittest.TestCase):
         self.assertIn("field_name", DEFAULT_SESSION_STATE)
         self.assertIn("team_members", DEFAULT_SESSION_STATE)
         self.assertIn("bowtie_register", DEFAULT_SESSION_STATE)
+        self.assertIn("barrier_register", DEFAULT_SESSION_STATE)
+        self.assertIn("study_reviews", DEFAULT_SESSION_STATE)
+        self.assertIn("study_role", DEFAULT_SESSION_STATE)
 
     def test_load_session_record_uses_project_and_field(self):
         with patch("utils.persistence.load_session", return_value=True) as mock_load:
@@ -119,3 +122,32 @@ class PersistenceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+    def test_sqlite_version_and_record_queries_support_history_and_portfolio(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = SQLiteDB()
+            database.db_path = f"{directory}\\history.db"
+            database.init()
+            record = {
+                "session": {
+                    "project_name": "Alpha",
+                    "field_name": "Beta",
+                    "study_revision": 2,
+                    "study_lifecycle": "In Review",
+                },
+                "meta": {
+                    "project_phase": "PGR2",
+                    "completion": 80,
+                    "auto_saved": False,
+                    "saved_at": "2026-09-22T12:00:00",
+                },
+            }
+            self.assertTrue(database.save_bundle("Alpha", "Beta", 2, record))
+            versions = database.list_versions("Alpha", "Beta")
+            revision = database.load_version("Alpha", "Beta", 2)
+            records = database.list_all_records()
+
+        self.assertEqual(versions[0]["revision"], 2)
+        self.assertEqual(revision["session"]["study_revision"], 2)
+        self.assertEqual(records[0]["session"]["project_name"], "Alpha")
