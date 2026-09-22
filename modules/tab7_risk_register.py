@@ -21,6 +21,7 @@ from utils.logic import (
     is_risk_assessed,
 )
 from utils.persistence import save_session
+from utils.workflow import mark_stage_changed
 
 _RATING_OPTIONS = ["", "H", "M", "L"]
 _STATUS_OPTIONS = ["Open", "In Progress", "Closed", "On Hold"]
@@ -105,7 +106,7 @@ def render():
         risk_df = build_risk_register(ku_df, resolution_df)
 
         st.session_state["risk_register"] = risk_df.to_dict("records")
-        st.session_state["pra_output"] = []
+        mark_stage_changed(st.session_state, "risk_register")
         save_session(auto=True)
         st.rerun()
 
@@ -256,6 +257,7 @@ def render():
 
         saved_rows = edited.to_dict("records")
         st.session_state["risk_register"] = saved_rows
+        mark_stage_changed(st.session_state, "risk_register")
         st.session_state["pra_output"] = (
             build_pra_output(edited).to_dict("records")
             if all(is_risk_assessed(row) for row in saved_rows)
