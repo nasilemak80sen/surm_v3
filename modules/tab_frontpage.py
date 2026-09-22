@@ -8,6 +8,8 @@ from components.metrics import render_metric_grid, render_progress_card
 from components.cards import render_card
 from utils.study_export import snapshot_csv, snapshot_json
 from utils.analytics import build_study_analytics, validation_warnings
+from utils.form_ui import render_form_header, render_stage_status
+from utils.workflow import current_stage, stage_results
 
 _PHASES = ["","PGR0","PGR1","PGR2","PGR3/FID","ITR2a","ITR2b","SBS","SIR2a","SIR2b","PGR4"]
 
@@ -34,30 +36,25 @@ def render():
     )
     resolution_actions = len(ss.get("resolution_planner", []))
     risks = len(ss.get("risk_register", []))
-    checks = [
-        bool(str(ss.get("project_name", "")).strip()),
-        selected_uncertainties > 0,
-        key_decisions > 0,
-        bool(ss.get("impact_assessment")),
-        bool(ss.get("key_uncertainties")),
-        bool(ss.get("resolution_list")),
-        resolution_actions > 0,
-        risks > 0,
-    ]
-    progress = round(sum(checks) / len(checks) * 100) if checks else 0
-    workflow_pages = [
-        ("1️⃣ Uncertainties", selected_uncertainties > 0),
-        ("2️⃣ Key Decisions", key_decisions > 0),
-        ("3️⃣ Impact Assessment", bool(ss.get("impact_assessment"))),
-        ("4️⃣ Key Uncertainties", bool(ss.get("key_uncertainties"))),
-        ("5️⃣ Resolution List", bool(ss.get("resolution_list"))),
-        ("6️⃣ Resolution Planner", resolution_actions > 0),
-        ("7️⃣ Risk Register", risks > 0),
-    ]
-    next_step = next((label for label, complete in workflow_pages if not complete), "📄 PRA Output")
+
+    stages = stage_results(ss)
+    progress = round(
+        sum(stage.complete for stage in stages)
+        / len(stages)
+        * 100
+    ) if stages else 0
+    next_stage = current_stage(ss)
+    next_step = next_stage.label
     analytics = build_study_analytics(dict(ss))
     for warning in validation_warnings(dict(ss))[:5]:
         st.warning(warning["message"])
+
+    render_form_header(
+        "STUDY OVERVIEW",
+        "Study Dashboard",
+        "A live summary of what has been completed, what needs attention, and where to continue next.",
+        next_step=next_step,
+    )
 
     render_metric_grid([
         {"title": "Uncertainties", "value": selected_uncertainties, "description": "Selected for study", "variant": "primary"},
@@ -65,7 +62,20 @@ def render():
         {"title": "Resolution Actions", "value": resolution_actions, "description": "In the workplan"},
         {"title": "Risks", "value": risks, "description": "In the register", "variant": "warning"},
     ])
-    render_progress_card("Study Progress", progress, description="Completion across the eight core study stages.")
+    render_progress_card("Study Progress", progress, description="Completion based on the authoritative workflow validation rules.")
+
+    if next_stage.complete:
+        render_stage_status(
+            label="Workflow status",
+            value="All mandatory workflow stages are complete. Review the PRA Output.",
+            tone="success",
+        )
+    else:
+        render_stage_status(
+            label=f"Next stage · {next_stage.label}",
+            value=next_stage.guidance,
+            tone="warning",
+        )
     context_col, next_col = st.columns([1.35, 1], gap="large")
     with context_col:
         render_card(
