@@ -30,6 +30,19 @@ def approval_readiness(session: dict[str, Any]) -> tuple[bool, list[str]]:
         reasons.append("All core workflow stages must be complete.")
     if not signoff_complete(session):
         reasons.append("All governance sign-offs must be completed.")
+    risks = [
+        row for row in session.get("risk_register", [])
+        if isinstance(row, dict) and str(row.get("risk_id", "")).strip()
+    ]
+    bowties = session.get("bowtie_register", {}) or {}
+    missing_bowties = [
+        row.get("risk_id", "")
+        for row in risks
+        if str(row.get("risk_id", "")).strip() not in bowties
+    ]
+    if missing_bowties:
+        reasons.append(f"Create Bowtie documents for {len(missing_bowties)} assessed risk(s).")
+
     qa = build_bowtie_qa(session)
     if qa:
         reasons.append(f"Resolve {len(qa)} Bowtie assurance finding(s).")
