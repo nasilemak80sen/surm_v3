@@ -109,12 +109,16 @@ svg{width:100%;height:100%;display:block}
   const relationshipsEl = document.getElementById('relationships');
   const statusEl = document.getElementById('status');
 
-  function post(type, value){
-    window.parent.postMessage({isStreamlitMessage:true,type,value},'*');
+  function post(type, data){
+    const message = Object.assign(
+      {isStreamlitMessage:true, type:type},
+      data || {}
+    );
+    window.parent.postMessage(message,'*');
   }
   function ready(){
     post('streamlit:componentReady',{apiVersion:1});
-    post('streamlit:setFrameHeight',document.documentElement.scrollHeight);
+    post('streamlit:setFrameHeight',{height:document.documentElement.scrollHeight || 720});
   }
   function setStatus(text){ statusEl.textContent = text || ''; }
 
