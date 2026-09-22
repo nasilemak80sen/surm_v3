@@ -121,14 +121,14 @@ def build_excel_export() -> bytes:
         ["Reviewed By (PP)",  study.get("rev_pp_name", ""),    study.get("rev_pp_date", "")],
         ["Endorsed By",       study.get("endorsed_name", ""), study.get("endorsed_date", "")],
     ]
-    ws.cell(row=7, column=1, value="Sign-Off").font = Font(name="Calibri", bold=True, size=12, color="FFFFFF")
-    ws.cell(row=7, column=1).fill = PatternFill("solid", fgColor=GREEN_DARK)
-    ws.merge_cells("A7:C7")
+    ws.cell(row=12, column=1, value="Sign-Off").font = Font(name="Calibri", bold=True, size=12, color="FFFFFF")
+    ws.cell(row=12, column=1).fill = PatternFill("solid", fgColor=GREEN_DARK)
+    ws.merge_cells("A12:C12")
     for ci, h in enumerate(signoff_headers, 1):
-        cell = ws.cell(row=8, column=ci, value=h)
+        cell = ws.cell(row=13, column=ci, value=h)
         cell.font = HEADER_FONT
         cell.fill = PatternFill("solid", fgColor="2E7D52")
-    for ri, row in enumerate(signoff_data, 9):
+    for ri, row in enumerate(signoff_data, 14):
         for ci, val in enumerate(row, 1):
             ws.cell(row=ri, column=ci, value=val).border = THIN_BORDER
 
