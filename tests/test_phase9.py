@@ -109,23 +109,23 @@ def test_phase9_export_contains_all_hardened_sheets():
     from utils.export_excel import build_excel_export
 
     st.session_state.clear()
-    st.session_state.update(_complete_workflow_session())
-    st.session_state.update(
-        {
-            "study_id": "phase9-export",
-            "study_owner": "Engineer A",
-            "methodology_version": "SURM-2026.01",
-            "study_lifecycle": "Reviewed",
-            "study_revision": 3,
-            "study_change_log": [{"revision": 3, "actor": "Engineer A"}],
-            "team_members": [],
-            "bowtie_register": {},
-            "barrier_register": {},
-            "study_reviews": [],
-            "workflow_revisions": {},
-            "workflow_snapshots": {},
-        }
-    )
+    for key, value in _complete_workflow_session().items():
+        st.session_state[key] = value
+    for key, value in {
+        "study_id": "phase9-export",
+        "study_owner": "Engineer A",
+        "methodology_version": "SURM-2026.01",
+        "study_lifecycle": "Reviewed",
+        "study_revision": 3,
+        "study_change_log": [{"revision": 3, "actor": "Engineer A"}],
+        "team_members": [],
+        "bowtie_register": {},
+        "barrier_register": {},
+        "study_reviews": [],
+        "workflow_revisions": {},
+        "workflow_snapshots": {},
+    }.items():
+        st.session_state[key] = value
 
     workbook_bytes = build_excel_export()
     workbook = openpyxl.load_workbook(BytesIO(workbook_bytes), read_only=True)
@@ -342,12 +342,13 @@ def test_phase9_lifecycle_transition_matrix_blocks_skips_and_backwards_moves():
     ]
 
     for current, target, role, expected in cases:
-        allowed, reasons = validate_transition(
+        session = _complete_workflow_session()
+        session.update(
             {
                 "study_lifecycle": current,
                 "study_role": role,
                 "study_access_mode": "edit",
-            },
-            target,
+            }
         )
+        allowed, reasons = validate_transition(session, target)
         assert allowed is expected, (current, target, role, reasons)
