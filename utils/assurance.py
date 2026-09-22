@@ -83,3 +83,14 @@ def validate_transition(
         errors.append("Approver study role is required to archive the study.")
 
     return not errors, errors
+
+
+def study_is_editable(session: dict[str, Any]) -> bool:
+    """Return whether the current governance mode should allow edits."""
+    if str(session.get("study_access_mode", "edit")) != "edit":
+        return False
+    if str(session.get("study_role", "Author")) == "Viewer":
+        return False
+    if str(session.get("study_lifecycle", "Draft")) == "Archived":
+        return False
+    return True
