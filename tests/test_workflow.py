@@ -171,3 +171,20 @@ def test_stage_change_tracks_revision_and_invalidates():
     assert session["workflow_revisions"]["impact_assessment"] == 1
     assert session["workflow_snapshots"]["impact_assessment"]["revision"] == 1
     assert session["key_uncertainties"] == []
+
+
+def test_stage_change_accepts_string_revision():
+    session = {
+        "impact_assessment": [],
+        "key_uncertainties": [],
+        "resolution_list": {},
+        "resolution_planner": [],
+        "risk_register": [],
+        "pra_output": [],
+        "workflow_revisions": {"impact_assessment": "3.0"},
+        "workflow_snapshots": {},
+    }
+
+    mark_stage_changed(session, "impact_assessment")
+
+    assert session["workflow_revisions"]["impact_assessment"] == 4
