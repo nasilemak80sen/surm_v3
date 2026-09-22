@@ -49,3 +49,28 @@ def test_approval_requires_approver_role():
 
     assert not allowed
     assert any("Approver" in reason for reason in reasons)
+
+
+def test_approval_requires_bowtie_coverage_for_assessed_risks():
+    ready, reasons = approval_readiness({
+        "study_lifecycle": "Reviewed",
+        "study_role": "Approver",
+        "uncertainties": [],
+        "key_decisions": [],
+        "impact_assessment": [],
+        "key_uncertainties": [],
+        "resolution_list": {},
+        "resolution_planner": [],
+        "risk_register": [{"risk_id": "RSK-001"}],
+        "pra_output": [],
+        "bowtie_register": {},
+        "barrier_register": {},
+        "prep_name": "A", "prep_role": "Engineer", "prep_date": "01/01/2026",
+        "rev_gg_name": "B", "rev_gg_role": "G&G", "rev_gg_date": "01/01/2026",
+        "rev_re_name": "C", "rev_re_role": "RE", "rev_re_date": "01/01/2026",
+        "rev_pp_name": "D", "rev_pp_role": "PP", "rev_pp_date": "01/01/2026",
+        "endorsed_name": "E", "endorsed_role": "Lead", "endorsed_date": "01/01/2026",
+    })
+
+    assert not ready
+    assert any("Bowtie documents" in reason for reason in reasons)
