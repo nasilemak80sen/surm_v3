@@ -69,6 +69,10 @@ from modules.tab6_resolution_planner import render as render_resolution_planner
 from modules.tab7_risk_register import render as render_risk_register
 from modules.tab_pra_output import render as render_pra_output
 from modules.tab_study_repository import render as render_study_repository
+from modules.tab_intelligence import render as render_intelligence
+from modules.tab_barrier_management import render as render_barrier_management
+from modules.tab_assurance import render as render_assurance
+from modules.tab_revision_history import render as render_revision_history
 
 
 # ============================================================================
@@ -243,6 +247,10 @@ def _render_read_only_page(page_name: str) -> None:
         "6️⃣ Resolution Planner": ["resolution_planner"],
         "7️⃣ Risk Register": ["risk_register"],
         "📄 PRA Output": ["pra_output"],
+        "📊 Intelligence": ["risk_register", "resolution_planner", "bowtie_register", "barrier_register"],
+        "🛡️ Barrier Management": ["barrier_register", "bowtie_register"],
+        "✅ Assurance & Review": ["study_reviews", "study_lifecycle"],
+        "🕘 Revision History": ["study_change_log", "study_revision"],
     }
     st.info("Read-only view. Select Edit Study to unlock changes.")
     for key in section_keys.get(page_name, []):
@@ -584,6 +592,10 @@ PAGE_DEFINITIONS = {
     "6️⃣ Resolution Planner": render_resolution_planner,
     "7️⃣ Risk Register": render_risk_register,
     "📄 PRA Output": render_pra_output,
+    "📊 Intelligence": render_intelligence,
+    "🛡️ Barrier Management": render_barrier_management,
+    "✅ Assurance & Review": render_assurance,
+    "🕘 Revision History": render_revision_history,
 }
  
 WORKFLOW_PAGES = [
@@ -628,6 +640,10 @@ def render_navigation() -> None:
         "6️⃣ Resolution Planner": "Turn selected resolution actions into an owned, trackable workplan.",
         "7️⃣ Risk Register": "Convert study outputs into a managed risk register and bowtie view.",
         "📄 PRA Output": "Review the read-only portfolio output generated from the risk register.",
+        "📊 Intelligence": "See study health, risk portfolio, actions, barriers, QA and traceability in one place.",
+        "🛡️ Barrier Management": "Manage owners, status, verification and administrative health for Bowtie barriers.",
+        "✅ Assurance & Review": "Control study lifecycle, review decisions, validation and approval readiness.",
+        "🕘 Revision History": "Inspect immutable study revisions and compare durable changes.",
     }
 
     if is_workflow_page:
@@ -646,6 +662,10 @@ def render_navigation() -> None:
         "📖 How to Use",
         "📋 Overview",
         "👥 Team",
+        "📊 Intelligence",
+        "🛡️ Barrier Management",
+        "✅ Assurance & Review",
+        "🕘 Revision History",
     }
     if not is_workflow_page and selected_page not in custom_header_pages:
         render_page_frame(
