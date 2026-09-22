@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 import streamlit as st
 from utils.db import get_db
-from utils.session import DEFAULT_SESSION_STATE
+from utils.session import DEFAULT_SESSION_STATE, normalize_entity_ids
 from utils.study_document import StudyDocument
 from utils.workflow import completion_percent
 import math
@@ -90,6 +90,7 @@ def save_session(auto: bool = False) -> bool:
             "study_lifecycle": st.session_state.get("study_lifecycle", "Draft"),
             "study_id": document.study_id,
             "study_owner": document.study_owner,
+            "methodology_version": document.methodology_version,
         },
         "session": payload,
     }
@@ -147,6 +148,7 @@ def load_session(project_name: str, field_name: str, phase_name: str = "") -> bo
         document.apply_to_session(st.session_state, keys=saved_keys)
         if mapping:
             st.session_state["_mapping"] = mapping
+        normalize_entity_ids()
         meta = data.get("meta", {})
         # Older saves may contain an empty session payload because durable
         # keys were not registered. The database row still has study identity.
