@@ -44,9 +44,10 @@ def test_team_editor_submit_captures_active_editor_state():
             edited.loc[0, "Date (DD/MM/YYYY)"] = "22/09/2026"
             return edited
 
-        page.st.data_editor = fake_editor
-        page.save_session = lambda auto=False: True
-        page.render()
+        from unittest.mock import patch
+
+        with patch.object(st, "data_editor", fake_editor),             patch.object(page, "save_session", lambda auto=False: True):
+            page.render()
 
     at = _run_app(app)
     at.button(key="save_team").click().run()
@@ -71,9 +72,10 @@ def test_key_decision_duplicate_is_rejected_on_save():
             edited.loc[0, "Key Decision"] = edited.iloc[1]["Key Decision"]
             return edited
 
-        page.st.data_editor = fake_editor
-        page.save_session = lambda auto=False: True
-        page.render()
+        from unittest.mock import patch
+
+        with patch.object(st, "data_editor", fake_editor),             patch.object(page, "save_session", lambda auto=False: True):
+            page.render()
 
     at = _run_app(app)
     at.button(key="save_key_decisions").click().run()
@@ -88,8 +90,10 @@ def test_key_decision_duplicate_is_rejected_on_save():
 def test_impact_assessment_renders_explicit_save_transaction():
     def app():
         import streamlit as st
+        import importlib
         from modules import tab3_impact_assessment as page
         from utils.session import init_session
+        importlib.reload(page)
 
         init_session()
         st.session_state["project_name"] = "Interaction Test"
@@ -105,10 +109,16 @@ def test_impact_assessment_renders_explicit_save_transaction():
 
 
 def test_key_uncertainty_save_does_not_invalidate_on_metadata_only_submission():
+    mark_calls = []
+
     def app():
         import streamlit as st
         from modules import tab4_key_uncertainties as page
         from utils.session import init_session
+        from unittest.mock import patch
+
+        importlib = __import__("importlib")
+        importlib.reload(page)
 
         init_session()
         st.session_state["project_name"] = "Interaction Test"
@@ -144,17 +154,17 @@ def test_key_uncertainty_save_does_not_invalidate_on_metadata_only_submission():
         }]
         st.session_state["risk_register"] = [{"Risk": "Risk A"}]
 
-        mark_calls = []
-        page.mark_stage_changed = lambda session, stage: mark_calls.append(stage)
-        page.st.plotly_chart = lambda *args, **kwargs: None
-        page.st.download_button = lambda *args, **kwargs: None
-        page.save_session = lambda auto=False: True
-        page.render()
+        def record_change(session, stage):
+            mark_calls.append(stage)
+
+        with patch.object(page, "mark_stage_changed", record_change),             patch.object(page, "save_session", lambda auto=False: True),             patch.object(st, "plotly_chart", lambda *args, **kwargs: None),             patch.object(st, "download_button", lambda *args, **kwargs: None):
+            page.render()
 
     at = _run_app(app)
     at.button(key="save_key_uncertainties").click().run()
 
     assert "key_uncertainties" not in mark_calls
+    uncertainty_name = at.session_state["key_uncertainties"][0]["Uncertainty"]
     assert at.session_state["resolution_list"][uncertainty_name] == {"Option A": "Y"}
     assert at.session_state["risk_register"] == [{"Risk": "Risk A"}]
 
@@ -208,10 +218,16 @@ def test_resolution_list_bulk_action_stays_draft_until_save():
 
 
 def test_planner_save_does_not_invalidate_risk_on_execution_metadata():
+    mark_calls = []
+
     def app():
         import streamlit as st
         from modules import tab6_resolution_planner as page
         from utils.session import init_session
+        from unittest.mock import patch
+
+        importlib = __import__("importlib")
+        importlib.reload(page)
 
         init_session()
         st.session_state["project_name"] = "Interaction Test"
@@ -246,10 +262,11 @@ def test_planner_save_does_not_invalidate_risk_on_execution_metadata():
         }]
         st.session_state["risk_register"] = [{"Risk": "Risk A"}]
 
-        mark_calls = []
-        page.mark_stage_changed = lambda session, stage: mark_calls.append(stage)
-        page.save_session = lambda auto=False: True
-        page.render()
+        def record_change(session, stage):
+            mark_calls.append(stage)
+
+        with patch.object(page, "mark_stage_changed", record_change),             patch.object(page, "save_session", lambda auto=False: True):
+            page.render()
 
     at = _run_app(app)
     at.button(key="save_resolution_planner").click().run()
@@ -262,8 +279,10 @@ def test_planner_save_does_not_invalidate_risk_on_execution_metadata():
 def test_risk_register_form_is_explicit_save_transaction():
     def app():
         import streamlit as st
+        import importlib
         from modules import tab7_risk_register as page
         from utils.session import init_session
+        importlib.reload(page)
 
         init_session()
         st.session_state["project_name"] = "Interaction Test"
