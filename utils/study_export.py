@@ -67,7 +67,10 @@ def build_study_snapshot(session: dict[str, Any]) -> dict[str, Any]:
             "resolution_list": study["resolution_list"],
             "resolutions": study["resolution_planner"],
             "risks": study["risk_register"],
+            "bowties": study["bowtie_register"],
+            "barriers": study["barrier_register"],
             "pra_output": study["pra_output"],
+            "study_reviews": study["study_reviews"],
         },
         "workflow": [
             {**stage.__dict__, "state": stage.state}
