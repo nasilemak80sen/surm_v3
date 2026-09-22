@@ -96,15 +96,24 @@ product need; it is not a prerequisite for the current SURM roadmap.
 
 ## Phase 9 — Production Hardening
 
-Planned:
-- stronger deployment-level identity and access control
-- role enforcement backed by authenticated identity
-- performance profiling for larger studies
-- concurrency and database hardening
-- component/browser regression coverage
+Status: implemented.
 
-The current Study Role control is a workflow/governance aid, not a security
-boundary.
+Includes:
+- deployment-aware authenticated identity hooks with role-map enforcement
+- ownership-aware study mutation and Admin-only deletion in secured deployments
+- strict sequential lifecycle transitions and governance matrix coverage
+- SQLite WAL/busy-timeout hardening and PostgreSQL row-locking
+- optimistic revision conflict protection for stale editors
+- end-to-end workflow regression coverage through 100% completion
+- 14-sheet Excel export contract validation
+- larger-study performance diagnostics and a 500-risk regression profile
+- browser-level Playwright regression coverage for the custom Bowtie component
+- separate CI jobs for Python regression and browser regression
+
+The Study Role control remains a governance state; secured deployments bind it
+to the authenticated identity and configured deployment role map.
+
+See `docs/PRODUCTION_HARDENING.md` for deployment configuration.
 
 ## Phase 10 — Enterprise SURM
 
