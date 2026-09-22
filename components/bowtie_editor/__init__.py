@@ -23,12 +23,18 @@ def render(
     *,
     key: str,
     height: int = 720,
+    editable: bool = True,
 ) -> dict[str, Any] | None:
     """Render an editable Bowtie and return the most recent changed document."""
     return _COMPONENT(
         document=document,
-        editable=True,
+        editable=editable,
         height=height,
         key=key,
         default=None,
     )
+
+
+def render_readonly(document: dict[str, Any], *, key: str, height: int = 760) -> None:
+    """Render a read-only Bowtie view for reporting pages."""
+    _COMPONENT(document=document, editable=False, height=height, key=key, default=None)
