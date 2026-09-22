@@ -120,7 +120,7 @@ def render():
         for decision_name in decision_names:
             row[decision_name] = existing.get(
                 decision_name,
-                "NA",
+                "",
             )
 
         rows.append(row)
@@ -132,7 +132,7 @@ def render():
         unsafe_allow_html=True,
     )
 
-    with st.form("impact_form"):
+    with st.form("impact_form", enter_to_submit=False):
         render_save_hint(
             "Fill the assessment matrix, then click Save Assessment. "
             "Bulk buttons are useful for repeated values, but review each row "
@@ -143,26 +143,31 @@ def render():
         with button_cols[0]:
             degree_h = st.form_submit_button(
                 "Degree → All H",
-                help="Set every degree to High.",
+                key="impact_degree_all_h",
+                help="Set every degree to High in the session draft.",
             )
         with button_cols[1]:
             degree_m = st.form_submit_button(
                 "Degree → All M",
-                help="Set every degree to Medium.",
+                key="impact_degree_all_m",
+                help="Set every degree to Medium in the session draft.",
             )
         with button_cols[2]:
             degree_l = st.form_submit_button(
                 "Degree → All L",
-                help="Set every degree to Low.",
+                key="impact_degree_all_l",
+                help="Set every degree to Low in the session draft.",
             )
         with button_cols[3]:
             impacts_na = st.form_submit_button(
                 "Impacts → All NA",
-                help="Reset all decision impacts to Not Applicable.",
+                key="impact_all_na",
+                help="Set all decision impacts to Not Applicable in the session draft.",
             )
         with button_cols[5]:
             save_clicked = st.form_submit_button(
                 "✅ Save Assessment",
+                key="save_impact_assessment",
                 type="primary",
             )
 
@@ -237,11 +242,26 @@ def render():
                 ).strip().upper()
                 not in {"H", "M", "L"}
             ]
+            missing_impacts = [
+                f'{row["Uncertainty"]} → {decision_name}'
+                for row in data
+                for decision_name in decision_names
+                if str(row.get(decision_name, "") or "").strip().upper()
+                not in {"H", "M", "L", "NA"}
+            ]
             if missing_degree:
                 st.warning(
                     "Before saving, choose a Degree of Uncertainty for: "
                     + ", ".join(missing_degree[:5])
                     + ("…" if len(missing_degree) > 5 else "")
+                )
+                return
+            if missing_impacts:
+                st.warning(
+                    "Before saving, explicitly rate each decision impact as H, M, L or NA. "
+                    "Missing examples: "
+                    + ", ".join(missing_impacts[:5])
+                    + ("…" if len(missing_impacts) > 5 else "")
                 )
                 return
 
@@ -275,7 +295,10 @@ def render():
                 return
             st.success("✅ Impact assessment saved.")
         else:
-            save_session(auto=True)
+            st.info(
+                "Draft updated. Review the matrix, then click **Save Assessment** "
+                "to persist the assessment."
+            )
 
         st.rerun()
 
