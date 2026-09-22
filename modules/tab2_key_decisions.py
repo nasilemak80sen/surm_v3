@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from utils.form_ui import render_form_header, render_stage_status
+from utils.workflow import mark_stage_changed
 
 
 def _normalize_decisions(frame: pd.DataFrame) -> pd.DataFrame:
@@ -68,6 +69,17 @@ def render():
     st.markdown(
         '<div class="surm-section-header">🎯 Key Project Decisions</div>',
         unsafe_allow_html=True,
+    )
+
+    before_signature = tuple(
+        (
+            str(row.get("decision_id", "")),
+            str(row.get("Key Decision", "")).strip(),
+            int(row.get("Weight (1-3)", 0) or 0),
+            str(row.get("Description", "") or "").strip(),
+        )
+        for row in existing_decisions
+        if isinstance(row, dict)
     )
 
     df = pd.DataFrame(existing_decisions)
@@ -137,7 +149,19 @@ def render():
 
     # Preserve current responsive behaviour: edits are immediately reflected
     # in the workspace. The workflow validator decides when the stage is ready.
-    st.session_state["key_decisions"] = normalized.to_dict("records")
+    updated_records = normalized.to_dict("records")
+    st.session_state["key_decisions"] = updated_records
+    after_signature = tuple(
+        (
+            str(row.get("decision_id", "")),
+            str(row.get("Key Decision", "")).strip(),
+            int(row.get("Weight (1-3)", 0) or 0),
+            str(row.get("Description", "") or "").strip(),
+        )
+        for row in updated_records
+    )
+    if before_signature != after_signature:
+        mark_stage_changed(st.session_state, "key_decisions")
 
     if st.button(
         "Remove Empty Decision Rows",
