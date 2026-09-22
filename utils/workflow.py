@@ -12,6 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from utils.coercion import safe_int
+
 
 @dataclass(frozen=True)
 class WorkflowStage:
@@ -118,11 +120,7 @@ def _decision_count(session: dict[str, Any]) -> int:
 
 
 def _decision_weight(value: Any) -> int:
-    try:
-        number = int(float(value))
-    except (TypeError, ValueError):
-        return 0
-    return number
+    return safe_int(value, default=0)
 
 
 def _key_decisions_complete(session: dict[str, Any]) -> bool:
@@ -486,7 +484,7 @@ def mark_stage_changed(
 ) -> None:
     """Record a stage revision and invalidate its downstream dependants."""
     revisions = dict(session.get("workflow_revisions", {}) or {})
-    revisions[stage_key] = int(revisions.get(stage_key, 0) or 0) + 1
+    revisions[stage_key] = safe_int(revisions.get(stage_key, 0), default=0) + 1
     session["workflow_revisions"] = revisions
 
     snapshots = dict(session.get("workflow_snapshots", {}) or {})
@@ -500,7 +498,7 @@ def mark_stage_changed(
 
 def stage_revision(session: dict[str, Any], stage_key: str) -> int:
     """Return the current revision counter for a stage."""
-    return int(
-        (session.get("workflow_revisions", {}) or {}).get(stage_key, 0)
-        or 0
+    return safe_int(
+        (session.get("workflow_revisions", {}) or {}).get(stage_key, 0),
+        default=0,
     )
