@@ -258,6 +258,6 @@ def get_active_decisions():
     return [
         d
         for d in st.session_state["key_decisions"]
-        if d.get("Weight (1-3)", 0) > 0
+        if safe_int(d.get("Weight (1-3)", 0), default=0) > 0
         and str(d.get("Key Decision", "")).strip()
     ]
