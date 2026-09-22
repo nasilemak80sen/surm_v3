@@ -402,50 +402,6 @@ def render_sidebar() -> None:
             current_page=ss.get("current_page"),
         )
 
-        # --------------------------------------------------------------------
-        # STATISTICS
-        # --------------------------------------------------------------------
-
-        stat_items = [
-            (
-                "Uncertainties",
-                f'{stats["selected_uncertainties"]} / '
-                f'{stats["total_uncertainties"]}',
-            ),
-            (
-                "Key Decisions",
-                stats["key_decisions"],
-            ),
-            (
-                "Key Uncertainties",
-                stats["key_uncertainties"],
-            ),
-            (
-                "Resolution Actions",
-                stats["resolution_actions"],
-            ),
-            (
-                "Risks",
-                stats["risks"],
-            ),
-            (
-                "Team Members",
-                stats["team_members"],
-            ),
-        ]
-
-        for label, value in stat_items:
-            col_label, col_value = st.columns([3, 1])
-
-            with col_label:
-                st.caption(label)
-
-            with col_value:
-                st.markdown(
-                    f"<div class='sidebar-stat-value'>{value}</div>",
-                    unsafe_allow_html=True,
-                )
-
         st.divider()
 
         # --------------------------------------------------------------------
@@ -685,11 +641,12 @@ def render_navigation() -> None:
             st.info(f"Current study stage: **{current.label}** — {current.guidance}")
             return
 
-    render_page_frame(
-        title,
-        descriptions.get(selected_page, "SURM study workspace."),
-        step=workflow_index + 1 if is_workflow_page else None,
-    )
+    if not is_workflow_page:
+        render_page_frame(
+            title,
+            descriptions.get(selected_page, "SURM study workspace."),
+        )
+
     if (
         st.session_state.get("study_access_mode") == "view"
         and selected_page != "🗂️ Study Repository"
