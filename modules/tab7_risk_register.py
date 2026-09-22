@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from utils.form_ui import render_form_header, render_stage_status
+from utils.form_ui import render_form_header, render_save_hint, render_stage_status
 from utils.logic import (
     build_pra_output,
     build_risk_register,
@@ -61,7 +61,7 @@ def render():
             key="populate_risk_register",
             use_container_width=True,
         )
-        st.caption("Populate again only when upstream uncertainties or resolutions change. Existing assessments are preserved by risk name.")
+        st.caption("Populate again only when upstream uncertainties or resolutions change. Existing assessments are preserved by risk identity.")
 
         if populate:
             ku_df = pd.DataFrame(ku_list)
@@ -76,9 +76,12 @@ def render():
                 resolution_rows.append(output)
 
             risk_df = build_risk_register(ku_df, pd.DataFrame(resolution_rows))
-            st.session_state["risk_register"] = risk_df.to_dict("records")
-            mark_stage_changed(st.session_state, "risk_register")
-            save_session(auto=True)
+            previous = st.session_state.get("risk_register", [])
+            updated = risk_df.to_dict("records")
+            st.session_state["risk_register"] = updated
+            if previous != updated:
+                mark_stage_changed(st.session_state, "risk_register")
+            st.info("Risk register draft populated. Review it, then click **Save risk register** to persist.")
             st.rerun()
 
         risk_data = st.session_state.get("risk_register", [])
@@ -90,8 +93,16 @@ def render():
             )
         else:
             risk_df = pd.DataFrame(risk_data)
-            with st.form("rr_form"):
-                save_clicked = st.form_submit_button("Save risk register", type="primary")
+            render_save_hint(
+                "Risk edits are a session draft until you click Save risk register. "
+                "PRA output is regenerated only when the saved risk register is explicitly committed."
+            )
+            with st.form("rr_form", enter_to_submit=False):
+                save_clicked = st.form_submit_button(
+                    "Save risk register",
+                    key="save_risk_register",
+                    type="primary",
+                )
                 edited = st.data_editor(
                     risk_df,
                     column_config={
@@ -132,10 +143,14 @@ def render():
                     if all(is_risk_assessed(row) for row in saved_rows)
                     else []
                 )
+                if not st.session_state.get("project_name", "").strip():
+                    st.warning("Enter a Project Name on Overview before saving the risk register.")
+                    return
                 ok = save_session(auto=False)
                 if not ok:
                     st.error("Register could not be saved.")
                     return
+                st.success("✅ Risk register saved.")
                 st.rerun()
 
     risk_data = st.session_state.get("risk_register", [])
