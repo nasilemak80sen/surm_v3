@@ -248,6 +248,27 @@ def render():
                     use_container_width=True,
                     config={"displayModeBar": False, "responsive": True},
                 )
+                st.markdown(
+                    '<div class="surm-section-header">Bowtie Detail</div>',
+                    unsafe_allow_html=True,
+                )
+                detail_rows = []
+                for category, field in [
+                    ("Threats / Causes", "Uncertainty/Causes"),
+                    ("Preventive Barriers", "Resolution Plan"),
+                    ("Mitigative Barriers", "Contingency Plan"),
+                    ("Consequences", "Impact/Consequence"),
+                ]:
+                    value = str(record.get(field, "") or "").strip()
+                    if value:
+                        detail_rows.append({"Element": category, "Details": value})
+                if detail_rows:
+                    st.dataframe(
+                        pd.DataFrame(detail_rows),
+                        hide_index=True,
+                        use_container_width=True,
+                        height=min(260, max(110, len(detail_rows) * 62 + 40)),
+                    )
                 try:
                     safe = selected_risk.replace("/", "_").replace(" ", "_")[:40]
                     st.download_button(
