@@ -38,6 +38,16 @@ def save_session(auto: bool = False) -> bool:
     if auto and not st.session_state.get("_auto_save_enabled", True):
         return False
 
+    # Keep managed barrier metadata aligned with current Bowties before
+    # constructing the canonical durable document.
+    try:
+        from utils.intelligence import sync_barrier_register
+        sync_barrier_register(st.session_state)
+    except Exception:
+        # Persistence must remain available even when optional intelligence
+        # calculations are unavailable.
+        pass
+
     payload = {}
     def _sanitize(o):
         """Recursively convert values to JSON-safe types."""
