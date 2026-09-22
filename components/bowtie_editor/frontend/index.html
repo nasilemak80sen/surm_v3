@@ -58,7 +58,8 @@ svg{width:100%;height:100%;display:block}
 <body>
 <div class="toolbar">
   <div class="title" id="title">SURM Bowtie</div>
-  <button id="auto">Auto-arrange</button><button id="exportSvg">Export SVG</button>
+  <button id="auto">Auto-arrange</button><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button>
+  <button id="exportSvg">Export SVG</button><button id="exportPng">Export PNG</button>
   <button id="addCause">+ Cause</button>
   <button id="addPrevent">+ Preventive</button>
   <button id="addMitigate">+ Mitigative</button>
@@ -102,6 +103,9 @@ svg{width:100%;height:100%;display:block}
   let selected = null;
   let dirtyTimer = null;
   let lastSentRevision = -1;
+  let undoStack = [];
+  let redoStack = [];
+  let historySuspended = false;
 
   const svg = document.getElementById('svg');
   const objectsEl = document.getElementById('objects');
@@ -168,6 +172,16 @@ svg{width:100%;height:100%;display:block}
       p.w=Math.max(Number(p.w)||210,210);
       p.h=Math.max(Number(p.h)||72,80);
     });
+    value.preventativeBarriers.forEach(p=>p.type='preventativeBarrier');
+    value.mitigativeBarriers.forEach(p=>p.type='mitigativeBarrier');
+    value.library.preventativeBarrier.forEach(n=>{
+      n.degradation_factors=Array.isArray(n.degradation_factors)?n.degradation_factors:[];
+      n.controls=Array.isArray(n.controls)?n.controls:[];
+    });
+    value.library.mitigativeBarrier.forEach(n=>{
+      n.degradation_factors=Array.isArray(n.degradation_factors)?n.degradation_factors:[];
+      n.controls=Array.isArray(n.controls)?n.controls:[];
+    });
     return value;
   }
 
@@ -191,6 +205,43 @@ svg{width:100%;height:100%;display:block}
   }
 
   function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+  function updateHistoryButtons(){
+    document.getElementById('undo').disabled=undoStack.length===0;
+    document.getElementById('redo').disabled=redoStack.length===0;
+  }
+
+  function rememberBeforeMutation(){
+    if(historySuspended || !doc) return;
+    undoStack.push(clone(doc));
+    if(undoStack.length>50) undoStack.shift();
+    redoStack=[];
+    updateHistoryButtons();
+  }
+
+  function undoChange(){
+    if(!doc || !undoStack.length) return;
+    const previous=undoStack.pop();
+    redoStack.push(clone(doc));
+    historySuspended=true;
+    doc=normalizeDocument(previous);
+    historySuspended=false;
+    emitChange();
+    render();
+    updateHistoryButtons();
+  }
+
+  function redoChange(){
+    if(!doc || !redoStack.length) return;
+    const next=redoStack.pop();
+    undoStack.push(clone(doc));
+    historySuspended=true;
+    doc=normalizeDocument(next);
+    historySuspended=false;
+    emitChange();
+    render();
+    updateHistoryButtons();
+  }
 
   function emitChange(){
     if(!editable) return;
@@ -232,12 +283,16 @@ svg{width:100%;height:100%;display:block}
   }
 
   function addObject(type){
+    rememberBeforeMutation();
     const nodeId=makeNodeId(type);
     const name=type==='cause'?'New Threat':type==='outcome'?'New Consequence':
       type==='preventativeBarrier'?'New Preventive Barrier':'New Mitigative Barrier';
     const node={id:nodeId,type,name,description:'',surm_source:{type:'manual'}};
     if(type==='preventativeBarrier'||type==='mitigativeBarrier'){
-      node.owner='';node.effectiveness='';
+      node.owner='';
+      node.effectiveness='';
+      node.degradation_factors=[];
+      node.controls=[];
     }
     doc.library[type]=doc.library[type]||[];
     doc.library[type].push(node);
@@ -260,6 +315,7 @@ svg{width:100%;height:100%;display:block}
 
   function removeSelected(){
     if(!selected || !doc) return false;
+    rememberBeforeMutation();
 
     const buckets=[
       ['cause',doc.causes],
@@ -309,6 +365,7 @@ svg{width:100%;height:100%;display:block}
   }
 
   function autoArrange(){
+    rememberBeforeMutation();
     const causes=doc.causes, prev=doc.preventativeBarriers, mit=doc.mitigativeBarriers, outs=doc.outcomes;
     causes.forEach((p,i)=>{
       p.w=210;p.h=80;p.x=120;p.y=150+i*135;
@@ -345,14 +402,19 @@ svg{width:100%;height:100%;display:block}
         '<label>Owner</label><input id="editOwner" value="'+esc(n.owner||'')+'">'+
         '<label>Effectiveness</label><select id="editEff">'+
           '<option value=""></option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>'+
-        '</select>':'');
+        '</select>'+
+        '<label>Degradation factors</label><textarea id="editDegradation">'+esc((n.degradation_factors||[]).join("\n"))+'</textarea>'+
+        '<label>Controls</label><textarea id="editControls">'+esc((n.controls||[]).join("\n"))+'</textarea>':'');
     const eff=document.getElementById('editEff'); if(eff) eff.value=n.effectiveness||'';
-    ['editName','editDesc','editOwner','editEff'].filter(Boolean).forEach(id=>{
+    ['editName','editDesc','editOwner','editEff','editDegradation','editControls'].filter(Boolean).forEach(id=>{
       const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{
+        rememberBeforeMutation();
         n.name=document.getElementById('editName').value;
         n.description=document.getElementById('editDesc').value;
         const o=document.getElementById('editOwner'); if(o) n.owner=o.value;
         const e=document.getElementById('editEff'); if(e) n.effectiveness=e.value;
+        const d=document.getElementById('editDegradation'); if(d) n.degradation_factors=d.value.split(/\n/).map(x=>x.trim()).filter(Boolean);
+        const ctrl=document.getElementById('editControls'); if(ctrl) n.controls=ctrl.value.split(/\n/).map(x=>x.trim()).filter(Boolean);
         emitChange();render();
       });
     });
@@ -379,6 +441,7 @@ svg{width:100%;height:100%;display:block}
     relationshipsEl.innerHTML=checks||'<div class="small">No '+(p.type==='cause'?'preventive':'mitigative')+' barriers exist.</div>';
     relationshipsEl.querySelectorAll('input[data-rel]').forEach(cb=>cb.addEventListener('change',()=>{
       const id=cb.getAttribute('data-rel');
+      rememberBeforeMutation();
       line.stops=line.stops||[];
       if(cb.checked){ if(!line.stops.includes(id)) line.stops.push(id); }
       else line.stops=line.stops.filter(x=>x!==id);
@@ -445,6 +508,15 @@ svg{width:100%;height:100%;display:block}
     r.setAttribute('stroke',kind==='preventativeBarrier'?'#1d9e75':'#534ab7');
     r.setAttribute('stroke-width',selected&&selected.id===p.id?3:1.5);
     r.classList.add('node');r.dataset.id=p.id;r.dataset.kind=kind;g.appendChild(r);
+    const health=n && n.surm_management ? String(n.surm_management.health||'') : '';
+    if(health){
+      const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('cx',p.x+p.w/2-10);
+      dot.setAttribute('cy',p.y-p.h/2+10);
+      dot.setAttribute('r',5);
+      dot.setAttribute('fill',health==='Healthy'?'#2E7D32':health==='At Risk'?'#E65100':'#607D8B');
+      g.appendChild(dot);
+    }
     const lines=textWrap(n?n.name:p.nodeId,15,5);
     lines.forEach((line,i)=>{
       const t=document.createElementNS('http://www.w3.org/2000/svg','text');
@@ -538,6 +610,7 @@ svg{width:100%;height:100%;display:block}
       el.addEventListener('pointerdown',e=>{
         if(!editable)return;
         const p=allPlacements().find(x=>x.id===el.dataset.id);if(!p)return;
+        rememberBeforeMutation();
         dragging=true;selected={id:p.id};startX=e.clientX;startY=e.clientY;origX=p.x;origY=p.y;el.setPointerCapture(e.pointerId);
       });
       el.addEventListener('pointermove',e=>{
@@ -590,7 +663,38 @@ svg{width:100%;height:100%;display:block}
     a.click();
     URL.revokeObjectURL(url);
   };
+  document.getElementById('exportPng').onclick=()=>{
+    if(!doc)return;
+    const cloneSvg=svg.cloneNode(true);
+    cloneSvg.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    const source=new XMLSerializer().serializeToString(cloneSvg);
+    const blob=new Blob([source],{type:'image/svg+xml;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const image=new Image();
+    image.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=3200;
+      canvas.height=1800;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(image,0,0,canvas.width,canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(png=>{
+        if(!png)return;
+        const pngUrl=URL.createObjectURL(png);
+        const a=document.createElement('a');
+        a.href=pngUrl;
+        a.download=(doc.risk_id ? 'SURM_'+doc.risk_id+'_Bowtie.png' : 'SURM_Bowtie.png');
+        a.click();
+        URL.revokeObjectURL(pngUrl);
+      },'image/png');
+    };
+    image.src=url;
+  };
   document.getElementById('auto').onclick=autoArrange;
+  document.getElementById('undo').onclick=undoChange;
+  document.getElementById('redo').onclick=redoChange;
   document.getElementById('addCause').onclick=()=>addObject('cause');
   document.getElementById('addPrevent').onclick=()=>addObject('preventativeBarrier');
   document.getElementById('addMitigate').onclick=()=>addObject('mitigativeBarrier');
