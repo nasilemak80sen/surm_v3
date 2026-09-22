@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from utils.coercion import safe_float
 from utils.form_ui import render_form_header, render_stage_status
 from utils.logic import build_resolution_planner
 from utils.persistence import save_session
@@ -152,7 +153,7 @@ def render():
         workplan_rows = [row for row in planner_data if row.get("Part of Workplan")]
         workplan_count, missing_owner = _planner_quality(planner_data)
         overall = (
-            sum(float(row.get("Progress (0-1)", 0) or 0) for row in workplan_rows)
+            sum(safe_float(row.get("Progress (0-1)", 0), default=0.0) for row in workplan_rows)
             / max(len(workplan_rows), 1)
         )
 
@@ -187,7 +188,7 @@ def render():
         if workplan_rows:
             st.markdown("**Execution pulse**")
             for row in workplan_rows[:8]:
-                progress = int(float(row.get("Progress (0-1)", 0) or 0) * 100)
+                progress = int(safe_float(row.get("Progress (0-1)", 0), default=0.0) * 100)
                 owner = str(row.get("Action Owner", "") or "Unassigned")
                 action = str(row.get("Resolution Action", "Unnamed"))[:42]
                 st.markdown(
