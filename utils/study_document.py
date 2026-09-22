@@ -30,6 +30,10 @@ STUDY_KEYS = (
     "resolution_planner",
     "risk_register",
     "pra_output",
+    "bowtie_register",
+    "barrier_register",
+    "study_role",
+    "study_reviews",
     # Governance / sign-off fields
     "prep_name",
     "prep_role",
@@ -63,7 +67,7 @@ class StudyDocument:
     """Durable study state independent of Streamlit widget state."""
 
     study_id: str = field(default_factory=lambda: str(uuid4()))
-    schema_version: str = "2.1"
+    schema_version: str = "2.2"
 
     project_name: str = ""
     field_name: str = ""
@@ -81,6 +85,9 @@ class StudyDocument:
     risk_register: list[dict[str, Any]] = field(default_factory=list)
     pra_output: list[dict[str, Any]] = field(default_factory=list)
     bowtie_register: dict[str, dict[str, Any]] = field(default_factory=dict)
+    barrier_register: dict[str, dict[str, Any]] = field(default_factory=dict)
+    study_role: str = "Author"
+    study_reviews: list[dict[str, Any]] = field(default_factory=list)
 
     # Governance / sign-off
     prep_name: str = ""
@@ -123,6 +130,9 @@ class StudyDocument:
             "risk_register": [],
             "pra_output": [],
             "bowtie_register": {},
+            "barrier_register": {},
+            "study_role": "Author",
+            "study_reviews": [],
             "prep_name": "",
             "prep_role": "",
             "prep_date": "",
