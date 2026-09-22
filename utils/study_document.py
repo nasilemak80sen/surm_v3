@@ -47,6 +47,8 @@ STUDY_KEYS = (
     "study_lifecycle",
     "study_revision",
     "study_change_log",
+    "workflow_revisions",
+    "workflow_snapshots",
 )
 
 
@@ -97,6 +99,8 @@ class StudyDocument:
     study_lifecycle: str = "Draft"
     study_revision: int = 0
     study_change_log: list[dict[str, Any]] = field(default_factory=list)
+    workflow_revisions: dict[str, int] = field(default_factory=dict)
+    workflow_snapshots: dict[str, dict[str, int]] = field(default_factory=dict)
 
     @classmethod
     def from_session(cls, session: dict[str, Any]) -> "StudyDocument":
@@ -133,6 +137,8 @@ class StudyDocument:
             "study_lifecycle": "Draft",
             "study_revision": 0,
             "study_change_log": [],
+            "workflow_revisions": {},
+            "workflow_snapshots": {},
         }
 
         values = {
