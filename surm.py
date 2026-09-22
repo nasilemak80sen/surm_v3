@@ -389,6 +389,7 @@ def render_sidebar() -> None:
                 "page": label,
                 "completed": stage.complete,
                 "locked": not stage.available,
+                "description": stage.guidance or stage.reason,
             }
             for index, (label, stage) in enumerate(
                 zip(
@@ -637,8 +638,8 @@ def render_navigation() -> None:
     """
     Render page navigation.
 
-    Phase 1 keeps navigation simple and reliable.
-    Phase 2 will redesign this into the full workflow UI.
+    Navigation remains intentionally simple and reliable; workflow state and
+    form guidance are provided by the shared workflow engine.
     """
 
     page_names = list(PAGE_DEFINITIONS.keys())
@@ -672,7 +673,8 @@ def render_navigation() -> None:
         if not allowed:
             render_page_frame(title, descriptions.get(selected_page, "SURM study workspace."), step=workflow_index + 1)
             st.warning(f"This stage is not ready yet. {reason}")
-            st.info(f"Current study stage: {current_stage(session).label}")
+            current = current_stage(session)
+            st.info(f"Current study stage: **{current.label}** — {current.guidance}")
             render_page_footer(previous_page=page_names[selected_index - 1] if selected_index else None)
             return
 
