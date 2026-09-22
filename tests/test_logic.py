@@ -90,3 +90,8 @@ def test_invalid_risk_dimensions_are_not_treated_as_assessed():
         "Likelihood (H/M/L)": "unexpected",
         "Impact (H/M/L)": "H",
     }) is False
+
+
+def test_blank_combined_rating_is_not_coerced_to_low():
+    assert compute_combined_rating("", "H") == ""
+    assert compute_combined_rating("H", "") == ""
