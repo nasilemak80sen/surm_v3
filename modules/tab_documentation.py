@@ -1,33 +1,50 @@
-"""modules/tab_documentation.py — Team roster"""
-import streamlit as st
+"""modules/tab_documentation.py — Team roster."""
+
+from __future__ import annotations
+
 import pandas as pd
+import streamlit as st
+
+from utils.form_ui import render_form_header
 from utils.persistence import save_session
 
-def render():
-    st.info("Add the people involved in this study. Their names and roles will appear in the exported documentation.")
-    st.markdown('<div class="surm-section-header">👥 Team Members</div>', unsafe_allow_html=True)
 
-    rows = st.session_state.get("team_members", [{"Name":"","Function / Role":"","Date":""}])
+def render():
+    render_form_header(
+        "STUDY GOVERNANCE",
+        "Team",
+        "Record the people and roles contributing to the study. These details become part of the exported documentation.",
+        next_step="Uncertainties",
+    )
+
+    rows = st.session_state.get(
+        "team_members",
+        [{"Name": "", "Function / Role": "", "Date": ""}],
+    )
     df = pd.DataFrame(rows)
     if "Date (DD/MM/YYYY)" not in df.columns:
         df["Date (DD/MM/YYYY)"] = df.pop("Date") if "Date" in df.columns else ""
 
-    editor_key = f"team_editor_{st.session_state.get('study_id', 'new')}"
     edited = st.data_editor(
         df,
         num_rows="dynamic",
         width="stretch",
         column_config={
-            "Name":             st.column_config.TextColumn("Name", width="medium"),
-            "Function / Role":  st.column_config.SelectboxColumn("Function / Role", width="medium",
-                options=["","ES","PE","RE","G&G","PT","PP","FE","D&C","FDP Lead","Other"]),
-            "Date (DD/MM/YYYY)": st.column_config.TextColumn("Date (DD/MM/YYYY)", width="small"),
+            "Name": st.column_config.TextColumn("Name", width="medium"),
+            "Function / Role": st.column_config.SelectboxColumn(
+                "Function / Role",
+                width="medium",
+                options=["", "ES", "PE", "RE", "G&G", "PT", "PP", "FE", "D&C", "FDP Lead", "Other"],
+            ),
+            "Date (DD/MM/YYYY)": st.column_config.TextColumn(
+                "Date (DD/MM/YYYY)",
+                width="small",
+            ),
         },
         hide_index=True,
-        key=editor_key,
+        key=f"team_editor_{st.session_state.get('study_id', 'new')}",
     )
-    # Keep the editor's rows intact. Removing blank rows during render causes
-    # Streamlit to reconcile the widget with stale data on the next rerun.
+
     raw = edited.to_dict("records")
     st.session_state["team_members"] = [
         {
@@ -37,25 +54,24 @@ def render():
         }
         for row in raw
     ] or [{"Name": "", "Function / Role": "", "Date": ""}]
-    st.metric("Team Size", len([r for r in raw if str(r.get("Name") or "").strip()]))
 
-    if st.button("Remove Empty Team Rows", key="remove_empty_team_rows"):
-        st.session_state["team_members"] = [
-            row for row in st.session_state["team_members"]
-            if any(str(value).strip() for value in row.values())
-        ] or [{"Name": "", "Function / Role": "", "Date": ""}]
-        st.rerun()
-    # Per-tab save button
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        if st.button("💾 Save Team", key="save_team"):
-            if not st.session_state.get("project_name", "").strip():
-                st.warning("Enter a Project Name before saving.")
-            else:
-                ok = save_session(auto=False)
-                if ok:
-                    st.success("✅ Team saved.")
+    left, right = st.columns([1, 3], gap="large")
+    with left:
+        st.metric("Team size", len([r for r in raw if str(r.get("Name") or "").strip()]))
+    with right:
+        save_col, clean_col = st.columns(2)
+        with save_col:
+            if st.button("Save team", type="primary", key="save_team"):
+                if not st.session_state.get("project_name", "").strip():
+                    st.warning("Enter a Project Name on Overview first.")
+                elif save_session(auto=False):
+                    st.success("Saved.")
                 else:
                     st.error("Save failed.")
-    with col2:
-        st.write("")
+        with clean_col:
+            if st.button("Remove empty rows", key="remove_empty_team_rows"):
+                st.session_state["team_members"] = [
+                    row for row in st.session_state["team_members"]
+                    if any(str(value).strip() for value in row.values())
+                ] or [{"Name": "", "Function / Role": "", "Date": ""}]
+                st.rerun()
