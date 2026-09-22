@@ -26,6 +26,8 @@ _COLUMNS = [
     "progress",
     "due_date",
     "effectiveness",
+    "degradation_factors",
+    "controls",
     "health",
     "criticality",
     "verification_status",
@@ -49,7 +51,12 @@ def render():
         "Barrier edits remain session drafts until you explicitly save the study."
     )
 
-    rows = [register[key] for key in sorted(register)]
+    rows = []
+    for key in sorted(register):
+        row = dict(register[key])
+        row["degradation_factors"] = "\n".join(row.get("degradation_factors") or [])
+        row["controls"] = "\n".join(row.get("controls") or [])
+        rows.append(row)
     frame = pd.DataFrame(rows, columns=_COLUMNS) if rows else pd.DataFrame(columns=_COLUMNS)
 
     with st.form("barrier_management_form", enter_to_submit=False):
@@ -76,6 +83,8 @@ def render():
                     "Effectiveness",
                     options=["", "Low", "Medium", "High"],
                 ),
+                "degradation_factors": st.column_config.TextColumn("Degradation Factors"),
+                "controls": st.column_config.TextColumn("Controls"),
                 "health": st.column_config.SelectboxColumn(
                     "Health",
                     options=["Healthy", "At Risk", "Planned"],
@@ -110,6 +119,12 @@ def render():
         record = dict(register.get(barrier_id, {}))
         record.update(row)
         record["risk_ids"] = record.get("risk_ids") or []
+        record["degradation_factors"] = [
+            item.strip() for item in str(record.get("degradation_factors") or "").splitlines() if item.strip()
+        ]
+        record["controls"] = [
+            item.strip() for item in str(record.get("controls") or "").splitlines() if item.strip()
+        ]
         record["updated_at"] = datetime.now().isoformat(timespec="seconds")
         updated[barrier_id] = record
 
