@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SURM Bowtie Editor</title>
+<style>
+:root{
+  --ink:#1d2b24;--muted:#607067;--line:#aab7b0;--panel:#f7faf8;
+  --cause:#fff5df;--cause-line:#c9972e;--prevent:#edf8f2;--prevent-line:#1d9e75;
+  --event:#c00000;--mitigate:#f1eefb;--mitigate-line:#534ab7;
+  --outcome:#fff0e9;--outcome-line:#b95a36;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Calibri,Arial,sans-serif;background:white;color:var(--ink);overflow:hidden}
+.toolbar{height:56px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #d9e2dc;background:#fff}
+.toolbar .title{font-size:17px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button{border:1px solid #b8c5bd;background:#fff;border-radius:7px;padding:7px 11px;font:inherit;color:var(--ink);cursor:pointer}
+button:hover{background:#f2f7f4}
+button.primary{background:#176b3a;color:#fff;border-color:#176b3a}
+button.danger{color:#a51d2d}
+button:disabled{opacity:.45;cursor:not-allowed}
+.layout{height:calc(100vh - 56px);display:grid;grid-template-columns:minmax(720px,1fr) 310px}
+.canvas-wrap{position:relative;overflow:hidden;background:#fbfdfc}
+canvas{width:100%;height:100%;display:block}
+.side{border-left:1px solid #d9e2dc;background:var(--panel);padding:12px;overflow:auto}
+.side h3{margin:0 0 8px;font-size:15px}
+.group{padding:10px 0;border-bottom:1px solid #dce5df}
+.group:last-child{border-bottom:0}
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+input,textarea,select{width:100%;border:1px solid #c6d1cb;border-radius:6px;padding:7px;font:inherit;background:#fff}
+textarea{min-height:72px;resize:vertical}
+.small{font-size:11px;color:var(--muted);line-height:1.4}
+.row{display:flex;gap:6px}
+.row>*{flex:1}
+.list{display:grid;gap:5px;max-height:230px;overflow:auto}
+.list button{text-align:left;font-size:11px;padding:6px 8px}
+.list button.active{outline:2px solid #74a98c;background:#edf8f2}
+.badge{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:700;background:#e5ece7}
+.status{font-size:11px;color:#176b3a;margin-top:6px;min-height:15px}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:10px;color:var(--muted)}
+.legend div{display:flex;align-items:center;gap:5px}
+.sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.15)}
+svg{width:100%;height:100%;display:block}
+.svg-bg{fill:#fbfdfc}
+.lane{fill:#fff;stroke:#d8e1db}
+.lane-title{font-size:15px;font-weight:700}
+.event{fill:var(--event);stroke:#850000;stroke-width:2}
+.node-text{font-size:13px;fill:#1c2b24;pointer-events:none}
+.event-text{font-size:16px;font-weight:700;fill:#fff;pointer-events:none}
+.barrier-text{font-size:11px;fill:#1c2b24;pointer-events:none}
+.arrow{stroke:#8a9891;stroke-width:2.2;fill:none}
+.node{cursor:grab}
+.node:active{cursor:grabbing}
+.selected{stroke:#176b3a!important;stroke-width:3!important}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <div class="title" id="title">SURM Bowtie</div>
+  <button id="auto">Auto-arrange</button>
+  <button id="addCause">+ Cause</button>
+  <button id="addPrevent">+ Preventive</button>
+  <button id="addMitigate">+ Mitigative</button>
+  <button id="addOutcome">+ Consequence</button>
+  <button id="delete" class="danger" disabled>Delete</button>
+</div>
+<div class="layout">
+  <div class="canvas-wrap"><svg id="svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <aside class="side">
+    <h3>Bowtie Structure</h3>
+    <div class="small" id="riskInfo"></div>
+    <div class="group">
+      <label>Objects</label>
+      <div class="list" id="objects"></div>
+    </div>
+    <div class="group">
+      <label>Selected object</label>
+      <div id="editor"><div class="small">Select a node to edit.</div></div>
+    </div>
+    <div class="group">
+      <label>Line relationships</label>
+      <div id="relationships"><div class="small">Select a Cause or Consequence to manage its barriers.</div></div>
+    </div>
+    <div class="group">
+      <div class="legend">
+        <div><span class="sw" style="background:var(--cause)"></span>Threat / Cause</div>
+        <div><span class="sw" style="background:var(--prevent)"></span>Preventive</div>
+        <div><span class="sw" style="background:var(--event)"></span>Top Event</div>
+        <div><span class="sw" style="background:var(--mitigate)"></span>Mitigative</div>
+        <div><span class="sw" style="background:var(--outcome)"></span>Consequence</div>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </aside>
+</div>
+<script>
+(function(){
+  let args = null;
+  let doc = null;
+  let selected = null;
+  let dirtyTimer = null;
+  let lastSentRevision = -1;
+
+  const svg = document.getElementById('svg');
+  const objectsEl = document.getElementById('objects');
+  const editorEl = document.getElementById('editor');
+  const relationshipsEl = document.getElementById('relationships');
+  const statusEl = document.getElementById('status');
+
+  function post(type, value){
+    window.parent.postMessage({isStreamlitMessage:true,type,value},'*');
+  }
+  function ready(){
+    post('streamlit:componentReady',{apiVersion:1});
+    post('streamlit:setFrameHeight',document.documentElement.scrollHeight);
+  }
+  function setStatus(text){ statusEl.textContent = text || ''; }
+
+  function esc(s){
+    return String(s ?? '').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  }
+  function itemsFor(type){
+    return type==='cause'?doc.causes:
+      type==='outcome'?doc.outcomes:
+      type==='preventativeBarrier'?doc.preventativeBarriers:doc.mitigativeBarriers;
+  }
+  function nodeFor(placement){
+    const bucket=doc.library[placement.type]||[];
+    return bucket.find(n=>n.id===placement.nodeId)||null;
+  }
+  function allPlacements(){
+    return [...doc.causes,...doc.preventativeBarriers,...doc.mitigativeBarriers,...doc.outcomes];
+  }
+  function lineForOrigin(id){
+    return doc.lines.find(l=>l.originId===id)||null;
+  }
+
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+  function emitChange(){
+    doc.editor_revision = Number(doc.editor_revision||0)+1;
+    if(dirtyTimer) clearTimeout(dirtyTimer);
+    dirtyTimer=setTimeout(()=>{
+      window.parent.postMessage({
+        isStreamlitMessage:true,
+        type:'streamlit:setComponentValue',
+        value:{document:clone(doc),revision:doc.editor_revision}
+      },'*');
+      setStatus('Draft synced to SURM session');
+    },180);
+  }
+
+  function makeId(prefix){
+    const used=new Set(allPlacements().map(x=>x.id));
+    let n=1,id;
+    do{id=prefix+'-'+n++;}while(used.has(id));
+    return id;
+  }
+  function makeNodeId(type){
+    const used=new Set((doc.library[type]||[]).map(x=>x.id));
+    const p=type==='cause'?'C':type==='outcome'?'O':type==='preventativeBarrier'?'PB':'MB';
+    let n=1,id;
+    do{id=p+'_'+n++;}while(used.has(id));
+    return id;
+  }
+  function barrierPlacement(type,nodeId,index){
+    return {
+      id:makeId(type==='preventativeBarrier'?'PREVENTIVE-PLACEMENT':'MITIGATIVE-PLACEMENT'),
+      nodeId,x:type==='preventativeBarrier'?460:930,y:150+index*115,w:54,h:96,pageId:'PAGE_1'
+    };
+  }
+
+  function addObject(type){
+    const nodeId=makeNodeId(type);
+    const name=type==='cause'?'New Threat':type==='outcome'?'New Consequence':
+      type==='preventativeBarrier'?'New Preventive Barrier':'New Mitigative Barrier';
+    const node={id:nodeId,type,name,description:'',surm_source:{type:'manual'}};
+    if(type==='preventativeBarrier'||type==='mitigativeBarrier'){
+      node.owner='';node.effectiveness='';
+    }
+    doc.library[type]=doc.library[type]||[];
+    doc.library[type].push(node);
+    const list=itemsFor(type);
+    const p=type==='cause'?
+      {id:makeId('CAUSE-PLACEMENT'),nodeId,x:120,y:160+list.length*115,w:220,h:72,pageId:'PAGE_1'}:
+      type==='outcome'?
+      {id:makeId('OUTCOME-PLACEMENT'),nodeId,x:1260,y:160+list.length*115,w:220,h:72,pageId:'PAGE_1'}:
+      barrierPlacement(type,nodeId,list.length);
+    list.push(p);
+    if(type==='cause'){
+      doc.lines.push({id:makeId('LINE-CAUSE'),originType:'cause',originId:p.id,stops:[],pageId:'PAGE_1'});
+    }
+    if(type==='outcome'){
+      doc.lines.push({id:makeId('LINE-OUTCOME'),originType:'outcome',originId:p.id,stops:[],pageId:'PAGE_1'});
+    }
+    selected={type,id:p.id};
+    emitChange();render();
+  }
+
+  function removeSelected(){
+    if(!selected) return;
+    const placement=allPlacements().find(p=>p.id===selected.id);
+    if(!placement) return;
+    const type=placement.type;
+    doc[type==='cause'?'causes':type==='outcome'?'outcomes':type==='preventativeBarrier'?'preventativeBarriers':'mitigativeBarriers']
+      = itemsFor(type).filter(p=>p.id!==placement.id);
+    const lib=doc.library[type]||[];
+    doc.library[type]=lib.filter(n=>n.id!==placement.nodeId);
+    doc.lines=doc.lines.filter(l=>l.originId!==placement.id);
+    doc.lines.forEach(l=>l.stops=(l.stops||[]).filter(id=>id!==placement.id));
+    selected=null;
+    emitChange();render();
+  }
+
+  function autoArrange(){
+    const causes=doc.causes, prev=doc.preventativeBarriers, mit=doc.mitigativeBarriers, outs=doc.outcomes;
+    causes.forEach((p,i)=>{p.x=120;p.y=150+i*125;});
+    outs.forEach((p,i)=>{p.x=1260;p.y=150+i*125;});
+    prev.forEach((p,i)=>{p.x=430+(i%3)*95;p.y=160+Math.floor(i/3)*200;});
+    mit.forEach((p,i)=>{p.x=1030+(i%3)*95;p.y=160+Math.floor(i/3)*200;});
+    emitChange();render();
+  }
+
+  function selectedObject(){
+    return selected?allPlacements().find(p=>p.id===selected.id):null;
+  }
+
+  function renderEditor(){
+    const p=selectedObject();
+    if(!p){ editorEl.innerHTML='<div class="small">Select a node to edit.</div>'; return; }
+    const n=nodeFor(p);
+    if(!n){editorEl.innerHTML='';return;}
+    editorEl.innerHTML=
+      '<label>Name</label><input id="editName" value="'+esc(n.name)+'">'+
+      '<label>Description</label><textarea id="editDesc">'+esc(n.description||'')+'</textarea>'+
+      ((p.type==='preventativeBarrier'||p.type==='mitigativeBarrier')?
+        '<label>Owner</label><input id="editOwner" value="'+esc(n.owner||'')+'">'+
+        '<label>Effectiveness</label><select id="editEff">'+
+          '<option value=""></option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>'+
+        '</select>':'');
+    const eff=document.getElementById('editEff'); if(eff) eff.value=n.effectiveness||'';
+    ['editName','editDesc','editOwner','editEff'].filter(Boolean).forEach(id=>{
+      const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{
+        n.name=document.getElementById('editName').value;
+        n.description=document.getElementById('editDesc').value;
+        const o=document.getElementById('editOwner'); if(o) n.owner=o.value;
+        const e=document.getElementById('editEff'); if(e) n.effectiveness=e.value;
+        emitChange();render();
+      });
+    });
+  }
+
+  function renderRelationships(){
+    const p=selectedObject();
+    if(!p || !['cause','outcome'].includes(p.type)){
+      relationshipsEl.innerHTML='<div class="small">Select a Cause or Consequence to manage its barriers.</div>';return;
+    }
+    const line=lineForOrigin(p.id);
+    if(!line){relationshipsEl.innerHTML='<div class="small">No line exists.</div>';return;}
+    const barrierType=p.type==='cause'?'preventativeBarrier':'mitigativeBarrier';
+    const barriers=itemsFor(barrierType);
+    const checks=barriers.map(b=>{
+      const n=nodeFor(b);
+      const checked=(line.stops||[]).includes(b.id);
+      return '<label style="display:flex;align-items:center;gap:6px;margin:5px 0;color:var(--ink)"><input type="checkbox" data-rel="'+b.id+'" '+(checked?'checked':'')+'> '+esc(n?n.name:b.nodeId)+'</label>';
+    }).join('');
+    relationshipsEl.innerHTML=checks||'<div class="small">No '+(p.type==='cause'?'preventive':'mitigative')+' barriers exist.</div>';
+    relationshipsEl.querySelectorAll('input[data-rel]').forEach(cb=>cb.addEventListener('change',()=>{
+      const id=cb.getAttribute('data-rel');
+      line.stops=line.stops||[];
+      if(cb.checked){ if(!line.stops.includes(id)) line.stops.push(id); }
+      else line.stops=line.stops.filter(x=>x!==id);
+      emitChange();render();
+    }));
+  }
+
+  function renderObjects(){
+    const groups=[['cause','Threats'],['preventativeBarrier','Preventive Barriers'],['mitigativeBarrier','Mitigative Barriers'],['outcome','Consequences']];
+    objectsEl.innerHTML=groups.map(([type,title])=>{
+      const list=itemsFor(type);
+      return '<div style="font-size:10px;color:var(--muted);margin:5px 0 3px">'+title+'</div>'+
+        (list.length?list.map(p=>{
+          const n=nodeFor(p);
+          return '<button class="'+(selected&&selected.id===p.id?'active':'')+'" data-p="'+p.id+'">'+esc(n?n.name:p.nodeId)+'</button>';
+        }).join(''):'<div class="small">None</div>');
+    }).join('');
+    objectsEl.querySelectorAll('button[data-p]').forEach(btn=>btn.addEventListener('click',()=>{
+      selected={id:btn.getAttribute('data-p')}; render();
+    }));
+  }
+
+  function textWrap(text,max=25){
+    const words=String(text||'').split(/\s+/);const out=[];let line='';
+    words.forEach(w=>{const next=line?line+' '+w:w;if(next.length>max){if(line)out.push(line);line=w;}else line=next;});
+    if(line)out.push(line);return out.slice(0,3);
+  }
+
+  function card(g,x,y,w,h,text,cls,kind,id){
+    const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x',x-w/2);r.setAttribute('y',y-h/2);r.setAttribute('width',w);r.setAttribute('height',h);
+    r.setAttribute('rx',8);r.setAttribute('class','node '+cls+(selected&&selected.id===id?' selected':''));
+    r.dataset.id=id;r.dataset.kind=kind;g.appendChild(r);
+    textWrap(text).forEach((line,i)=>{
+      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x',x);t.setAttribute('y',y+(i-(textWrap(text).length-1)/2)*16);
+      t.setAttribute('text-anchor','middle');t.setAttribute('class','node-text');t.textContent=line;g.appendChild(t);
+    });
+  }
+
+  function barrier(g,p,kind){
+    const n=nodeFor(p);const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x',p.x-p.w/2);r.setAttribute('y',p.y-p.h/2);r.setAttribute('width',p.w);r.setAttribute('height',p.h);
+    r.setAttribute('rx',5);r.setAttribute('fill',kind==='preventativeBarrier'?'#edf8f2':'#f1eefb');
+    r.setAttribute('stroke',kind==='preventativeBarrier'?'#1d9e75':'#534ab7');
+    r.setAttribute('stroke-width',selected&&selected.id===p.id?3:1.5);
+    r.classList.add('node');r.dataset.id=p.id;r.dataset.kind=kind;g.appendChild(r);
+    textWrap(n?n.name:p.nodeId,15).forEach((line,i)=>{
+      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x',p.x);t.setAttribute('y',p.y+(i-(textWrap(n?n.name:p.nodeId,15).length-1)/2)*14);
+      t.setAttribute('text-anchor','middle');t.setAttribute('class','barrier-text');t.textContent=line;g.appendChild(t);
+    });
+  }
+
+  function arrow(x1,y1,x2,y2){
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);l.setAttribute('class','arrow');
+    l.setAttribute('marker-end','url(#arrowhead)');svg.appendChild(l);
+  }
+
+  function render(){
+    if(!doc)return;
+    svg.innerHTML='';
+    const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+    defs.innerHTML='<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#8a9891"/></marker>';
+    svg.appendChild(defs);
+    const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');bg.setAttribute('x',0);bg.setAttribute('y',0);bg.setAttribute('width',1600);bg.setAttribute('height',900);bg.setAttribute('class','svg-bg');svg.appendChild(bg);
+    const lanes=[
+      [180,50,260,780,'THREATS / CAUSES','#fff5df','#d9a441'],
+      [500,50,260,780,'PREVENTIVE BARRIERS','#edf8f2','#1d9e75'],
+      [800,50,260,780,'TOP EVENT','#fff3f3','#c00000'],
+      [1100,50,260,780,'MITIGATIVE BARRIERS','#f1eefb','#534ab7'],
+      [1400,50,260,780,'CONSEQUENCES','#fff0e9','#b95a36']
+    ];
+    lanes.forEach(([x,y,w,h,title,fill,stroke])=>{
+      const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x',x-w/2);rect.setAttribute('y',y);rect.setAttribute('width',w);rect.setAttribute('height',h);
+      rect.setAttribute('rx',12);rect.setAttribute('fill',fill);rect.setAttribute('stroke',stroke);rect.setAttribute('class','lane');svg.appendChild(rect);
+      const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',x);t.setAttribute('y',88);t.setAttribute('text-anchor','middle');t.setAttribute('class','lane-title');t.setAttribute('fill',stroke);t.textContent=title;svg.appendChild(t);
+    });
+
+    const eventX=800,eventY=450;
+    arrow(315,eventY,660,eventY);arrow(940,eventY,1285,eventY);
+
+    const ev=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    ev.setAttribute('x',665);ev.setAttribute('y',385);ev.setAttribute('width',270);ev.setAttribute('height',130);ev.setAttribute('rx',12);ev.setAttribute('class','event');
+    ev.dataset.id='TLE_1';ev.dataset.kind='topLevelEvent';svg.appendChild(ev);
+    const et=document.createElementNS('http://www.w3.org/2000/svg','text');et.setAttribute('x',800);et.setAttribute('y',438);et.setAttribute('text-anchor','middle');et.setAttribute('class','event-text');et.textContent='TOP EVENT';svg.appendChild(et);
+    textWrap(doc.pages?.[0]?.topLevelEvent?.name||doc.name,26).forEach((line,i)=>{
+      const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',800);t.setAttribute('y',465+i*18);t.setAttribute('text-anchor','middle');t.setAttribute('class','event-text');t.setAttribute('font-size','14');t.textContent=line;svg.appendChild(t);
+    });
+
+    doc.causes.forEach((p)=>card(svg,p.x,p.y,p.w,p.h,nodeFor(p)?.name||p.nodeId,'cause', 'cause',p.id));
+    doc.outcomes.forEach((p)=>card(svg,p.x,p.y,p.w,p.h,nodeFor(p)?.name||p.nodeId,'outcome','outcome',p.id));
+    doc.preventativeBarriers.forEach(p=>barrier(svg,p,'preventativeBarrier'));
+    doc.mitigativeBarriers.forEach(p=>barrier(svg,p,'mitigativeBarrier'));
+
+    doc.lines.filter(l=>l.originType==='cause').forEach(l=>{
+      const o=doc.causes.find(p=>p.id===l.originId);if(!o)return;
+      const y=o.y;
+      let lastX=o.x+o.w/2;
+      (l.stops||[]).forEach(stopId=>{
+        const b=doc.preventativeBarriers.find(p=>p.id===stopId);if(!b)return;
+        arrow(lastX,y,b.x-b.w/2,y);lastX=b.x+b.w/2;
+      });
+      arrow(lastX,y,665,eventY);
+    });
+    doc.lines.filter(l=>l.originType==='outcome').forEach(l=>{
+      const o=doc.outcomes.find(p=>p.id===l.originId);if(!o)return;
+      const y=o.y;
+      let lastX=o.x-o.w/2;
+      (l.stops||[]).slice().reverse().forEach(stopId=>{
+        const b=doc.mitigativeBarriers.find(p=>p.id===stopId);if(!b)return;
+        arrow(lastX,y,b.x+b.w/2,y);lastX=b.x-b.w/2;
+      });
+      arrow(935,eventY,lastX,y);
+      arrow(lastX,y,o.x-o.w/2,y);
+    });
+
+    svg.querySelectorAll('.node').forEach(el=>{
+      el.addEventListener('click',e=>{e.stopPropagation();selected={id:el.dataset.id};render();});
+      let dragging=false,startX=0,startY=0,origX=0,origY=0;
+      el.addEventListener('pointerdown',e=>{
+        const p=allPlacements().find(x=>x.id===el.dataset.id);if(!p)return;
+        dragging=true;selected={id:p.id};startX=e.clientX;startY=e.clientY;origX=p.x;origY=p.y;el.setPointerCapture(e.pointerId);
+      });
+      el.addEventListener('pointermove',e=>{
+        if(!dragging)return;
+        const rect=svg.getBoundingClientRect();
+        const dx=(e.clientX-startX)*(1600/rect.width),dy=(e.clientY-startY)*(900/rect.height);
+        const p=allPlacements().find(x=>x.id===el.dataset.id);if(!p)return;
+        p.x=origX+dx;p.y=origY+dy;render();
+      });
+      el.addEventListener('pointerup',()=>{if(dragging){dragging=false;emitChange();}});
+    });
+
+    document.getElementById('title').textContent=doc.name||'SURM Bowtie';
+    document.getElementById('riskInfo').innerHTML='<span class="badge">'+esc(doc.risk_id||'')+'</span> '+esc(doc.name||'');
+    document.getElementById('delete').disabled=!selected;
+    renderObjects();renderEditor();renderRelationships();
+  }
+
+  window.addEventListener('message',event=>{
+    const data=event.data||{};
+    if(!data.isStreamlitMessage)return;
+    if(data.type==='streamlit:render'){
+      args=data.args||{};
+      const incoming=args.document;
+      if(incoming) {
+        if(!doc || Number(incoming.editor_revision||0)>=Number(doc.editor_revision||0)){
+          doc=clone(incoming);
+          if(!doc.library){doc.library={cause:[],outcome:[],preventativeBarrier:[],mitigativeBarrier:[]};}
+          render();
+        }
+      }
+      setTimeout(ready,0);
+    }
+  });
+
+  document.getElementById('auto').onclick=autoArrange;
+  document.getElementById('addCause').onclick=()=>addObject('cause');
+  document.getElementById('addPrevent').onclick=()=>addObject('preventativeBarrier');
+  document.getElementById('addMitigate').onclick=()=>addObject('mitigativeBarrier');
+  document.getElementById('addOutcome').onclick=()=>addObject('outcome');
+  document.getElementById('delete').onclick=removeSelected;
+
+  // First ready handshake. Streamlit will immediately follow with renderData.
+  ready();
+})();
+</script>
+</body>
+</html>
