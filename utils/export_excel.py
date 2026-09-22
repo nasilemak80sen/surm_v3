@@ -180,6 +180,33 @@ def build_excel_export() -> bytes:
     rr_df = pd.DataFrame(study.get("risk_register", []))
     _write_df_to_sheet(ws9, rr_df, "Risk Register")
 
+    # ── Sheet: Bowtie Register ────────────────────────────────────────
+    ws9b = wb.create_sheet("7b. Bowtie Register")
+    bowtie_rows = []
+    risks_by_id = {
+        str(row.get("risk_id", "")): row
+        for row in study.get("risk_register", [])
+        if isinstance(row, dict)
+    }
+    for risk_id, diagram in study.get("bowtie_register", {}).items():
+        risk_row = risks_by_id.get(str(risk_id), {})
+        bowtie_rows.append({
+            "Risk ID": risk_id,
+            "Risk": risk_row.get("Risk", diagram.get("name", "")),
+            "Top Event": diagram.get("pages", [{}])[0].get("topLevelEvent", {}).get("name", ""),
+            "Causes": len(diagram.get("causes", [])),
+            "Preventive Barriers": len(diagram.get("preventativeBarriers", [])),
+            "Mitigative Barriers": len(diagram.get("mitigativeBarriers", [])),
+            "Consequences": len(diagram.get("outcomes", [])),
+            "Editor Revision": diagram.get("editor_revision", 0),
+            "Needs Refresh": "Y" if diagram.get("needs_refresh") else "",
+        })
+    _write_df_to_sheet(
+        ws9b,
+        pd.DataFrame(bowtie_rows) if bowtie_rows else pd.DataFrame(),
+        "Registered Bowtie Diagrams",
+    )
+
     # ── Sheet: PRA Output ─────────────────────────────────────────────
     ws10 = wb.create_sheet("PRA Output")
     pra_df = pd.DataFrame(study.get("pra_output", []))
