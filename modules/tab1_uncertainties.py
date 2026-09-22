@@ -6,7 +6,8 @@ from uuid import uuid4
 
 import streamlit as st
 
-from utils.form_ui import render_form_header, render_stage_status
+from utils.form_ui import render_form_header, render_save_hint, render_stage_status
+from utils.persistence import save_session
 from utils.workflow import mark_stage_changed
 
 
@@ -69,6 +70,11 @@ def render():
             value="Select at least one uncertainty to unlock the next stage.",
             tone="warning",
         )
+
+    render_save_hint(
+        "Selections and custom uncertainties are held as a session draft. "
+        "Use Save uncertainty selection to persist the current draft to the saved study."
+    )
 
     st.markdown(
         '<div class="surm-section-header">📌 Selection Summary</div>',
@@ -275,7 +281,7 @@ def render():
         "one associated risk so the risk register can trace them later."
     )
 
-    with st.form("custom_unc_form", clear_on_submit=True):
+    with st.form("custom_unc_form", clear_on_submit=True, enter_to_submit=False):
         discipline_col, name_col, risk_col = st.columns([2, 4, 2])
 
         with discipline_col:
@@ -316,30 +322,55 @@ def render():
                 "can flow into the Risk Register."
             )
         else:
-            new_numeric_id = max(
-                (
-                    int(item.get("id", 0))
-                    for item in st.session_state["uncertainties"]
-                    if str(item.get("id", "")).isdigit()
-                ),
-                default=0,
-            ) + 1
+            proposed_name = custom_name.strip()
+            existing_names = {
+                str(item.get("name", "") or "").strip().casefold()
+                for item in st.session_state["uncertainties"]
+                if isinstance(item, dict) and str(item.get("name", "") or "").strip()
+            }
+            if proposed_name.casefold() in existing_names:
+                st.warning(
+                    f"The uncertainty **{proposed_name}** already exists. "
+                    "Use the existing row instead of creating a duplicate."
+                )
+            else:
+                new_numeric_id = max(
+                    (
+                        int(item.get("id", 0))
+                        for item in st.session_state["uncertainties"]
+                        if str(item.get("id", "")).isdigit()
+                    ),
+                    default=0,
+                ) + 1
 
-            st.session_state["uncertainties"].append({
-                "id": new_numeric_id,
-                "uncertainty_id": f"UNC-CUSTOM-{uuid4().hex[:8].upper()}",
-                "discipline": custom_discipline,
-                "name": custom_name.strip(),
-                "selected": True,
-                "custom": True,
-                "risks": custom_risks,
-            })
+                st.session_state["uncertainties"].append({
+                    "id": new_numeric_id,
+                    "uncertainty_id": f"UNC-CUSTOM-{uuid4().hex[:8].upper()}",
+                    "discipline": custom_discipline,
+                    "name": proposed_name,
+                    "selected": True,
+                    "custom": True,
+                    "risks": custom_risks,
+                })
 
-            mark_stage_changed(st.session_state, "uncertainties")
-            st.success(
-                f"✅ Added: **{custom_name.strip()}**"
-            )
-            st.rerun()
+                mark_stage_changed(st.session_state, "uncertainties")
+                st.success(
+                    f"✅ Added: **{proposed_name}** to the session draft. "
+                    "Save the stage to persist it."
+                )
+                st.rerun()
+
+    save_col, _, _ = st.columns([1.6, 0.5, 5])
+    with save_col:
+        if st.button("Save uncertainty selection", type="primary", key="save_uncertainties"):
+            if not st.session_state.get("project_name", "").strip():
+                st.warning(
+                    "Enter a Project Name on Overview before saving the uncertainty selection."
+                )
+            elif save_session(auto=False):
+                st.success("✅ Uncertainty selection saved.")
+            else:
+                st.error("Uncertainty selection could not be saved.")
 
     if selected_count >= 1:
         st.success(
