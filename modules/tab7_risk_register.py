@@ -6,6 +6,11 @@ import pandas as pd
 import streamlit as st
 
 from utils.form_ui import render_form_header, render_save_hint, render_stage_status
+from components.bowtie_editor import render as render_bowtie_editor
+from utils.bowtie_adapter import (
+    ensure_bowtie_register,
+    refresh_bowtie_document,
+)
 from utils.logic import (
     build_pra_output,
     build_risk_register,
@@ -110,6 +115,13 @@ def render():
         previous = st.session_state.get("risk_register", [])
         updated = risk_df.to_dict("records")
         st.session_state["risk_register"] = updated
+        st.session_state["bowtie_register"] = ensure_bowtie_register(
+            updated,
+            current=st.session_state.get("bowtie_register", {}),
+            uncertainties=st.session_state.get("uncertainties", []),
+            resolution_list=st.session_state.get("resolution_list", {}),
+            resolution_planner=st.session_state.get("resolution_planner", []),
+        )
         if previous != updated:
             mark_stage_changed(st.session_state, "risk_register")
         st.info("Risk register draft populated. Review it, then click **Save risk register** to persist.")
@@ -178,6 +190,13 @@ def render():
         )
         saved_rows = edited.to_dict("records")
         st.session_state["risk_register"] = saved_rows
+        st.session_state["bowtie_register"] = ensure_bowtie_register(
+            saved_rows,
+            current=st.session_state.get("bowtie_register", {}),
+            uncertainties=st.session_state.get("uncertainties", []),
+            resolution_list=st.session_state.get("resolution_list", {}),
+            resolution_planner=st.session_state.get("resolution_planner", []),
+        )
         mark_stage_changed(st.session_state, "risk_register")
         st.session_state["pra_output"] = (
             build_pra_output(edited).to_dict("records")
@@ -213,71 +232,104 @@ def render():
     )
 
     # ------------------------------------------------------------------
-    # Bowtie: full-width reporting section with a deliberately larger figure.
+    # Bowtie authoring: one persistent document per risk_id.
     # ------------------------------------------------------------------
-    st.markdown('<div class="surm-section-header">Bowtie Analysis</div>', unsafe_allow_html=True)
-    risk_names = [str(name) for name in risk_df["Risk"].tolist()]
-    selected_risk = st.selectbox(
-        "Risk event",
-        risk_names,
+    st.markdown(
+        '<div class="surm-section-header">Bowtie Analysis</div>',
+        unsafe_allow_html=True,
+    )
+    risk_options = [
+        f'{row.get("risk_id", "")} — {row.get("Risk", "Risk")}'
+        for row in risk_data
+    ]
+    selected_label = st.selectbox(
+        "Risk",
+        risk_options,
         key="bowtie_risk_selection",
-        help="Choose an assessed risk to generate its threat → event → consequence view.",
     )
-    generate = st.button(
-        "Generate Bowtie",
-        type="primary",
-        key="generate_bowtie",
-        use_container_width=True,
-    )
+    selected_index = risk_options.index(selected_label)
+    selected_record = risk_data[selected_index]
+    selected_risk_id = str(selected_record.get("risk_id", "")).strip()
 
-    if generate:
-        risk_row = risk_df[risk_df["Risk"] == selected_risk]
-        if risk_row.empty:
-            st.warning("The selected risk is no longer available.")
+    registry = st.session_state.get("bowtie_register", {})
+    document = registry.get(selected_risk_id)
+
+    if document is None:
+        document = refresh_bowtie_document(
+            selected_record,
+            uncertainties=st.session_state.get("uncertainties", []),
+            resolution_list=st.session_state.get("resolution_list", {}),
+            resolution_planner=st.session_state.get("resolution_planner", []),
+        )
+        registry[selected_risk_id] = document
+        st.session_state["bowtie_register"] = registry
+
+    if document.get("needs_refresh"):
+        st.warning(
+            "The upstream Risk Register changed after this Bowtie was created. "
+            "Review the existing diagram or refresh it from the current risk data."
+        )
+
+    action_cols = st.columns([1.4, 1.4, 1.4, 2.8])
+    with action_cols[0]:
+        refresh_clicked = st.button(
+            "Refresh from Risk",
+            key="refresh_selected_bowtie",
+            use_container_width=True,
+        )
+    with action_cols[1]:
+        save_bowtie = st.button(
+            "Save Bowtie",
+            type="primary",
+            key="save_selected_bowtie",
+            use_container_width=True,
+        )
+    with action_cols[2]:
+        json_payload = pd.io.json.dumps(document, indent=2)
+        st.download_button(
+            "Download JSON",
+            data=json_payload,
+            file_name=f"SURM_{selected_risk_id}_Bowtie.json",
+            mime="application/json",
+            use_container_width=True,
+            key="download_selected_bowtie_json",
+        )
+    with action_cols[3]:
+        st.caption(
+            "Bowtie edits are session drafts. Saving the study persists the diagram "
+            "with this risk without changing SURM risk scoring."
+        )
+
+    if refresh_clicked:
+        registry[selected_risk_id] = refresh_bowtie_document(
+            selected_record,
+            uncertainties=st.session_state.get("uncertainties", []),
+            resolution_list=st.session_state.get("resolution_list", {}),
+            resolution_planner=st.session_state.get("resolution_planner", []),
+        )
+        st.session_state["bowtie_register"] = registry
+        st.rerun()
+
+    changed_document = render_bowtie_editor(
+        registry[selected_risk_id],
+        key=f"surm_bowtie_{selected_risk_id}_{st.session_state.get('study_id', 'new')}",
+        height=760,
+    )
+    if isinstance(changed_document, dict) and isinstance(changed_document.get("document"), dict):
+        incoming = changed_document["document"]
+        if int(incoming.get("editor_revision", 0)) >= int(
+            registry[selected_risk_id].get("editor_revision", 0)
+        ):
+            registry[selected_risk_id] = incoming
+            st.session_state["bowtie_register"] = registry
+
+    if save_bowtie:
+        if not st.session_state.get("project_name", "").strip():
+            st.warning("Enter a Project Name on Overview before saving the Bowtie.")
         else:
-            record = risk_row.iloc[0].to_dict()
-            if not is_risk_assessed(record):
-                st.warning("Assess likelihood and impact before generating the Bowtie.")
+            ok = save_session(auto=False)
+            if ok:
+                st.success(f"Bowtie for {selected_risk_id} saved with the study.")
             else:
-                from utils.charts import build_bowtie
-                from utils.export_png import fig_to_png_bytes
+                st.error("Bowtie could not be saved.")
 
-                figure = build_bowtie(record)
-                st.plotly_chart(
-                    figure,
-                    use_container_width=True,
-                    config={"displayModeBar": False, "responsive": True},
-                )
-                st.markdown(
-                    '<div class="surm-section-header">Bowtie Detail</div>',
-                    unsafe_allow_html=True,
-                )
-                detail_rows = []
-                for category, field in [
-                    ("Threats / Causes", "Uncertainty/Causes"),
-                    ("Preventive Barriers", "Resolution Plan"),
-                    ("Mitigative Barriers", "Contingency Plan"),
-                    ("Consequences", "Impact/Consequence"),
-                ]:
-                    value = str(record.get(field, "") or "").strip()
-                    if value:
-                        detail_rows.append({"Element": category, "Details": value})
-                if detail_rows:
-                    st.dataframe(
-                        pd.DataFrame(detail_rows),
-                        hide_index=True,
-                        use_container_width=True,
-                        height=min(260, max(110, len(detail_rows) * 62 + 40)),
-                    )
-                try:
-                    safe = selected_risk.replace("/", "_").replace(" ", "_")[:40]
-                    st.download_button(
-                        "Download Bowtie (PNG)",
-                        data=fig_to_png_bytes(figure, width=1800, height=900),
-                        file_name=f"SURM_Bowtie_{safe}.png",
-                        mime="image/png",
-                        use_container_width=True,
-                        key="bowtie_download",
-                    )
-                except Exception:
-                    st.caption("Install kaleido for PNG export.")
