@@ -128,8 +128,6 @@ def test_impact_assessment_renders_explicit_save_transaction():
         from utils.session import init_session
         importlib.reload(page)
 
-        page.render_bowtie_editor = lambda *args, **kwargs: None
-
         init_session()
         st.session_state["project_name"] = "Interaction Test"
         st.session_state["uncertainties"][0]["selected"] = True
@@ -318,6 +316,8 @@ def test_risk_register_form_is_explicit_save_transaction():
         from modules import tab7_risk_register as page
         from utils.session import init_session
         importlib.reload(page)
+
+        page.render_bowtie_editor = lambda *args, **kwargs: None
 
         init_session()
         st.session_state["project_name"] = "Interaction Test"
