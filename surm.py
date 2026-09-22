@@ -226,6 +226,11 @@ def _delete_selected_session(project_name: str, field_name: str) -> None:
     """Streamlit callback for deleting a saved study."""
     from utils.persistence import delete_session
 
+    allowed, reason = can_delete_study()
+    if not allowed:
+        st.error(reason)
+        return
+
     if delete_session(project_name, field_name):
         if (
             st.session_state.get("project_name", "").strip() == project_name
