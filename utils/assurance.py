@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from utils.auth import can_edit_study, role_is_granted
 from utils.intelligence import build_bowtie_qa
 from utils.workflow import stage_results
 
@@ -30,6 +31,7 @@ def approval_readiness(session: dict[str, Any]) -> tuple[bool, list[str]]:
         reasons.append("All core workflow stages must be complete.")
     if not signoff_complete(session):
         reasons.append("All governance sign-offs must be completed.")
+
     risks = [
         row for row in session.get("risk_register", [])
         if isinstance(row, dict) and str(row.get("risk_id", "")).strip()
@@ -41,7 +43,9 @@ def approval_readiness(session: dict[str, Any]) -> tuple[bool, list[str]]:
         if str(row.get("risk_id", "")).strip() not in bowties
     ]
     if missing_bowties:
-        reasons.append(f"Create Bowtie documents for {len(missing_bowties)} assessed risk(s).")
+        reasons.append(
+            f"Create Bowtie documents for {len(missing_bowties)} assessed risk(s)."
+        )
 
     qa = build_bowtie_qa(session)
     if qa:
@@ -66,11 +70,23 @@ def validate_transition(
     if LIFECYCLE_ORDER.index(target) < LIFECYCLE_ORDER.index(current):
         errors.append("Lifecycle cannot move backward.")
 
-    if target == "In Review" and not all(stage.complete for stage in stage_results(session)):
+    editable, edit_reason = can_edit_study(session)
+    if not editable:
+        errors.append(edit_reason)
+
+    identity_ok, identity_reason = role_is_granted(session)
+    if not identity_ok:
+        errors.append(identity_reason)
+
+    if target == "In Review" and not all(
+        stage.complete for stage in stage_results(session)
+    ):
         errors.append("Complete the core workflow before entering review.")
 
     if target == "Reviewed" and ROLE_RANK.get(role, 0) < ROLE_RANK["Reviewer"]:
-        errors.append("Reviewer or Approver study role is required to record Reviewed.")
+        errors.append(
+            "Reviewer or Approver study role is required to record Reviewed."
+        )
 
     if target == "Approved":
         if role != "Approver":
@@ -86,11 +102,12 @@ def validate_transition(
 
 
 def study_is_editable(session: dict[str, Any]) -> bool:
-    """Return whether the current governance mode should allow edits."""
+    """Return whether governance and deployment identity allow edits."""
     if str(session.get("study_access_mode", "edit")) != "edit":
         return False
     if str(session.get("study_role", "Author")) == "Viewer":
         return False
     if str(session.get("study_lifecycle", "Draft")) == "Archived":
         return False
-    return True
+    allowed, _ = can_edit_study(session)
+    return allowed
