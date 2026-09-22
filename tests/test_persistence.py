@@ -119,11 +119,6 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(summaries[0]["last_edited_by"], "Engineer A")
         self.assertEqual(summaries[0]["last_edited_at"], "2026-09-01T12:30:00")
 
-
-if __name__ == "__main__":
-    unittest.main()
-
-
     def test_sqlite_version_and_record_queries_support_history_and_portfolio(self):
         with tempfile.TemporaryDirectory() as directory:
             database = SQLiteDB()
@@ -152,7 +147,6 @@ if __name__ == "__main__":
         self.assertEqual(revision["session"]["study_revision"], 2)
         self.assertEqual(records[0]["session"]["project_name"], "Alpha")
 
-
     def test_delete_removes_current_study_and_its_revision_history(self):
         with tempfile.TemporaryDirectory() as directory:
             database = SQLiteDB()
@@ -160,8 +154,17 @@ if __name__ == "__main__":
             database.init()
             record = {
                 "session": {"project_name": "Alpha", "field_name": "Beta", "study_revision": 1},
-                "meta": {"project_phase": "PGR1", "completion": 20, "auto_saved": False, "saved_at": "2026-09-22T12:00:00"},
+                "meta": {
+                    "project_phase": "PGR1",
+                    "completion": 20,
+                    "auto_saved": False,
+                    "saved_at": "2026-09-22T12:00:00",
+                },
             }
             self.assertTrue(database.save_bundle("Alpha", "Beta", 1, record))
             self.assertTrue(database.delete("Alpha", "Beta"))
             self.assertEqual(database.list_versions("Alpha", "Beta"), [])
+
+
+if __name__ == "__main__":
+    unittest.main()
