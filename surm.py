@@ -265,6 +265,10 @@ def _render_read_only_page(page_name: str) -> None:
 
 
 def _enable_edit_mode() -> None:
+    allowed, reason = can_edit_study(dict(st.session_state))
+    if not allowed:
+        st.error(reason)
+        return
     st.session_state["study_access_mode"] = "edit"
     st.rerun()
 
