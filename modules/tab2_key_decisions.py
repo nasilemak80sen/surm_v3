@@ -189,28 +189,28 @@ def render():
             return
 
         before_records = st.session_state.get("key_decisions", [])
-        before_signature = tuple(
+        before_dependency_signature = tuple(
             (
                 str(row.get("decision_id", "")),
                 str(row.get("Key Decision", "")).strip(),
                 _weight_value(row.get("Weight (1-3)", 0)),
-                str(row.get("Description", "") or "").strip(),
             )
             for row in before_records
             if isinstance(row, dict)
         )
-        after_signature = tuple(
+        after_dependency_signature = tuple(
             (
                 str(row.get("decision_id", "")),
                 str(row.get("Key Decision", "")).strip(),
                 _weight_value(row.get("Weight (1-3)", 0)),
-                str(row.get("Description", "") or "").strip(),
             )
             for row in updated_records
         )
 
         st.session_state["key_decisions"] = updated_records
-        if before_signature != after_signature:
+        if before_dependency_signature != after_dependency_signature:
+            # Decision description is governance metadata; changing it does not
+            # alter the impact matrix or its downstream calculations.
             mark_stage_changed(st.session_state, "key_decisions")
 
         if save_clicked:
