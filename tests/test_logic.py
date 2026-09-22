@@ -83,3 +83,10 @@ def test_new_impact_rows_do_not_invent_a_degree_rating():
     table = build_impact_table()
 
     assert table.loc[0, "Degree of Uncertainty"] == ""
+
+
+def test_invalid_risk_dimensions_are_not_treated_as_assessed():
+    assert is_risk_assessed({
+        "Likelihood (H/M/L)": "unexpected",
+        "Impact (H/M/L)": "H",
+    }) is False
