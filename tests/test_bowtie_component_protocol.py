@@ -32,3 +32,10 @@ def test_bowtie_frontend_normalizes_saved_placements_and_uses_fixed_viewport():
     assert "value.outcomes.forEach(p=>p.type='outcome')" in source
     assert "post('streamlit:setFrameHeight',{height:Number(height)||760})" in source
     assert "setTimeout(()=>ready(args.height),0)" in source
+
+
+def test_bowtie_frontend_accepts_streamlit_render_without_inbound_marker():
+    source = FRONTEND.read_text(encoding="utf-8")
+
+    assert "if(data.type!=='streamlit:render')return;" in source
+    assert "if(!data.isStreamlitMessage)return;" not in source
