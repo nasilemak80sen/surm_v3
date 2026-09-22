@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from utils.form_ui import render_form_header, render_stage_status
+from utils.form_ui import render_form_header, render_save_hint, render_stage_status
 from utils.logic import compute_key_uncertainties
 from utils.persistence import save_session
 from utils.workflow import mark_stage_changed
@@ -64,14 +64,18 @@ def render():
     with left:
         st.markdown("**Prioritisation matrix**")
         st.caption("Calculated fields are locked. Edit only the two planning checkboxes.")
-        with st.form("ku_form"):
+        render_save_hint(
+            "Include/Resolved changes are a session draft until you click Save selection. "
+            "Bulk Include/Exclude applies a draft change without persisting the saved study."
+        )
+        with st.form("ku_form", enter_to_submit=False):
             button_cols = st.columns([1, 1, 2.2])
             with button_cols[0]:
-                include_all = st.form_submit_button("Include all")
+                include_all = st.form_submit_button("Include all", key="ku_include_all")
             with button_cols[1]:
-                exclude_all = st.form_submit_button("Exclude all")
+                exclude_all = st.form_submit_button("Exclude all", key="ku_exclude_all")
             with button_cols[2]:
-                apply_selection = st.form_submit_button("Save selection", type="primary")
+                apply_selection = st.form_submit_button("Save selection", key="save_key_uncertainties", type="primary")
 
             edited = st.data_editor(
                 key_uncertainties[
@@ -113,12 +117,36 @@ def render():
             elif exclude_all:
                 full["Include in Plan"] = False
 
-            st.session_state["key_uncertainties"] = full.to_dict("records")
-            mark_stage_changed(st.session_state, "key_uncertainties")
-            ok = save_session(auto=not apply_selection)
-            if not ok:
-                st.error("Key uncertainty selection could not be saved.")
-                return
+            previous_rows = st.session_state.get("key_uncertainties", [])
+            previous_include = {
+                str(row.get("Uncertainty", "")).strip(): bool(row.get("Include in Plan"))
+                for row in previous_rows
+                if isinstance(row, dict)
+            }
+            next_rows = full.to_dict("records")
+            next_include = {
+                str(row.get("Uncertainty", "")).strip(): bool(row.get("Include in Plan"))
+                for row in next_rows
+            }
+
+            st.session_state["key_uncertainties"] = next_rows
+
+            # Resolution Achieved is tracking metadata. It does not invalidate
+            # the resolution matrix or later risk/PRA work.
+            if previous_include != next_include:
+                mark_stage_changed(st.session_state, "key_uncertainties")
+
+            if apply_selection:
+                if not st.session_state.get("project_name", "").strip():
+                    st.warning("Enter a Project Name on Overview before saving the key uncertainty selection.")
+                    return
+                ok = save_session(auto=False)
+                if not ok:
+                    st.error("Key uncertainty selection could not be saved.")
+                    return
+                st.success("✅ Key uncertainty selection saved.")
+            else:
+                st.info("Draft updated. Click **Save selection** to persist the key uncertainty selection.")
             st.rerun()
 
     saved = st.session_state.get("key_uncertainties", [])
