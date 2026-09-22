@@ -110,7 +110,7 @@ def render():
                         "Remarks": st.column_config.TextColumn("Remarks", width="large"),
                     },
                     hide_index=True,
-                    width="stretch",
+                use_container_width=True,
                     num_rows="fixed",
                     key=f"rr_editor_{st.session_state.get('study_id', 'new')}",
                 )
@@ -187,7 +187,7 @@ def render():
                         from utils.charts import build_bowtie
                         from utils.export_png import fig_to_png_bytes
                         figure = build_bowtie(record)
-                        st.plotly_chart(figure, width="stretch", config={"displayModeBar": False})
+                        st.plotly_chart(figure, use_container_width=True, config={"displayModeBar": False})
                         try:
                             safe = selected_risk.replace("/", "_").replace(" ", "_")[:40]
                             st.download_button(
