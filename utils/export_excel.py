@@ -100,20 +100,22 @@ def build_excel_export() -> bytes:
     ws.row_dimensions[1].height = 36
 
     fields = [
-        ("Project Name",  study.get("project_name",  "")),
-        ("Field Name",    ss.get("field_name",    "")),
-        ("Project Phase", ss.get("project_phase", "")),
+        ("Study ID",      study.get("study_id", "")),
+        ("Project Name",  study.get("project_name", "")),
+        ("Field Name",    study.get("field_name", "")),
+        ("Project Phase", study.get("project_phase", "")),
+        ("Methodology",   study.get("methodology_version", "")),
+        ("Lifecycle",     study.get("study_lifecycle", "Draft")),
+        ("Revision",      study.get("study_revision", 0)),
     ]
     for i, (label, val) in enumerate(fields, 3):
         ws.cell(row=i, column=1, value=label).font = Font(name="Calibri", bold=True, size=11)
         ws.cell(row=i, column=2, value=val).font   = Font(name="Calibri", size=11)
 
-    ws["B2"].value = study.get("methodology_version", "")
-
     # Sign-off block
     signoff_headers = ["Role", "Name", "Date"]
     signoff_data    = [
-        ["Prepared By",      ss.get("prep_name", ""),      ss.get("prep_date", "")],
+        ["Prepared By",      study.get("prep_name", ""),      ss.get("prep_date", "")],
         ["Reviewed By (G&G)", ss.get("rev_gg_name", ""),    ss.get("rev_gg_date", "")],
         ["Reviewed By (RE)",  ss.get("rev_re_name", ""),    ss.get("rev_re_date", "")],
         ["Reviewed By (PP)",  ss.get("rev_pp_name", ""),    ss.get("rev_pp_date", "")],
