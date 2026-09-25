@@ -7,7 +7,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
-from utils.form_ui import render_save_hint
+from utils.form_ui import render_form_header, render_save_hint
 from utils.intelligence import (
     apply_barrier_register_to_bowties,
     sync_barrier_register,
@@ -42,10 +42,11 @@ def render():
         return
 
     register = sync_barrier_register(st.session_state)
-    st.markdown("## 🛡️ Barrier Management")
-    st.caption(
-        "Administrative health and ownership of Bowtie barriers. This does not "
-        "replace engineering verification or alter SURM risk scoring."
+    render_form_header(
+        "STUDY GOVERNANCE",
+        "Barrier Management",
+        "Manage owners, status, verification and administrative health for Bowtie barriers. "
+        "This does not replace engineering verification or alter SURM risk scoring.",
     )
     render_save_hint(
         "Barrier edits remain session drafts until you explicitly save the study."

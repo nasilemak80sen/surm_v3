@@ -1198,9 +1198,8 @@ section[data-testid="stSidebar"] hr {
 
 
 .stButton > button:hover {
-    font-size: 1.35rem;
-
-    font-weight: 750;
+    transform: translateY(-1px);
+    box-shadow: var(--surm-shadow-sm);
 }
 
 
@@ -2140,4 +2139,236 @@ section[data-testid="stSidebar"] .stButton > button {
     .surm-flow-figure { align-items: stretch; }
     .surm-guide-grid { grid-template-columns: 1fr; }
     .surm-form-header { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
+}
+
+
+/* ==========================================================================
+   SURM UX 1.0 — hierarchy, navigation clarity and progressive disclosure
+   ========================================================================== */
+
+.block-container {
+    max-width: 1380px;
+    padding-top: 1.15rem;
+    padding-bottom: 2.75rem;
+}
+
+.surm-sidebar-study-card {
+    margin: 0.8rem 0 0.7rem;
+    padding: 0.85rem 0.9rem;
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+}
+
+.surm-sidebar-study-kicker {
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+}
+
+.surm-sidebar-study-title {
+    margin-top: 0.18rem;
+    color: #FFFFFF;
+    font-size: 0.86rem;
+    font-weight: 750;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.surm-sidebar-study-meta {
+    margin-top: 0.18rem;
+    color: rgba(255, 255, 255, 0.70);
+    font-size: 0.68rem;
+    overflow-wrap: anywhere;
+}
+
+.surm-sidebar-study-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.55rem;
+}
+
+.surm-sidebar-study-chips span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 0.84);
+    font-size: 0.58rem;
+    line-height: 1;
+}
+
+.surm-sidebar-nav-label {
+    margin: 0.9rem 0 0.35rem;
+    color: rgba(255, 255, 255, 0.60);
+    font-size: 0.61rem;
+    font-weight: 800;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+}
+
+.surm-sidebar-nav-group-title {
+    margin: 0.65rem 0 0.3rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+section[data-testid="stSidebar"] .stButton > button {
+    min-height: 2.15rem !important;
+    margin: 0.08rem 0 !important;
+    padding: 0.35rem 0.55rem !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 8px !important;
+    color: rgba(255, 255, 255, 0.83) !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(255, 255, 255, 0.09) !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    color: #FFFFFF !important;
+    transform: none !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:disabled {
+    background: transparent !important;
+    color: rgba(255, 255, 255, 0.35) !important;
+    border-color: transparent !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {
+    background: #FFFFFF !important;
+    border-color: #FFFFFF !important;
+    color: var(--surm-primary-dark) !important;
+    font-weight: 750 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
+    background: #F3F8F5 !important;
+    border-color: #F3F8F5 !important;
+    color: var(--surm-primary-dark) !important;
+}
+
+.surm-sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.15rem;
+    margin: 0.08rem 0;
+    padding: 0.35rem 0.55rem;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.surm-sidebar-nav-current {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: inset 3px 0 0 #FFFFFF;
+}
+
+.surm-sidebar-nav-indicator {
+    width: 1rem;
+    flex: 0 0 1rem;
+    text-align: center;
+    font-size: 0.58rem;
+    color: #FFFFFF;
+}
+
+.surm-sidebar-nav-current .surm-sidebar-nav-indicator {
+    color: #DDF3E5;
+}
+
+.surm-sidebar-nav-label {
+    min-width: 0;
+}
+
+.surm-sidebar-divider {
+    height: 1px;
+    margin: 0.9rem 0 0.65rem;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+    margin: 0.25rem 0 0.55rem;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.surm-overview-section-label,
+.surm-panel-kicker {
+    color: var(--surm-primary);
+    font-size: 0.61rem;
+    font-weight: 800;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+}
+
+.surm-overview-section-label {
+    margin: 0.8rem 0 0.45rem;
+}
+
+.surm-panel-kicker {
+    margin-bottom: 0.45rem;
+}
+
+.overview-cover {
+    margin-bottom: 0.9rem;
+    padding: 1rem 1.1rem;
+}
+
+.overview-cover-title {
+    font-size: clamp(1.35rem, 2.3vw, 1.9rem);
+}
+
+.overview-cover-meta {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.surm-header {
+    margin-bottom: 0.8rem;
+}
+
+.surm-form-header {
+    margin-bottom: 0.65rem;
+}
+
+.surm-stage-status {
+    margin-bottom: 0.45rem;
+}
+
+/* Avoid decorative hover motion inside dense working surfaces. */
+.surm-card:hover {
+    transform: none;
+}
+
+@media (max-width: 900px) {
+    .block-container {
+        max-width: 100%;
+        padding-top: 0.75rem;
+        padding-bottom: 2rem;
+    }
+
+    .surm-sidebar-study-card {
+        margin-top: 0.55rem;
+    }
 }

@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from datetime import date
+import html
 import streamlit as st
 
 from utils.analytics import build_study_analytics, validation_warnings
 from utils.form_ui import render_save_hint
-from utils.export_excel import build_excel_export
-from utils.persistence import delete_session, list_sessions, load_session_record, save_session
-from utils.session import create_new_study
+from utils.persistence import save_session
 from utils.study_export import snapshot_csv, snapshot_json
 from utils.workflow import current_stage, stage_results
 
@@ -82,46 +81,110 @@ def _signoff_row(label: str, key: str) -> None:
 
 
 def render():
+    """Render the study dashboard with a clear setup → progress → governance hierarchy."""
     ss = st.session_state
     stages = stage_results(ss)
     progress = round(sum(stage.complete for stage in stages) / len(stages) * 100) if stages else 0
     next_stage = current_stage(ss)
     analytics = build_study_analytics(dict(ss))
-
-    for warning in validation_warnings(dict(ss))[:2]:
-        st.warning(warning["message"])
+    warnings = validation_warnings(dict(ss))
 
     project = ss.get("project_name") or "Untitled Study"
     field = ss.get("field_name") or "Field not configured"
     phase = ss.get("project_phase") or "Phase not configured"
     lifecycle = ss.get("study_lifecycle", "Draft")
 
+    # ------------------------------------------------------------------
+    # 1. Identity banner
+    # ------------------------------------------------------------------
     st.markdown(
         f"""
         <div class="overview-cover">
-            <div class="overview-cover-kicker">SURM STUDY REPORT</div>
-            <div class="overview-cover-title">{project}</div>
-            <div class="overview-cover-meta">{field} · {phase} · Revision {ss.get("study_revision", 0)} · {lifecycle}</div>
+            <div class="overview-cover-kicker">SURM STUDY</div>
+            <div class="overview-cover-title">{html.escape(project)}</div>
+            <div class="overview-cover-meta">
+                {html.escape(field)} · {html.escape(phase)} ·
+                Revision {ss.get("study_revision", 0)} · {html.escape(lifecycle)}
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    # ------------------------------------------------------------------
+    # 2. Executive glance
+    # ------------------------------------------------------------------
+    st.markdown('<div class="surm-overview-section-label">AT A GLANCE</div>', unsafe_allow_html=True)
     metric_cols = st.columns(4)
-    metric_cols[0].metric("Study progress", f"{progress}%")
-    metric_cols[1].metric("Uncertainties", sum(1 for x in ss.get("uncertainties", []) if isinstance(x, dict) and x.get("selected")))
+    metric_cols[0].metric(
+        "Study progress",
+        f"{progress}%",
+        help="Completion is based on the authoritative workflow gates.",
+    )
+    metric_cols[1].metric(
+        "Uncertainties",
+        sum(1 for x in ss.get("uncertainties", []) if isinstance(x, dict) and x.get("selected")),
+    )
     metric_cols[2].metric("Resolution actions", len(ss.get("resolution_planner", [])))
     metric_cols[3].metric("Risks", len(ss.get("risk_register", [])))
 
-    left, right = st.columns([1.45, 1], gap="large")
-    with left:
-        st.markdown("### Study identity")
-        render_save_hint(
-            "Study identity and governance inputs are session drafts until you click Save study. "
-            "Exports reflect the current session draft; they do not persist it to the saved study."
-        )
-        c1, c2, c3 = st.columns(3)
+    # ------------------------------------------------------------------
+    # 3. Next best action + current signal
+    # ------------------------------------------------------------------
+    left, right = st.columns([1.25, 1], gap="large")
 
+    with left:
+        with st.container(border=True):
+            st.markdown('<div class="surm-panel-kicker">NEXT ACTION</div>', unsafe_allow_html=True)
+            if next_stage.complete:
+                st.success("Core workflow complete.")
+                st.write("Review the PRA Output and confirm the study is ready for governance.")
+                if st.button(
+                    "Review PRA Output →",
+                    key="overview_continue",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    st.session_state["current_page"] = "📄 PRA Output"
+                    st.rerun()
+            else:
+                st.markdown(f"### Continue with {next_stage.label}")
+                st.write(next_stage.guidance)
+                if st.button(
+                    f"Continue to {next_stage.label.split(' ', 1)[-1]} →",
+                    key="overview_continue",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    st.session_state["current_page"] = next_stage.label
+                    st.rerun()
+
+            if warnings:
+                st.markdown("#### Needs attention")
+                for warning in warnings[:3]:
+                    st.warning(warning["message"])
+
+    with right:
+        with st.container(border=True):
+            st.markdown('<div class="surm-panel-kicker">CURRENT SIGNAL</div>', unsafe_allow_html=True)
+            critical = analytics.get("critical_uncertainties", [])
+            if critical:
+                for item in critical[:4]:
+                    st.markdown(f"• {item}")
+            else:
+                st.caption("No ranked key uncertainties yet.")
+            st.progress(progress / 100, text=f"{progress}% of core workflow complete")
+
+    # ------------------------------------------------------------------
+    # 4. Study setup — the first data-entry destination on a new study.
+    # ------------------------------------------------------------------
+    with st.container(border=True):
+        st.markdown("### Study setup")
+        render_save_hint(
+            "Identity and governance fields are session drafts. Save the study when the details are ready to persist."
+        )
+
+        c1, c2, c3 = st.columns([1.15, 1.15, 0.8], gap="medium")
         _ensure_widget_value("project_name_input", "project_name")
         _ensure_widget_value("field_name_input", "field_name")
         _ensure_widget_value("project_phase_input", "project_phase")
@@ -151,9 +214,9 @@ def render():
                 args=("project_phase", "project_phase_input"),
             )
 
-        save_col, clear_col, _ = st.columns([1.2, 1.1, 3])
+        save_col, clear_col, _ = st.columns([1.15, 1.1, 3.75])
         with save_col:
-            if st.button("Save study", type="primary", key="fp_save"):
+            if st.button("Save study", type="primary", key="fp_save", use_container_width=True):
                 if not ss.get("project_name", "").strip():
                     st.warning("Enter a Project Name before saving.")
                 elif save_session(auto=False):
@@ -161,121 +224,69 @@ def render():
                 else:
                     st.error("Save failed.")
         with clear_col:
-            if st.button("Clear details", key="clear_study_details"):
-                ss["project_name"] = ""
-                ss["field_name"] = ""
-                ss["project_phase"] = ""
-                ss["project_name_input"] = ""
-                ss["field_name_input"] = ""
-                ss["project_phase_input"] = ""
+            if st.button("Clear details", key="clear_study_details", use_container_width=True):
+                for key, widget_key in (
+                    ("project_name", "project_name_input"),
+                    ("field_name", "field_name_input"),
+                    ("project_phase", "project_phase_input"),
+                ):
+                    ss[key] = ""
+                    ss[widget_key] = ""
                 st.rerun()
 
-    with right:
-        st.markdown("### What needs attention")
-        if next_stage.complete:
-            st.success("Workflow complete. Review PRA Output.")
-        else:
-            st.warning(f"Next: **{next_stage.label}**")
-            st.caption(next_stage.guidance)
-        st.progress(progress / 100)
-        st.caption("Progress follows the authoritative workflow gates, not manual page visits.")
+    # ------------------------------------------------------------------
+    # 5. Workflow progress
+    # ------------------------------------------------------------------
+    with st.container(border=True):
+        st.markdown("### Workflow progress")
+        st.caption("The sequence below mirrors the authoritative workflow gates.")
 
-        st.markdown("### Current signal")
-        critical = analytics.get("critical_uncertainties", [])
-        if critical:
-            st.write(" · ".join(critical[:4]))
-        else:
-            st.caption("No ranked key uncertainties yet.")
+        for row_start in range(0, len(stages), 4):
+            row_cols = st.columns(4, gap="medium")
+            for col, stage in zip(row_cols, stages[row_start:row_start + 4]):
+                state = "Complete" if stage.complete else ("Ready" if stage.available else "Locked")
+                icon = "✓" if stage.complete else ("•" if stage.available else "🔒")
+                col.markdown(f"**{icon} {stage.label}**")
+                col.caption(state)
 
-    st.markdown("### Workflow at a glance")
-    flow_cols = st.columns(4)
-    for index, stage in enumerate(stages):
-        col = flow_cols[index % 4]
-        state = "✓" if stage.complete else ("•" if stage.available else "—")
-        col.markdown(f"**{state} {stage.label}**")
-        col.caption("Complete" if stage.complete else ("Ready" if stage.available else "Locked"))
+        st.progress(progress / 100, text=f"{progress}% complete")
 
-    st.markdown("### Governance")
-    render_save_hint(
-        "Lifecycle and sign-off fields are also session drafts. Use Save study above to persist the complete front-page record."
-    )
-    life_col, rev_col = st.columns([1.2, 2])
-    with life_col:
-        _ensure_widget_value("study_lifecycle_input", "study_lifecycle")
-        st.selectbox(
-            "Study lifecycle",
-            ["Draft", "In Review", "Reviewed", "Approved", "Archived"],
-            key="study_lifecycle_input",
-            on_change=_sync_widget_value,
-            args=("study_lifecycle", "study_lifecycle_input"),
+    # ------------------------------------------------------------------
+    # 6. Governance and sign-off are secondary until the study is ready.
+    # ------------------------------------------------------------------
+    with st.expander("Governance & sign-off", expanded=False):
+        st.markdown("### Governance")
+        render_save_hint(
+            "Lifecycle and sign-off fields remain session drafts until you save the study."
         )
-        st.caption(f"Revision {ss.get('study_revision', 0)}")
-    with rev_col:
-        st.caption("Sign-off")
-        signoffs = [
-            ("Prepared By", "prep"),
-            ("Reviewed By — G&G", "rev_gg"),
-            ("Reviewed By — RE", "rev_re"),
-            ("Reviewed By — PP", "rev_pp"),
-            ("Endorsed By — FDP Lead", "endorsed"),
-        ]
-        for label, key in signoffs:
-            _signoff_row(label, key)
+        life_col, rev_col = st.columns([1.1, 2], gap="large")
+        with life_col:
+            _ensure_widget_value("study_lifecycle_input", "study_lifecycle")
+            st.selectbox(
+                "Study lifecycle",
+                ["Draft", "In Review", "Reviewed", "Approved", "Archived"],
+                key="study_lifecycle_input",
+                on_change=_sync_widget_value,
+                args=("study_lifecycle", "study_lifecycle_input"),
+            )
+            st.caption(f"Revision {ss.get('study_revision', 0)}")
 
-    export_col, session_col = st.columns([1, 1], gap="large")
-    with export_col:
-        st.markdown("### Export")
-        field_name = ss.get("field_name") or "Output"
-        st.download_button(
-            "Download SURM workbook",
-            data=build_excel_export(),
-            file_name=f"SURM_{field_name.replace(' ', '_')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
-        st.download_button(
-            "Download study JSON",
-            data=snapshot_json(dict(ss)),
-            file_name=f"SURM_{project.replace(' ', '_')}.json",
-            mime="application/json",
-            use_container_width=True,
-        )
-        st.download_button(
-            "Download relationships CSV",
-            data=snapshot_csv(dict(ss)),
-            file_name=f"SURM_{project.replace(' ', '_')}_relationships.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
+        with rev_col:
+            st.caption("Sign-off")
+            signoffs = [
+                ("Prepared By", "prep"),
+                ("Reviewed By — G&G", "rev_gg"),
+                ("Reviewed By — RE", "rev_re"),
+                ("Reviewed By — PP", "rev_pp"),
+                ("Endorsed By — FDP Lead", "endorsed"),
+            ]
+            for label, key in signoffs:
+                _signoff_row(label, key)
 
-    with session_col:
-        st.markdown("### Saved studies")
-        sessions = list_sessions()
-        if not sessions:
-            st.caption("No saved studies yet.")
-            if st.button("Create new study", type="secondary", key="overview_create_new_session"):
-                create_new_study()
-                st.rerun()
-        else:
-            for session_index, saved in enumerate(sessions[:8]):
-                label = f'{saved.get("project_name", "Unnamed")} · {saved.get("field_name", "Unknown")}'
-                meta = f'{saved.get("phase", "—")} · {saved.get("completion", 0)}%'
-                c1, c2, c3 = st.columns([3, 1, 1])
-                with c1:
-                    st.caption(label)
-                    st.caption(meta)
-                with c2:
-                    if st.button("Load", key=f"load_saved_study_{session_index}"):
-                        if load_session_record(saved):
-                            st.rerun()
-                        else:
-                            st.error("Load failed.")
-                with c3:
-                    if st.button("Delete", key=f"delete_saved_study_{session_index}"):
-                        delete_session(saved.get("project_name", ""), saved.get("field_name", ""))
-                        st.rerun()
-
-    with st.expander("Developer Tools", expanded=False):
+    # ------------------------------------------------------------------
+    # 7. Developer controls remain hidden until explicitly requested.
+    # ------------------------------------------------------------------
+    with st.expander("Developer tools", expanded=False):
         if st.button("Load Demo Data", key="load_demo_data"):
             mapping = ss.get("_mapping", {})
             ulist = mapping.get("uncertainties", [])[:4]
