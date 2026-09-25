@@ -270,7 +270,7 @@ window.addEventListener("error", event => {
 
             connectors = page.locator('[data-layer="connectors"] .connector')
             assert connectors.count() >= 6
-            before_path = connectors.first().get_attribute("d")
+            before_path = connectors.first.get_attribute("d")
 
             first_cause = page.locator(
                 '[data-kind="cause"][data-id="CAUSE-PLACEMENT-1"]'
