@@ -32,7 +32,7 @@ jobs:
           python -m pip install pytest
 
       - name: Run regression tests
-        run: python -m pytest -q -m "not browser"
+        run: python -m pytest -q -m "not browser" --ignore=tests/test_bowtie_browser.py
 
   browser_regression:
     runs-on: ubuntu-latest
