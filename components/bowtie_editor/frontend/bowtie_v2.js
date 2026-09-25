@@ -33,6 +33,7 @@
   let panState = null;
   let camera = { x: 0, y: 0, w: VIEW_W, h: VIEW_H };
   let currentFingerprint = "";
+  let inspectorDirty = false;
 
   const svg = document.getElementById("svg");
   const objectsEl = document.getElementById("objects");
@@ -979,12 +980,13 @@
     };
   }
 
-  function applyInspectorChanges() {
+  function applyInspectorChanges(options) {
+    const settings = options || {};
     const p = selected ? placementForId(selected.id) : null;
-    if (!p || !editable) return;
+    if (!p || !editable) return false;
 
     const current = nodeFor(p);
-    if (!current) return;
+    if (!current) return false;
 
     const values = readInspectorValues();
     const changed =
@@ -995,9 +997,11 @@
       JSON.stringify(current.degradation_factors || []) !== JSON.stringify(values.degradation_factors) ||
       JSON.stringify(current.controls || []) !== JSON.stringify(values.controls);
 
+    inspectorDirty = false;
+
     if (!changed) {
-      setStatus("No changes to apply");
-      return;
+      if (!settings.silent) setStatus("No changes to apply");
+      return false;
     }
 
     rememberBeforeMutation();
@@ -1013,8 +1017,23 @@
     }
 
     emitChange();
-    render();
-    setStatus("Changes applied to Bowtie draft");
+    if (settings.rerender !== false) render();
+    if (!settings.silent) setStatus("Changes applied to Bowtie draft");
+    return true;
+  }
+
+  function scheduleInspectorCommit() {
+    if (!inspectorDirty || !editable) return;
+    window.setTimeout(function () {
+      if (!inspectorDirty || !editorEl) return;
+      const active = document.activeElement;
+      if (active && editorEl.contains(active)) return;
+      applyInspectorChanges({rerender:true, silent:false});
+    }, 0);
+  }
+
+  function markInspectorDirty() {
+    inspectorDirty = true;
   }
 
   function renderEditor() {
@@ -1061,6 +1080,14 @@
       '<button id="selectConnections" class="inspector-action">Show connections</button>';
 
     editorEl.innerHTML = html;
+    inspectorDirty = false;
+
+    ["editName","editDesc","editOwner","editEff","editDegradation","editControls"].forEach(function (id) {
+      const field = document.getElementById(id);
+      if (!field) return;
+      field.addEventListener("input", markInspectorDirty);
+      field.addEventListener("change", markInspectorDirty);
+    });
 
     const eff = document.getElementById("editEff");
     if (eff) eff.value = n.effectiveness || "";
@@ -1071,11 +1098,13 @@
     const cancel = document.getElementById("cancelChanges");
     if (cancel) {
       cancel.addEventListener("click", function () {
+        inspectorDirty = false;
         renderEditor();
         setStatus("Inspector changes cancelled");
       });
     }
 
+    editorEl.addEventListener("focusout", scheduleInspectorCommit);
     const selectConnections = document.getElementById("selectConnections");
     if (selectConnections) {
       selectConnections.addEventListener("click", function () {
