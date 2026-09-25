@@ -13,6 +13,49 @@ from utils.workflow import mark_stage_changed
 
 
 _STATUS_OPTIONS = ["Open", "Under Assessment", "Resolution Planned", "In Progress", "Resolved", "Closed"]
+_OTHER_OWNER_OPTION = "Others"
+
+
+def build_owner_options(session: dict | None = None) -> list[str]:
+    """Build planner owner dropdown options from Team names plus controlled custom owners."""
+    source = session if session is not None else st.session_state
+    names: list[str] = []
+    for member in source.get("team_members", []) or []:
+        if not isinstance(member, dict):
+            continue
+        name = str(member.get("Name", "") or "").strip()
+        if name and name not in names:
+            names.append(name)
+
+    for row in source.get("resolution_planner", []) or []:
+        if not isinstance(row, dict):
+            continue
+        for key in ("Action Owner", "Other Owner Name"):
+            name = str(row.get(key, "") or "").strip()
+            if name and name != _OTHER_OWNER_OPTION and name not in names:
+                names.append(name)
+
+    return [""] + names + [_OTHER_OWNER_OPTION]
+
+
+def _display_owner(row: dict) -> str:
+    owner = str(row.get("Action Owner", "") or "").strip()
+    if owner == _OTHER_OWNER_OPTION:
+        return str(row.get("Other Owner Name", "") or "").strip()
+    return owner
+
+
+def _normalize_owner_rows(rows: list[dict]) -> list[dict]:
+    """Resolve the controlled Others option into the actual custom owner name."""
+    normalized = []
+    for row in rows:
+        next_row = dict(row)
+        if str(next_row.get("Action Owner", "") or "").strip() == _OTHER_OWNER_OPTION:
+            custom_owner = str(next_row.get("Other Owner Name", "") or "").strip()
+            next_row["Action Owner"] = custom_owner
+        next_row.pop("Other Owner Name", None)
+        normalized.append(next_row)
+    return normalized
 
 
 def _build_resolution_dataframe(ku_list: list[dict], resolution_list: dict) -> pd.DataFrame:
@@ -45,7 +88,7 @@ def _planner_quality(rows: list[dict]) -> tuple[int, int]:
     workplan = [row for row in rows if row.get("Part of Workplan")]
     missing_owner = sum(
         1 for row in workplan
-        if not str(row.get("Action Owner", "") or "").strip()
+        if not _display_owner(row)
     )
     return len(workplan), missing_owner
 
@@ -163,6 +206,9 @@ def render():
         )
     else:
         df_in = pd.DataFrame(planner_data)
+        if "Other Owner Name" not in df_in.columns:
+            df_in["Other Owner Name"] = ""
+        owner_options = build_owner_options(st.session_state)
         render_save_hint(
             "Planner edits are a session draft until you click Save planner. "
             "Execution fields such as owner, dates, progress and remarks do not invalidate the risk register."
@@ -181,7 +227,7 @@ def render():
                     type="primary",
                 )
             with button_cols[3]:
-                st.caption("Execution fields remain editable without forcing a downstream risk rebuild.")
+                st.caption("Choose an Owner from the Team roster. Select **Others** and fill **Other owner name** for an external contributor.")
 
             edited = st.data_editor(
                 df_in,
@@ -204,7 +250,16 @@ def render():
                         step=0.05,
                     ),
                     "Status": st.column_config.SelectboxColumn("Status", options=_STATUS_OPTIONS),
-                    "Action Owner": st.column_config.TextColumn("Owner"),
+                    "Action Owner": st.column_config.SelectboxColumn(
+                        "Owner",
+                        options=owner_options,
+                        help="Choose a Team member. Select Others and enter a name in Other owner name for someone outside the Team roster.",
+                    ),
+                    "Other Owner Name": st.column_config.TextColumn(
+                        "Other owner name",
+                        help="Used only when Owner is Others.",
+                        width="medium",
+                    ),
                     "Part of Workplan": st.column_config.CheckboxColumn("In Workplan?"),
                     "Remarks": st.column_config.TextColumn("Remarks", width="large"),
                 },
@@ -223,6 +278,9 @@ def render():
             elif remove_all:
                 for row in data:
                     row["Part of Workplan"] = False
+
+            if save_clicked:
+                data = _normalize_owner_rows(data)
 
             st.session_state["resolution_planner"] = data
 
@@ -258,7 +316,7 @@ def render():
         pulse_cols = st.columns(2)
         for index, row in enumerate(workplan_rows[:8]):
             progress = int(safe_float(row.get("Progress (0-1)", 0), default=0.0) * 100)
-            owner = str(row.get("Action Owner", "") or "Unassigned")
+            owner = _display_owner(row) or "Unassigned"
             action = str(row.get("Resolution Action", "Unnamed"))[:42]
             with pulse_cols[index % 2]:
                 st.markdown(
