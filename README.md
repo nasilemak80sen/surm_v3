@@ -29,9 +29,9 @@ P2 focuses on information density without changing the engineering methodology:
 - **How to Use** is a visual onboarding page with a study-flow figure instead of a text-only manual.
 - **Overview** is treated as the report front page: study identity, readiness, governance and export live together without duplicating every downstream detail.
 - Workflow pages use a **work-left / inspect-right** layout where practical, keeping the user's primary input alongside the immediate chart, coverage, execution or risk output.
-- The global navigation is the navigation mechanism. Redundant previous/next text at the bottom of pages has been removed.
+- The sidebar is the single primary navigation surface, grouped into Study, Workflow, Insights & governance and Support. Redundant top-level page switchers and previous/next navigation have been removed.
 - Workflow pages use a compact task header and reserve visual emphasis for the active form and its decision-support output.
-- Sidebar content is intentionally reduced to study context, workflow state, session controls and export.
+- Sidebar content is intentionally structured around study context, workflow navigation, frequent Save/New actions and progressive disclosure for session settings, export and account controls.
 
 ## Design principles
 
