@@ -13,7 +13,7 @@ import streamlit as st
 
 from utils.analytics import build_study_analytics
 from utils.db import get_db
-from utils.form_ui import render_stage_status
+from utils.form_ui import render_form_header, render_stage_status
 from utils.performance import profile_call
 from utils.intelligence import (
     build_historical_patterns,
@@ -32,10 +32,11 @@ def render():
         st.caption(f"Diagnostic: risk intelligence computed in {profiled.elapsed_ms:.1f} ms.")
     else:
         intelligence = build_risk_intelligence(session)
-    st.markdown("## 📊 Study Intelligence")
-    st.caption(
+    render_form_header(
+        "STUDY INSIGHTS",
+        "Study Intelligence",
         "Management view of recorded risks, actions, barriers and traceability. "
-        "No risk score is recalculated here."
+        "No risk score is recalculated here.",
     )
 
     metric_cols = st.columns(6)
