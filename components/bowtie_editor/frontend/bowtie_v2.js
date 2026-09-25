@@ -266,7 +266,11 @@
   }
 
   function makeId(prefix) {
-    const used = new Set(allPlacements().map(function (x) { return x.id; }));
+    const used = new Set(
+      allPlacements()
+        .map(function (x) { return x.id; })
+        .concat((doc && doc.lines ? doc.lines : []).map(function (x) { return x.id; }))
+    );
     let i = 1;
     let id = prefix + "-" + i;
     while (used.has(id)) {
@@ -1133,7 +1137,7 @@
       (doc.lines || []).reduce(function (acc, line) {
         (line.stops || []).forEach(function (id) { acc.add(id); });
         return acc;
-      }, [])
+      }, new Set())
     );
     const unlinked = barrierPlacements.filter(function (p) {
       return !linked.has(p.id);
