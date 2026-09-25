@@ -456,6 +456,25 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
                 "Updated through the Bowtie inspector."
             )
 
+            # Second consecutive edit: the same selected box must accept a new edit immediately.
+            page.locator("#editName").fill("Updated Threat Again")
+            page.locator("#editDesc").fill("Second edit must be captured without a second click.")
+            page.locator("#applyChanges").click()
+            expect(page.locator("#editName")).to_have_value("Updated Threat Again")
+            expect(page.locator("#editDesc")).to_have_value(
+                "Second edit must be captured without a second click."
+            )
+            second_change = [
+                item["value"]["document"]
+                for item in page.evaluate("window.__surmMessages")
+                if item["type"] == "streamlit:setComponentValue"
+                and item["value"]
+            ]
+            assert second_change[-1]["library"]["cause"][0]["name"] == "Updated Threat Again"
+            assert second_change[-1]["library"]["cause"][0]["description"] == (
+                "Second edit must be captured without a second click."
+            )
+
             emitted = page.evaluate("window.__surmMessages")
             changed = [
                 item["value"]["document"]
