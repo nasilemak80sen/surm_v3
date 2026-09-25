@@ -26,7 +26,6 @@
   let editable = true;
   let doc = null;
   let selected = null;
-  let dirtyTimer = null;
   let undoStack = [];
   let redoStack = [];
   let historySuspended = false;
@@ -249,16 +248,12 @@
     syncLayoutMetadata(doc);
     doc.editor_revision = finite(doc.editor_revision, 0) + 1;
     currentFingerprint = fingerprint(doc);
-    if (dirtyTimer) window.clearTimeout(dirtyTimer);
-    dirtyTimer = window.setTimeout(function () {
-      syncLayoutMetadata(doc);
-      window.parent.postMessage({
-        isStreamlitMessage:true,
-        type:"streamlit:setComponentValue",
-        value:{document:clone(doc),revision:doc.editor_revision}
-      }, "*");
-      setStatus("Draft synced to SURM session");
-    }, 140);
+    window.parent.postMessage({
+      isStreamlitMessage:true,
+      type:"streamlit:setComponentValue",
+      value:{document:clone(doc),revision:doc.editor_revision}
+    }, "*");
+    setStatus("Draft synced to SURM session");
   }
 
   function setStatus(message) {
@@ -362,10 +357,30 @@
       });
     }
 
+    let linkedTo = null;
+    const selectedPlacement = selected ? placementForId(selected.id) : null;
+    if (type === "preventativeBarrier" && selectedPlacement && selectedPlacement.type === "cause") {
+      const line = lineForOrigin(selectedPlacement.id);
+      if (line) {
+        line.stops = Array.isArray(line.stops) ? line.stops : [];
+        if (!line.stops.includes(placement.id)) line.stops.push(placement.id);
+        linkedTo = selectedPlacement.id;
+      }
+    } else if (type === "mitigativeBarrier" && selectedPlacement && selectedPlacement.type === "outcome") {
+      const line = lineForOrigin(selectedPlacement.id);
+      if (line) {
+        line.stops = Array.isArray(line.stops) ? line.stops : [];
+        if (!line.stops.includes(placement.id)) line.stops.push(placement.id);
+        linkedTo = selectedPlacement.id;
+      }
+    }
+
     selected = {id: placement.id};
     emitChange();
     render();
-    setStatus("Added " + name);
+    setStatus(
+      "Added " + name + (linkedTo ? " and linked it to the selected relationship" : "")
+    );
   }
 
   function removeSelected() {
