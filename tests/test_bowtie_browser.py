@@ -384,3 +384,152 @@ window.addEventListener("error", event => {
     finally:
         server.shutdown()
         thread.join(timeout=5)
+
+
+def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
+    server, thread = _serve_frontend()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page()
+            page_errors = []
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+
+            page.goto(
+                f"http://127.0.0.1:{server.server_port}/index.html",
+                wait_until="load",
+            )
+
+            page.evaluate(
+                """payload => {
+                    window.__surmMessages = [];
+                    window.addEventListener("message", event => {
+                        const data = event.data || {};
+                        if (data.isStreamlitMessage) {
+                            window.__surmMessages.push({
+                                type: data.type,
+                                value: data.value || null
+                            });
+                        }
+                    });
+                    window.dispatchEvent(
+                        new MessageEvent("message", {data: payload})
+                    );
+                }""",
+                {
+                    "type": "streamlit:render",
+                    "args": {
+                        "document": _fixture_document(),
+                        "editable": True,
+                        "height": 820,
+                    },
+                },
+            )
+
+            assert not page_errors, page_errors
+
+            # READ: canvas selection and Navigator selection must expose the same object.
+            page.locator('[data-kind="cause"][data-id="CAUSE-PLACEMENT-1"]').click()
+            expect(page.locator("#editName")).to_have_value("Existing Threat")
+            expect(page.locator("#delete")).not_to_be_disabled()
+
+            # UPDATE: edit multiple inspector fields, then commit them explicitly.
+            page.locator("#editName").fill("Updated Threat")
+            page.locator("#editDesc").fill("Updated through the Bowtie inspector.")
+            page.locator("#applyChanges").click()
+            page.wait_for_timeout(220)
+
+            expect(page.locator("#objects")).to_contain_text("Updated Threat")
+            expect(page.locator("#editName")).to_have_value("Updated Threat")
+            expect(page.locator("#editDesc")).to_have_value(
+                "Updated through the Bowtie inspector."
+            )
+
+            emitted = page.evaluate("window.__surmMessages")
+            changed = [
+                item["value"]["document"]
+                for item in emitted
+                if item["type"] == "streamlit:setComponentValue"
+                and item["value"]
+            ]
+            assert changed
+            changed_document = changed[-1]
+            assert changed_document["editor_revision"] > 0
+
+            # Streamlit rerun: same persisted document must NOT clear selection/history.
+            page.evaluate(
+                """document => {
+                    window.dispatchEvent(
+                        new MessageEvent("message", {
+                            data: {
+                                type: "streamlit:render",
+                                args: {
+                                    document: document,
+                                    editable: true,
+                                    height: 820
+                                }
+                            }
+                        })
+                    );
+                }""",
+                changed_document,
+            )
+            page.wait_for_timeout(60)
+
+            expect(page.locator("#editName")).to_have_value("Updated Threat")
+            expect(page.locator("#delete")).not_to_be_disabled()
+            expect(page.locator("#undo")).not_to_be_disabled()
+
+            # CREATE + DELETE: preventive barrier.
+            page.locator("#addPrevent").click()
+            page.wait_for_timeout(40)
+            expect(page.locator("#objects")).to_contain_text("New Preventive Barrier")
+            new_prevent = page.locator(
+                "#objects button", has_text="New Preventive Barrier"
+            )
+            new_prevent.click()
+            expect(page.locator("#editName")).to_have_value("New Preventive Barrier")
+            page.locator("#delete").click()
+            page.wait_for_timeout(100)
+            expect(page.locator("#objects")).not_to_contain_text(
+                "New Preventive Barrier"
+            )
+
+            # CREATE + DELETE: mitigative barrier.
+            page.locator("#addMitigate").click()
+            page.wait_for_timeout(40)
+            expect(page.locator("#objects")).to_contain_text("New Mitigative Barrier")
+            page.locator(
+                "#objects button", has_text="New Mitigative Barrier"
+            ).click()
+            page.locator("#delete").click()
+            page.wait_for_timeout(100)
+            expect(page.locator("#objects")).not_to_contain_text(
+                "New Mitigative Barrier"
+            )
+
+            # CREATE + DELETE: consequence.
+            page.locator("#addOutcome").click()
+            page.wait_for_timeout(40)
+            expect(page.locator("#objects")).to_contain_text("New Consequence")
+            page.locator(
+                "#objects button", has_text="New Consequence"
+            ).click()
+            page.locator("#delete").click()
+            page.wait_for_timeout(100)
+            expect(page.locator("#objects")).not_to_contain_text(
+                "New Consequence"
+            )
+
+            # DELETE: the updated threat and its origin line.
+            page.locator("#objects button", has_text="Updated Threat").click()
+            page.locator("#delete").click()
+            page.wait_for_timeout(100)
+            expect(page.locator("#objects")).not_to_contain_text("Updated Threat")
+            assert page.locator('[data-layer="connectors"] .connector').count() >= 2
+
+            assert not page_errors, page_errors
+            browser.close()
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)

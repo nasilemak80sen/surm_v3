@@ -90,3 +90,26 @@ def test_bowtie_v2_javascript_passes_node_syntax_check():
         check=False,
     )
     assert completed.returncode == 0, completed.stderr or completed.stdout
+
+
+def test_bowtie_v2_crud_state_management_is_explicit_and_rerun_safe():
+    source = _source()
+
+    assert "let currentFingerprint = \"\";" in source
+    assert "function fingerprint(value)" in source
+    assert "function applyInspectorChanges()" in source
+    assert 'id="applyChanges"' in source
+    assert 'id="cancelChanges"' in source
+    assert "incomingFingerprint !== currentFingerprint" in source
+    assert "if (previousSelection && placementForId(previousSelection))" in source
+    assert "setStatus(\"Changes applied to Bowtie draft\")" in source
+
+
+def test_bowtie_v2_create_controls_are_lane_aware():
+    source = _source()
+
+    assert 'document.getElementById("addCause").addEventListener' in source
+    assert 'document.getElementById("addPrevent").addEventListener' in source
+    assert 'document.getElementById("addMitigate").addEventListener' in source
+    assert 'document.getElementById("addOutcome").addEventListener' in source
+    assert "x: LANE_X[type]" in source

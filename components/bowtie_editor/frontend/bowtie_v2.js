@@ -33,6 +33,7 @@
   let dragState = null;
   let panState = null;
   let camera = { x: 0, y: 0, w: VIEW_W, h: VIEW_H };
+  let currentFingerprint = "";
 
   const svg = document.getElementById("svg");
   const objectsEl = document.getElementById("objects");
@@ -57,6 +58,10 @@
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
+  }
+
+  function fingerprint(value) {
+    return JSON.stringify(value);
   }
 
   function esc(value) {
@@ -243,6 +248,7 @@
     if (!doc || !editable) return;
     syncLayoutMetadata(doc);
     doc.editor_revision = finite(doc.editor_revision, 0) + 1;
+    currentFingerprint = fingerprint(doc);
     if (dirtyTimer) window.clearTimeout(dirtyTimer);
     dirtyTimer = window.setTimeout(function () {
       syncLayoutMetadata(doc);
@@ -925,6 +931,61 @@
     });
   }
 
+  function readInspectorValues() {
+    return {
+      name: document.getElementById("editName")?.value ?? "",
+      description: document.getElementById("editDesc")?.value ?? "",
+      owner: document.getElementById("editOwner")?.value ?? "",
+      effectiveness: document.getElementById("editEff")?.value ?? "",
+      degradation_factors: (document.getElementById("editDegradation")?.value ?? "")
+        .split(/\n/)
+        .map(function (x) { return x.trim(); })
+        .filter(Boolean),
+      controls: (document.getElementById("editControls")?.value ?? "")
+        .split(/\n/)
+        .map(function (x) { return x.trim(); })
+        .filter(Boolean),
+    };
+  }
+
+  function applyInspectorChanges() {
+    const p = selected ? placementForId(selected.id) : null;
+    if (!p || !editable) return;
+
+    const current = nodeFor(p);
+    if (!current) return;
+
+    const values = readInspectorValues();
+    const changed =
+      current.name !== values.name ||
+      (current.description || "") !== values.description ||
+      (current.owner || "") !== values.owner ||
+      (current.effectiveness || "") !== values.effectiveness ||
+      JSON.stringify(current.degradation_factors || []) !== JSON.stringify(values.degradation_factors) ||
+      JSON.stringify(current.controls || []) !== JSON.stringify(values.controls);
+
+    if (!changed) {
+      setStatus("No changes to apply");
+      return;
+    }
+
+    rememberBeforeMutation();
+
+    current.name = values.name;
+    current.description = values.description;
+
+    if (p.type === "preventativeBarrier" || p.type === "mitigativeBarrier") {
+      current.owner = values.owner;
+      current.effectiveness = values.effectiveness;
+      current.degradation_factors = values.degradation_factors;
+      current.controls = values.controls;
+    }
+
+    emitChange();
+    render();
+    setStatus("Changes applied to Bowtie draft");
+  }
+
   function renderEditor() {
     const p = selected ? placementForId(selected.id) : null;
     if (!p) {
@@ -962,6 +1023,10 @@
     html +=
       '<div class="small" style="margin-top:7px">Lane: ' + esc(p.type) +
       " · Position snaps to " + GRID + " px vertically.</div>" +
+      '<div class="row" style="margin-top:8px">' +
+        '<button id="applyChanges" class="inspector-action primary">Apply changes</button>' +
+        '<button id="cancelChanges" class="inspector-action">Cancel</button>' +
+      '</div>' +
       '<button id="selectConnections" class="inspector-action">Show connections</button>';
 
     editorEl.innerHTML = html;
@@ -969,54 +1034,23 @@
     const eff = document.getElementById("editEff");
     if (eff) eff.value = n.effectiveness || "";
 
-    [
-      "editName","editDesc","editOwner","editEff","editDegradation","editControls"
-    ].forEach(function (id) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener("change", function () {
-        rememberBeforeMutation();
-        const current = nodeFor(p);
-        if (!current) return;
+    const apply = document.getElementById("applyChanges");
+    if (apply) apply.addEventListener("click", applyInspectorChanges);
 
-        current.name = document.getElementById("editName").value;
-        current.description = document.getElementById("editDesc").value;
-
-        const owner = document.getElementById("editOwner");
-        if (owner) current.owner = owner.value;
-
-        const effectiveness = document.getElementById("editEff");
-        if (effectiveness) current.effectiveness = effectiveness.value;
-
-        const degradation = document.getElementById("editDegradation");
-        if (degradation) {
-          current.degradation_factors = degradation.value
-            .split(/\n/)
-            .map(function (x) { return x.trim(); })
-            .filter(Boolean);
-        }
-
-        const controls = document.getElementById("editControls");
-        if (controls) {
-          current.controls = controls.value
-            .split(/\n/)
-            .map(function (x) { return x.trim(); })
-            .filter(Boolean);
-        }
-
-        emitChange();
-        render();
+    const cancel = document.getElementById("cancelChanges");
+    if (cancel) {
+      cancel.addEventListener("click", function () {
+        renderEditor();
+        setStatus("Inspector changes cancelled");
       });
-    });
+    }
 
     const selectConnections = document.getElementById("selectConnections");
     if (selectConnections) {
       selectConnections.addEventListener("click", function () {
-        const origin = p.type === "cause" || p.type === "outcome"
-          ? p
-          : null;
-        if (origin) {
+        if (p.type === "cause" || p.type === "outcome") {
           renderRelationships();
+          relationshipsEl.scrollIntoView({block:"nearest"});
         } else {
           setStatus("Select a Threat or Consequence to edit relationship links");
         }
@@ -1479,11 +1513,28 @@
 
     const incoming = args.document;
     if (incoming) {
-      if (!doc || finite(incoming.editor_revision, 0) >= finite(doc.editor_revision, 0)) {
-        doc = normalizeDocument(incoming);
+      const normalized = normalizeDocument(incoming);
+      const incomingFingerprint = fingerprint(normalized);
+
+      if (!doc) {
+        doc = normalized;
+        currentFingerprint = incomingFingerprint;
         undoStack = [];
         redoStack = [];
         selected = null;
+        render();
+      } else if (incomingFingerprint !== currentFingerprint) {
+        const previousSelection = selected ? selected.id : null;
+        doc = normalized;
+        currentFingerprint = incomingFingerprint;
+        undoStack = [];
+        redoStack = [];
+
+        if (previousSelection && placementForId(previousSelection)) {
+          selected = {id:previousSelection};
+        } else {
+          selected = null;
+        }
         render();
       }
     }
