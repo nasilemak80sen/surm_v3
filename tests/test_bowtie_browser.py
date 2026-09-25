@@ -348,7 +348,7 @@ window.addEventListener("error", event => {
 
             page.locator("#editName").fill("Edited Threat")
             page.locator("#editName").press("Tab")
-            page.wait_for_timeout(50)
+            page.wait_for_timeout(80)
             assert not page_errors, page_errors
             expect(page.locator("#objects")).to_contain_text("Edited Threat")
 
@@ -460,9 +460,20 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             page.locator("#editName").fill("Updated Threat Again")
             page.locator("#editDesc").fill("Second edit must be captured without a second click.")
             page.locator("#applyChanges").click()
+            page.wait_for_timeout(30)
             expect(page.locator("#editName")).to_have_value("Updated Threat Again")
             expect(page.locator("#editDesc")).to_have_value(
                 "Second edit must be captured without a second click."
+            )
+            page.wait_for_function(
+                """document => window.__surmMessages.some(
+                    item => item.type === "streamlit:setComponentValue"
+                    && item.value
+                    && item.value.document
+                    && item.value.document.library
+                    && item.value.document.library.cause
+                    && item.value.document.library.cause[0].name === "Updated Threat Again"
+                )"""
             )
             second_change = [
                 item["value"]["document"]
