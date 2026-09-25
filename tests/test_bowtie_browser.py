@@ -480,7 +480,7 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             expect(page.locator("#delete")).not_to_be_disabled()
             expect(page.locator("#undo")).not_to_be_disabled()
 
-            # CREATE + DELETE: preventive barrier.
+            # CREATE + UPDATE + DELETE: preventive barrier and its barrier-specific fields.
             page.locator("#addPrevent").click()
             page.wait_for_timeout(40)
             expect(page.locator("#objects")).to_contain_text("New Preventive Barrier")
@@ -489,10 +489,29 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             )
             new_prevent.click()
             expect(page.locator("#editName")).to_have_value("New Preventive Barrier")
+            page.locator("#editName").fill("Updated Preventive Barrier")
+            page.locator("#editDesc").fill("Barrier description from inspector.")
+            page.locator("#editOwner").fill("Reservoir Engineering")
+            page.locator("#editEff").select_option("high")
+            page.locator("#editDegradation").fill("Erosion\nLoss of containment")
+            page.locator("#editControls").fill("Inspection\nIntegrity review")
+            page.locator("#applyChanges").click()
+            page.wait_for_timeout(180)
+
+            expect(page.locator("#objects")).to_contain_text("Updated Preventive Barrier")
+            expect(page.locator("#editOwner")).to_have_value("Reservoir Engineering")
+            expect(page.locator("#editEff")).to_have_value("high")
+            expect(page.locator("#editDegradation")).to_have_value(
+                "Erosion\nLoss of containment"
+            )
+            expect(page.locator("#editControls")).to_have_value(
+                "Inspection\nIntegrity review"
+            )
+
             page.locator("#delete").click()
             page.wait_for_timeout(100)
             expect(page.locator("#objects")).not_to_contain_text(
-                "New Preventive Barrier"
+                "Updated Preventive Barrier"
             )
 
             # CREATE + DELETE: mitigative barrier.
