@@ -338,6 +338,27 @@ def render_sidebar() -> None:
         st.divider()
 
         # --------------------------------------------------------------------
+        # IDENTITY
+        # --------------------------------------------------------------------
+
+        st.markdown(
+            '<div class="sidebar-section-title">Identity</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(f"Active user: {current_user_label()}")
+        if auth_required():
+            st.caption("Authentication: enforced")
+            if resolve_identity().authenticated:
+                st.button(
+                    "Log out",
+                    key="sidebar_logout",
+                    use_container_width=True,
+                    on_click=st.logout,
+                )
+        else:
+            st.caption("Authentication: local development mode")
+
+        # --------------------------------------------------------------------
         # PROJECT CONTEXT
         # --------------------------------------------------------------------
 
