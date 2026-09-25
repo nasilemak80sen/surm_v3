@@ -437,9 +437,20 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             page.locator("#editName").fill("Updated Threat")
             page.locator("#editDesc").fill("Updated through the Bowtie inspector.")
             page.locator("#applyChanges").click()
-            page.wait_for_timeout(220)
 
             expect(page.locator("#objects")).to_contain_text("Updated Threat")
+            emitted_immediate = page.evaluate("window.__surmMessages")
+            changed_immediate = [
+                item["value"]["document"]
+                for item in emitted_immediate
+                if item["type"] == "streamlit:setComponentValue"
+                and item["value"]
+            ]
+            assert changed_immediate
+            assert changed_immediate[-1]["library"]["cause"][0]["name"] == "Updated Threat"
+            assert changed_immediate[-1]["library"]["cause"][0]["description"] == (
+                "Updated through the Bowtie inspector."
+            )
             expect(page.locator("#editName")).to_have_value("Updated Threat")
             expect(page.locator("#editDesc")).to_have_value(
                 "Updated through the Bowtie inspector."
@@ -481,9 +492,30 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             expect(page.locator("#undo")).not_to_be_disabled()
 
             # CREATE + UPDATE + DELETE: preventive barrier and its barrier-specific fields.
+            page.locator("#objects button", has_text="Updated Threat").click()
             page.locator("#addPrevent").click()
             page.wait_for_timeout(40)
             expect(page.locator("#objects")).to_contain_text("New Preventive Barrier")
+
+            prevent_emitted = page.evaluate("window.__surmMessages")
+            prevent_docs = [
+                item["value"]["document"]
+                for item in prevent_emitted
+                if item["type"] == "streamlit:setComponentValue"
+                and item["value"]
+            ]
+            assert prevent_docs
+            prevent_doc = prevent_docs[-1]
+            new_prevent_id = next(
+                p["id"]
+                for p in prevent_doc["preventativeBarriers"]
+                if p["nodeId"].startswith("PB_")
+            )
+            updated_threat_line = next(
+                line for line in prevent_doc["lines"]
+                if line["originId"] == "CAUSE-PLACEMENT-1"
+            )
+            assert new_prevent_id in updated_threat_line["stops"]
             new_prevent = page.locator(
                 "#objects button", has_text="New Preventive Barrier"
             )
@@ -515,9 +547,30 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             )
 
             # CREATE + DELETE: mitigative barrier.
+            page.locator("#objects button", has_text="Existing Consequence").click()
             page.locator("#addMitigate").click()
             page.wait_for_timeout(40)
             expect(page.locator("#objects")).to_contain_text("New Mitigative Barrier")
+
+            mitigate_emitted = page.evaluate("window.__surmMessages")
+            mitigate_docs = [
+                item["value"]["document"]
+                for item in mitigate_emitted
+                if item["type"] == "streamlit:setComponentValue"
+                and item["value"]
+            ]
+            assert mitigate_docs
+            mitigate_doc = mitigate_docs[-1]
+            new_mitigate_id = next(
+                p["id"]
+                for p in mitigate_doc["mitigativeBarriers"]
+                if p["nodeId"].startswith("MB_")
+            )
+            existing_outcome_line = next(
+                line for line in mitigate_doc["lines"]
+                if line["originId"] == "OUTCOME-PLACEMENT-1"
+            )
+            assert new_mitigate_id in existing_outcome_line["stops"]
             page.locator(
                 "#objects button", has_text="New Mitigative Barrier"
             ).click()
@@ -525,6 +578,37 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             page.wait_for_timeout(100)
             expect(page.locator("#objects")).not_to_contain_text(
                 "New Mitigative Barrier"
+            )
+
+            # CREATE + DELETE: second threat must receive a unique origin line ID.
+            page.locator("#addCause").click()
+            page.wait_for_timeout(40)
+            repeated_threat_docs = [
+                item["value"]["document"]
+                for item in page.evaluate("window.__surmMessages")
+                if item["type"] == "streamlit:setComponentValue"
+                and item["value"]
+            ]
+            assert repeated_threat_docs
+            repeated_doc = repeated_threat_docs[-1]
+            cause_line_ids = [
+                line["id"]
+                for line in repeated_doc["lines"]
+                if line["originType"] == "cause"
+            ]
+            assert len(cause_line_ids) == len(set(cause_line_ids))
+            assert any(line["originId"] == "CAUSE-PLACEMENT-3" for line in repeated_doc["lines"])
+            page.locator("#delete").click()
+            page.wait_for_timeout(40)
+            after_threat_delete = [
+                item["value"]["document"]
+                for item in page.evaluate("window.__surmMessages")
+                if item["type"] == "streamlit:setComponentValue"
+                and item["value"]
+            ][-1]
+            assert not any(
+                line["originId"] == "CAUSE-PLACEMENT-3"
+                for line in after_threat_delete["lines"]
             )
 
             # CREATE + DELETE: consequence.
