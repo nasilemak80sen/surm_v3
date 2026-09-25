@@ -39,3 +39,51 @@ class StudyDocumentTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+def test_governance_metadata_and_signoffs_round_trip():
+    document = StudyDocument.from_session({
+        "study_id": "study-governance",
+        "project_name": "Governance Project",
+        "field_name": "Governance Field",
+        "methodology_version": "SURM-2026.01",
+        "prep_name": "Prepared Person",
+        "prep_role": "Engineer",
+        "prep_date": "22/09/2026",
+        "rev_gg_name": "G&G Reviewer",
+        "rev_gg_role": "G&G Lead",
+        "rev_gg_date": "23/09/2026",
+        "rev_re_name": "RE Reviewer",
+        "rev_re_role": "RE Lead",
+        "rev_re_date": "24/09/2026",
+        "rev_pp_name": "PP Reviewer",
+        "rev_pp_role": "PP Lead",
+        "rev_pp_date": "25/09/2026",
+        "endorsed_name": "FDP Lead",
+        "endorsed_role": "FDP Lead",
+        "endorsed_date": "26/09/2026",
+        "workflow_revisions": {"impact_assessment": 3},
+        "workflow_snapshots": {
+            "impact_assessment": {"revision": 3},
+        },
+    })
+
+    restored = StudyDocument.from_record({
+        "session": document.to_dict(),
+        "meta": {},
+    })
+
+    assert restored.prep_name == "Prepared Person"
+    assert restored.rev_gg_role == "G&G Lead"
+    assert restored.rev_re_date == "24/09/2026"
+    assert restored.endorsed_name == "FDP Lead"
+    assert restored.methodology_version == "SURM-2026.01"
+    assert restored.workflow_revisions == {"impact_assessment": 3}
+
+
+def test_legacy_string_revision_is_coerced():
+    document = StudyDocument.from_session({
+        "study_id": "string-revision",
+        "study_revision": "7.0",
+    })
+
+    assert document.study_revision == 7

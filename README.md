@@ -1,228 +1,186 @@
 # 🛢️ SURM Toolkit
-**Subsurface Uncertainty & Risk Management Plan**  
-**Access Here:** https://beta-release-surmv1.streamlit.app/
-PETRONAS Carigali | Web Application v1.0
 
----
+Subsurface Uncertainty & Risk Management Plan
+PETRONAS Carigali | Streamlit application
 
-## What Is This?
+SURM Toolkit is a guided web implementation of the PETRONAS Carigali subsurface uncertainty and risk-management workflow. It preserves the engineering methodology while turning the Excel process into a structured form-filling experience with validation, persistence, visual analysis, risk governance and export.
 
-The SURM Toolkit is a web-based implementation of the PETRONAS Carigali Subsurface Uncertainty & Risk Management process. It mirrors the Excel-based workflow that teams use during Field Development Planning (FDP), replacing manual spreadsheet navigation with a structured, tab-by-tab guided interface.
+## Current workflow
 
-**Key features:**
-- 11-tab workflow mirroring the Excel SURM toolkit
-- Automated cascade — select uncertainties → risks auto-flag → scores auto-calculate → register auto-builds
-- Uncertainty Matrix and Tornado Chart (Plotly, interactive + PNG export)
-- Proper Bowtie Diagram for each risk (PNG export)
-- Full styled Excel export (.xlsx, 9 sheets)
-- Live project summary sidebar
+| Step | User activity | SURM output |
+|---|---|---|
+| 1️⃣ Uncertainties | Select relevant subsurface uncertainties and define custom items when needed | Study uncertainty population + linked risks |
+| 2️⃣ Key Decisions | Define the decisions the study must support and weight them 1–3 | Decision drivers |
+| 3️⃣ Impact Assessment | Rate degree of uncertainty and impact on each active decision | Weighted impact + combined HH–LL rating |
+| 4️⃣ Key Uncertainties | Review the calculated ranking and decide what carries forward | Prioritised planning set |
+| 5️⃣ Resolution List | Select engineering actions for each included uncertainty | Resolution coverage matrix |
+| 6️⃣ Resolution Planner | Assign owners, dates, resources, status and progress | Action workplan |
+| 7️⃣ Risk Register | Complete owner, consequence, contingency, likelihood and impact | Assessed risk register |
+| 📄 PRA Output | Review the read-only final risk view | PRA-ready output + workbook |
 
----
+Supporting pages are ordered for users as: Study Repository → How to Use → Overview (report front page) → Team. The workflow then runs from Uncertainties through PRA Output.
 
-## Option 1 — Run Locally (Recommended for PETRONAS internal use)
 
-### Windows (easiest)
-```
-1. Download and unzip surm_app.zip
-2. Double-click launch.bat
-3. Browser opens automatically at http://localhost:8501
-```
 
-### Mac / Linux
-```bash
-chmod +x launch.sh
-./launch.sh
-```
+## UI / UX direction
 
-### Manual setup
-```bash
-# 1. Create and activate virtual environment
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-source .venv/bin/activate      # Mac/Linux
+P2 focuses on information density without changing the engineering methodology:
 
-# 2. Install dependencies
-pip install -r requirements.txt
+- **How to Use** is a visual onboarding page with a study-flow figure instead of a text-only manual.
+- **Overview** is treated as the report front page: study identity, readiness, governance and export live together without duplicating every downstream detail.
+- Workflow pages use a **work-left / inspect-right** layout where practical, keeping the user's primary input alongside the immediate chart, coverage, execution or risk output.
+- The global navigation is the navigation mechanism. Redundant previous/next text at the bottom of pages has been removed.
+- Workflow pages use a compact task header and reserve visual emphasis for the active form and its decision-support output.
+- Sidebar content is intentionally reduced to study context, workflow state, session controls and export.
 
-# 3. Run
-streamlit run surm.py
-```
+## Design principles
 
----
+### Preserve the methodology
+The existing H/M/L scoring, weighted-decision logic, combined rating order, resolution master list and 3×3 risk matrix are preserved unless a concrete data-integrity or workflow gap requires a change.
 
-## Option 2 — Streamlit Community Cloud (Free, shareable link)
+### Treat SURM as a guided form
+Each workflow page explains what the user is deciding, what is calculated automatically, what is still required and what happens next.
 
-> Best for sharing across the team without IT infrastructure.
+New assessments are not silently pre-filled with a human judgement. For example, a new risk begins as Not Assessed until likelihood and impact are explicitly entered.
 
-### Steps:
+### One durable study model
+StudyDocument is the canonical durable representation. Database persistence, JSON snapshots and Excel export use the same study model so governance fields, methodology version and workflow state do not drift between outputs.
 
-1. **Create a GitHub account** at https://github.com if you don't have one.
+### Downstream data stays trustworthy
+Changing an upstream stage invalidates dependent outputs through one central workflow dependency map. The app can therefore tell the user why a later stage is blocked instead of showing stale results.
 
-2. **Create a new repository** called `surm-toolkit` (set to Private if needed).
+## Persistence and governance
 
-3. **Upload all files** from this folder into the repository root.  
-   Your repo should look like:
-   ```
-   surm-toolkit/
-   ├── surm.py
-   ├── requirements.txt
-   ├── .streamlit/config.toml
-   ├── data/
-   ├── modules/
-   ├── utils/
-   └── assets/
-   ```
+Saved studies record:
 
-4. **Go to** https://share.streamlit.io and sign in with GitHub.
+- Study ID
+- Project / field / phase
+- Study owner and team
+- Methodology version
+- Workflow revisions
+- Sign-off information
+- Study lifecycle
+- Full workflow data
 
-5. Click **"New app"** → select your repository → set:
-   - **Branch:** `main`
-   - **Main file path:** `surm.py`
+Current study schema: 2.2
+Current methodology identifier: SURM-2026.01
 
-6. Click **Deploy**. In ~2 minutes you'll have a shareable URL like:  
-   `https://your-name-surm-toolkit.streamlit.app`
+Sessions use SQLite locally and PostgreSQL when DATABASE_URL is configured.
 
-7. **Share the link** with your team. Anyone with the link can use it — no installation needed.
+## Excel output
 
-> 💡 Free tier gives you 1 app and sufficient compute for a small team. Upgrade to Streamlit Teams ($) for private apps with password protection.
+The exporter currently produces 14 worksheets:
 
-### Keep the Community Cloud app warm
+1. Front Page
+2. Documentation
+3. 1. Uncertainties List
+4. 2. Key Decisions
+5. 3. Impact Assessment
+6. 4. Key Uncertainties
+7. 5. Resolution List
+8. 6. Resolution Planner
+9. 7. Risk Register
+10. 7b. Bowtie Register
+11. 8. Barrier Management
+12. 9. Assurance & Reviews
+13. 10. Traceability
+14. PRA Output
 
-The repository includes `.github/workflows/keep-streamlit-awake.yml`. It checks the
-deployed app every six hours and can also be run manually from the GitHub Actions
-page. This is a best-effort workaround for Community Cloud sleep behaviour, not a
-guaranteed always-on service.
+The workbook is an output projection of the canonical study model; it is not the application's source of truth.
 
-Configure it once in GitHub:
+## Development maturity — Phase 4 onward
 
-1. Open **Settings → Secrets and variables → Actions → Variables**.
-2. Add a repository variable named `SURM_APP_URL`, for example:
-   `https://your-name-surm-toolkit.streamlit.app/`.
-3. Open **Actions → Keep SURM Awake → Run workflow** to test it.
+The current branch has moved beyond workflow-only UX into a decision-intelligence
+layer:
 
-The manual run also accepts an optional URL override. The workflow reports the HTTP
-status and fails when the app returns HTTP 400 or higher.
+- **Study Intelligence** consolidates risk, action, barrier, QA, traceability and saved-study portfolio signals.
+- **Barrier Management** turns Bowtie barriers into managed records with owner, status, progress, due date, effectiveness, criticality and verification.
+- **Bowtie QA** checks structural completeness without changing SURM risk scoring.
+- **Assurance & Review** controls lifecycle transitions and records review decisions.
+- **Revision History** supports immutable revision listing and durable-field comparison.
+- **Historical Intelligence** provides descriptive recurring-pattern analysis across saved studies.
 
----
+Corporate-data integrations are intentionally **shelved** for this development
+wave. SURM remains self-contained around its canonical study model and local /
+configured database backends.
 
-## Option 3 — Docker (For IT-managed or server deployment)
+See `docs/ROADMAP_PHASE4_10.md` for the active roadmap.
 
-```bash
-# Build the image
-docker build -t surm-toolkit .
+## Regression protection
 
-# Run (port 8501)
-docker run -p 8501:8501 surm-toolkit
+The repository includes deterministic tests for weighted scoring and NA handling, rating thresholds, explicit risk assessment, workflow gating, resolution coverage, downstream invalidation, workflow revision tracking and StudyDocument governance/sign-off round trips.
 
-# Open
-http://localhost:8501
-```
+GitHub Actions runs two hardening lanes on the main branch and enhancement branches:
 
-**With Docker Compose** (add this as `docker-compose.yml`):
-```yaml
-version: "3.8"
-services:
-  surm:
-    build: .
-    ports:
-      - "8501:8501"
-    restart: unless-stopped
-```
-```bash
-docker-compose up -d
-```
+- Python regression coverage for workflow, persistence, governance, export, intelligence and database concurrency.
+- Playwright browser regression coverage for the custom Bowtie component.
 
-> For intranet deployment, replace `localhost` with the server IP. Ensure port 8501 is open in the firewall.
+Phase 9 production-hardening controls are documented in `docs/PRODUCTION_HARDENING.md`.
 
----
+## Run locally
 
-## Workflow Guide
+Windows:
 
-| Tab | Action |
-|-----|--------|
-| 📋 Front Page | Fill project name, field, phase, sign-off names |
-| 👥 Team | Add all contributors |
-| 1️⃣ Uncertainties | Tick relevant uncertainties — risks auto-flag |
-| 2️⃣ Key Decisions | Add project decisions + weight factors (1–3) |
-| 3️⃣ Impact Assessment | Rate each uncertainty H/M/L against each decision |
-| 4️⃣ Key Uncertainties | Review auto-ranked list, select what to carry forward |
-| 5️⃣ Resolution List | Assign resolution actions per uncertainty |
-| 6️⃣ Resolution Planner | Update planner, fill dates/owners/progress |
-| 7️⃣ Risk Register | Populate register, fill contingency, generate Bowtie |
-| 📄 PRA Output | Review final PRA table, download full Excel |
+    python -m venv .venv
+    .venv\Scripts\activate
+    pip install -r requirements.txt
+    streamlit run surm.py
 
-> Sessions are saved to SQLite locally or PostgreSQL when `DATABASE_URL` is configured.
+macOS / Linux:
 
----
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
+    streamlit run surm.py
 
-## File Structure
+The default Streamlit port is 8501.
 
-```
-surm_app/
-├── surm.py                       Main entry point
-├── requirements.txt              Python dependencies
-├── launch.bat                    Windows one-click launcher
-├── launch.sh                     Mac/Linux launcher
-├── Dockerfile                    Container deployment
-├── .streamlit/
-│   └── config.toml               Theme + server config
-├── data/
-│   └── surm_master_mapping.json  Master uncertainty↔risk mapping
-├── modules/                      One file per tab
-│   ├── tab_frontpage.py
-│   ├── tab_documentation.py
-│   ├── tab_how_to_use.py
-│   ├── tab1_uncertainties.py
-│   ├── tab2_key_decisions.py
-│   ├── tab3_impact_assessment.py
-│   ├── tab4_key_uncertainties.py
-│   ├── tab5_resolution_list.py
-│   ├── tab6_resolution_planner.py
-│   ├── tab7_risk_register.py
-│   └── tab_pra_output.py
-├── utils/
-│   ├── session.py                Session state manager
-│   ├── logic.py                  Cascade scoring engine
-│   ├── charts.py                 Plotly charts (Matrix, Tornado, Bowtie)
-│   ├── export_excel.py           Excel export builder
-│   └── export_png.py             PNG export helper
-└── assets/
-    └── style.css                 Excel-inspired theme
-```
+## Deployment
 
----
+The project supports Streamlit Community Cloud, Docker, Docker Compose, SQLite for local use and PostgreSQL for shared/production deployments.
 
-## Dependencies
+For secured deployments, set `SURM_AUTH_REQUIRED=1` and configure `SURM_ROLE_MAP` as documented in `docs/PRODUCTION_HARDENING.md`. Streamlit's native OIDC identity is used through `st.user`; role assignment remains an application authorization layer.
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| streamlit | ≥1.35 | Web framework |
-| pandas | ≥2.0 | Data handling |
-| openpyxl | ≥3.1 | Excel export |
-| plotly | ≥5.20 | Interactive charts |
-| kaleido | ≥0.2 | PNG export from Plotly |
-| numpy | ≥1.26 | Numerical operations |
-| Pillow | ≥10.0 | Image handling |
+The repository also includes the existing Streamlit keep-awake GitHub workflow.
 
----
+## Repository structure
 
-## Troubleshooting
+    surm_v3/
+    ├── surm.py
+    ├── components/
+    ├── modules/
+    │   ├── tab_frontpage.py
+    │   ├── tab_documentation.py
+    │   ├── tab_how_to_use.py
+    │   ├── tab1_uncertainties.py
+    │   ├── tab2_key_decisions.py
+    │   ├── tab3_impact_assessment.py
+    │   ├── tab4_key_uncertainties.py
+    │   ├── tab5_resolution_list.py
+    │   ├── tab6_resolution_planner.py
+    │   ├── tab7_risk_register.py
+    │   ├── tab_pra_output.py
+    │   └── tab_study_repository.py
+    ├── utils/
+    │   ├── session.py
+    │   ├── study_document.py
+    │   ├── workflow.py
+    │   ├── logic.py
+    │   ├── persistence.py
+    │   ├── study_export.py
+    │   ├── export_excel.py
+    │   └── form_ui.py
+    ├── data/
+    │   └── surm_master_mapping.json
+    ├── tests/
+    └── .github/workflows/
 
-| Issue | Fix |
-|-------|-----|
-| `ModuleNotFoundError` | Run `pip install -r requirements.txt` |
-| PNG export not working | `pip install kaleido` |
-| `use_container_width` warnings | Update calls to use `width='stretch'` |
-| App won't start on port 8501 | Another app may use that port. Run: `streamlit run surm.py --server.port 8502` |
-| Blank tab content | Check that session state was initialised — reload the page |
+## Methodology versioning
 
----
+The master mapping in data/surm_master_mapping.json contains domain methodology data such as uncertainties, associated risks, resolution options and rating configuration. When the methodology evolves, the methodology version should be changed deliberately so older studies remain reproducible.
 
-## Built By
+## Built for
 
-PETRONAS Carigali — Reservoir Engineering & Technology  
-SURM Toolkit v1.0 | 2025
+PETRONAS Carigali — Reservoir Engineering & Technology
 
----
-
-*For questions or improvements, contact the RE-LT team.*
+SURM Toolkit is intended to support engineering decision-making, traceability and structured study documentation. It does not replace engineering review or professional judgement.

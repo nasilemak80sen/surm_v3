@@ -1,161 +1,339 @@
-"""
-modules/tab7_risk_register.py
-Risk register + bowtie. Auto-saves after populate and after register edits.
-"""
-import streamlit as st
+"""Tab 7 — Risk Register: assessment workspace with live risk and Bowtie view."""
+
+from __future__ import annotations
+
+import json
 import pandas as pd
-from utils.logic import build_risk_register
-from utils.charts import build_bowtie
-from utils.export_png import fig_to_png_bytes
+import streamlit as st
+
+from utils.form_ui import render_form_header, render_save_hint, render_stage_status
+from components.bowtie_editor import render as render_bowtie_editor
+from utils.bowtie_adapter import (
+    ensure_bowtie_register,
+    refresh_bowtie_document,
+)
+from utils.intelligence import sync_barrier_register
+from utils.logic import (
+    build_pra_output,
+    build_risk_register,
+    calculate_risk_rating,
+    is_risk_assessed,
+)
 from utils.persistence import save_session
+from utils.workflow import mark_stage_changed
 
-_RATING_OPTIONS = ["H", "M", "L"]
+
+_RATING_OPTIONS = ["", "H", "M", "L"]
 _STATUS_OPTIONS = ["Open", "In Progress", "Closed", "On Hold"]
+_RATING_ORDER = ["Extreme", "High", "Medium", "Low", "Not Assessed"]
 
-_RISK_MATRIX = {
-    ("H","H"):"Extreme",("H","M"):"High",  ("H","L"):"Medium",
-    ("M","H"):"High",   ("M","M"):"Medium",("M","L"):"Low",
-    ("L","H"):"Medium", ("L","M"):"Low",   ("L","L"):"Low",
-}
+
+def _risk_distribution(df: pd.DataFrame) -> dict[str, int]:
+    distribution = {key: 0 for key in _RATING_ORDER}
+    for _, row in df.iterrows():
+        rating = calculate_risk_rating(
+            row.get("Likelihood (H/M/L)", ""),
+            row.get("Impact (H/M/L)", ""),
+        )
+        distribution[rating] = distribution.get(rating, 0) + 1
+    return distribution
 
 
 def render():
-    ku_list  = [r for r in st.session_state.get("key_uncertainties",[]) if r.get("Include in Plan")]
+    ku_list = [
+        row for row in st.session_state.get("key_uncertainties", [])
+        if row.get("Include in Plan")
+    ]
     res_list = st.session_state.get("resolution_list", {})
 
     if not ku_list:
         st.info("⬅️ Complete **Tab 4** first.")
         return
 
-    st.info("Build the register from the prioritised uncertainties, then complete owner, contingency, consequence, likelihood, and impact.")
+    render_form_header(
+        "STEP 7 OF 7",
+        "Risk Register",
+        "Assess the generated risks explicitly, then review the portfolio distribution and Bowtie below the register.",
+        next_step="PRA Output",
+    )
 
-    # ── Populate button ───────────────────────────────────────────────
-    col_btn, _ = st.columns([1, 4])
-    with col_btn:
-        if st.button("🔄 Populate Risk Register", type="primary", key="populate_risk_register"):
-            ku_df   = pd.DataFrame(ku_list)
-            options = st.session_state["_mapping"]["resolution_options"]
-            res_rows = []
-            for _, r in ku_df.iterrows():
-                row = {"Uncertainty": r["Uncertainty"], "Rating": r.get("Combined Rating","")}
-                row.update(res_list.get(r["Uncertainty"], {}))
-                res_rows.append(row)
-            res_df = pd.DataFrame(res_rows)
-            rr_df  = build_risk_register(ku_df, res_df)
-            st.session_state["risk_register"] = rr_df.to_dict("records")
-            save_session(auto=True)
-            st.success(f"✅ {len(rr_df)} risks identified.")
-            st.rerun()
+    risk_data = st.session_state.get("risk_register", [])
+    risk_df = pd.DataFrame(risk_data) if risk_data else pd.DataFrame()
+    distribution = _risk_distribution(risk_df) if risk_data else {key: 0 for key in _RATING_ORDER}
+    assessed_count = sum(is_risk_assessed(row) for row in risk_data)
+    not_assessed = len(risk_data) - assessed_count
+    assessed_pct = round((assessed_count / max(len(risk_data), 1)) * 100)
 
-    rr_data = st.session_state.get("risk_register", [])
-    if not rr_data:
-        st.info("Click the button above to populate the risk register.")
-        return
+    # Executive signal first. Detailed register and visual diagnostics get
+    # their own full-width sections below.
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Risks", len(risk_data))
+    metric_cols[1].metric("Assessed", assessed_count)
+    metric_cols[2].metric("Not assessed", not_assessed)
+    metric_cols[3].metric("Assessment", f"{assessed_pct}%")
 
-    # ── Risk summary cards ────────────────────────────────────────────
-    rr_df_cur = pd.DataFrame(rr_data)
-    rr_df_cur["Risk Rating"] = rr_df_cur.apply(
-        lambda r: _RISK_MATRIX.get(
-            (r.get("Likelihood (H/M/L)","M"), r.get("Impact (H/M/L)","M")), "Medium"), axis=1)
-
-    m1,m2,m3,m4 = st.columns(4)
-    m1.metric("🔴 Extreme", int((rr_df_cur["Risk Rating"]=="Extreme").sum()))
-    m2.metric("🟠 High",    int((rr_df_cur["Risk Rating"]=="High").sum()))
-    m3.metric("🟡 Medium",  int((rr_df_cur["Risk Rating"]=="Medium").sum()))
-    m4.metric("🟢 Low",     int((rr_df_cur["Risk Rating"]=="Low").sum()))
-
-    # ── Risk register form ────────────────────────────────────────────
-    st.markdown('<div class="surm-section-header">📋 Risk Register</div>', unsafe_allow_html=True)
-
-    with st.form("rr_form"):
-        st.markdown(
-            '<div style="font-size:11px;color:#888;margin-bottom:8px;">'
-            '⚠️ Click <b>Save Register</b> before switching tabs.'
-            '</div>', unsafe_allow_html=True)
-
-        _, btn_save_col = st.columns([5, 1])
-        with btn_save_col:
-            btn_save = st.form_submit_button("💾 Save Register", type="primary")
-
-        edited = st.data_editor(
-            rr_df_cur,
-            column_config={
-                "#":                   st.column_config.NumberColumn("#", width="small", disabled=True),
-                "Risk":                st.column_config.TextColumn("Risk", width="medium", disabled=True),
-                "Uncertainty/Causes":  st.column_config.TextColumn("Causes / Uncertainties", width="large", disabled=True),
-                "Resolution Plan":     st.column_config.TextColumn("Resolution Plan", width="large", disabled=True),
-                "Action Owner":        st.column_config.TextColumn("Action Owner"),
-                "Contingency Plan":    st.column_config.TextColumn("Contingency Plan", width="large"),
-                "Impact/Consequence":  st.column_config.TextColumn("Impact / Consequence", width="large"),
-                "Likelihood (H/M/L)":  st.column_config.SelectboxColumn("Likelihood", options=_RATING_OPTIONS, width="small"),
-                "Impact (H/M/L)":      st.column_config.SelectboxColumn("Impact",     options=_RATING_OPTIONS, width="small"),
-                "Risk Rating":         st.column_config.TextColumn("Risk Rating", width="small", disabled=True),
-                "Risk Status":         st.column_config.SelectboxColumn("Status", options=_STATUS_OPTIONS, width="small"),
-                "Remarks":             st.column_config.TextColumn("Remarks", width="large"),
-            },
-            hide_index=True, width="stretch", num_rows="fixed",
-            key=f"rr_editor_{st.session_state.get('study_id', 'new')}",
+    if not risk_data:
+        render_stage_status(
+            label="Register",
+            value="No risks populated yet.",
+            tone="info",
+        )
+    elif not_assessed:
+        render_stage_status(
+            label="PRA",
+            value=f"{not_assessed} risk(s) still need likelihood and impact.",
+            tone="warning",
+        )
+    else:
+        render_stage_status(
+            label="PRA",
+            value="All risks are explicitly assessed.",
+            tone="success",
         )
 
-    if btn_save:
-        edited["Risk Rating"] = edited.apply(
-            lambda r: _RISK_MATRIX.get(
-                (r.get("Likelihood (H/M/L)","M"), r.get("Impact (H/M/L)","M")), "Medium"), axis=1)
-        st.session_state["risk_register"] = edited.to_dict("records")
-        st.session_state["pra_output"]    = edited.to_dict("records")
-        # Manual save from UI
-        try:
-            ok = save_session(auto=False)
-            if ok:
-                st.success("✅ Register saved.")
-            else:
-                st.error("Save failed.")
-        except Exception:
-            st.error("Save failed.")
+    populate = st.button(
+        "Populate from current plan",
+        type="secondary",
+        key="populate_risk_register",
+        use_container_width=True,
+    )
+    st.caption(
+        "Populate again only when upstream uncertainties or resolutions change. "
+        "Existing assessments are preserved by risk identity."
+    )
+
+    if populate:
+        ku_df = pd.DataFrame(ku_list)
+        resolution_rows = []
+        for _, row in ku_df.iterrows():
+            output = {
+                "Uncertainty": row["Uncertainty"],
+                "Rating": row.get("Combined Rating", ""),
+            }
+            output.update(res_list.get(row["Uncertainty"], {}))
+            resolution_rows.append(output)
+
+        risk_df = build_risk_register(ku_df, pd.DataFrame(resolution_rows))
+        previous = st.session_state.get("risk_register", [])
+        updated = risk_df.to_dict("records")
+        st.session_state["risk_register"] = updated
+        st.session_state["bowtie_register"] = ensure_bowtie_register(
+            updated,
+            current=st.session_state.get("bowtie_register", {}),
+            uncertainties=st.session_state.get("uncertainties", []),
+            resolution_list=st.session_state.get("resolution_list", {}),
+            resolution_planner=st.session_state.get("resolution_planner", []),
+        )
+        sync_barrier_register(st.session_state)
+        if previous != updated:
+            mark_stage_changed(st.session_state, "risk_register")
+        st.info("Risk register draft populated. Review it, then click **Save risk register** to persist.")
         st.rerun()
 
-    # ── Bowtie generator ──────────────────────────────────────────────
-    st.divider()
-    st.markdown('<div class="surm-section-header">🦋 Bowtie Diagram Generator</div>', unsafe_allow_html=True)
-    st.info("Select a risk to generate its Bowtie. Complete the consequence and contingency fields above for a useful diagram.")
+    risk_data = st.session_state.get("risk_register", [])
 
-    risk_names = rr_df_cur["Risk"].tolist()
-    col_sel, col_gen = st.columns([3, 1])
-    with col_sel:
-        selected_risk = st.selectbox("Select risk:", risk_names, label_visibility="collapsed", key="bowtie_risk_selection")
-    with col_gen:
-        gen_btn = st.button("🦋 Generate Bowtie", type="primary", key="generate_bowtie")
+    if not risk_data:
+        return
 
-    if gen_btn:
-        risk_row = rr_df_cur[rr_df_cur["Risk"] == selected_risk].iloc[0].to_dict()
-        fig_bt   = build_bowtie(risk_row)
-        st.plotly_chart(fig_bt, use_container_width=True)
-        try:
-            png_bt = fig_to_png_bytes(fig_bt, width=1600, height=700)
-            safe   = selected_risk.replace("/","_").replace(" ","_")[:40]
-            st.download_button(
-                f"📥 Download Bowtie — {selected_risk[:30]} (PNG)",
-                data=png_bt,
-                file_name=f"SURM_Bowtie_{safe}.png",
-                mime="image/png",
+    risk_df = pd.DataFrame(risk_data)
+    with st.container():
+        st.markdown('<div class="surm-section-header">Risk Register</div>', unsafe_allow_html=True)
+        render_save_hint(
+            "Risk edits are a session draft until you click Save risk register. "
+            "PRA output is regenerated only when the saved risk register is explicitly committed."
+        )
+        with st.form("rr_form", enter_to_submit=False):
+            save_clicked = st.form_submit_button(
+                "Save risk register",
+                key="save_risk_register",
+                type="primary",
             )
-        except Exception:
-            st.caption("Install kaleido for PNG export.")
+            edited = st.data_editor(
+                risk_df,
+                column_config={
+                    "risk_id": st.column_config.TextColumn("ID", width="small", disabled=True),
+                    "#": st.column_config.NumberColumn("#", width="small", disabled=True),
+                    "Risk": st.column_config.TextColumn("Risk", width="large", disabled=True),
+                    "Uncertainty/Causes": st.column_config.TextColumn("Causes / Uncertainties", width="large", disabled=True),
+                    "Resolution Plan": st.column_config.TextColumn("Resolution Plan", width="large", disabled=True),
+                    "Action Owner": st.column_config.TextColumn("Owner"),
+                    "Contingency Plan": st.column_config.TextColumn("Contingency", width="large"),
+                    "Impact/Consequence": st.column_config.TextColumn("Consequence", width="large"),
+                    "Likelihood (H/M/L)": st.column_config.SelectboxColumn(
+                        "Likelihood",
+                        options=_RATING_OPTIONS,
+                        width="small",
+                        help="Blank = Not Assessed",
+                    ),
+                    "Impact (H/M/L)": st.column_config.SelectboxColumn(
+                        "Impact",
+                        options=_RATING_OPTIONS,
+                        width="small",
+                        help="Blank = Not Assessed",
+                    ),
+                    "Risk Rating": st.column_config.TextColumn("Rating", width="small", disabled=True),
+                    "Risk Status": st.column_config.SelectboxColumn("Status", options=_STATUS_OPTIONS, width="small"),
+                    "Remarks": st.column_config.TextColumn("Remarks", width="large"),
+                },
+                hide_index=True,
+                use_container_width=True,
+                num_rows="fixed",
+                height=min(760, max(340, len(risk_data) * 78 + 100)),
+                key=f"rr_editor_{st.session_state.get('study_id', 'new')}",
+            )
 
-    # ── Status overview ───────────────────────────────────────────────
-    st.divider()
-    st.markdown('<div class="surm-section-header">📊 Status Overview</div>', unsafe_allow_html=True)
-    if "Risk Status" in rr_df_cur.columns:
-        status_counts = rr_df_cur["Risk Status"].value_counts()
-        badge_map = {"Open":"badge-open","In Progress":"badge-progress",
-                     "Closed":"badge-closed","On Hold":"badge-hold"}
-        cols = st.columns(max(len(status_counts), 1))
-        for col, (status, count) in zip(cols, status_counts.items()):
-            badge = badge_map.get(status,"")
-            col.markdown(f"""
-                <div style="text-align:center;padding:12px;background:#FAFAFA;
-                border:1px solid #E8E8E8;border-radius:6px;">
-                    <div style="font-size:22px;font-weight:700;">{count}</div>
-                    <span class="badge {badge}">{status}</span>
-                </div>
-            """, unsafe_allow_html=True)
+    if save_clicked:
+        edited = edited.copy()
+        edited["Risk Rating"] = edited.apply(
+            lambda row: calculate_risk_rating(
+                row.get("Likelihood (H/M/L)", ""),
+                row.get("Impact (H/M/L)", ""),
+            ),
+            axis=1,
+        )
+        saved_rows = edited.to_dict("records")
+        st.session_state["risk_register"] = saved_rows
+        st.session_state["bowtie_register"] = ensure_bowtie_register(
+            saved_rows,
+            current=st.session_state.get("bowtie_register", {}),
+            uncertainties=st.session_state.get("uncertainties", []),
+            resolution_list=st.session_state.get("resolution_list", {}),
+            resolution_planner=st.session_state.get("resolution_planner", []),
+        )
+        sync_barrier_register(st.session_state)
+        mark_stage_changed(st.session_state, "risk_register")
+        st.session_state["pra_output"] = (
+            build_pra_output(edited).to_dict("records")
+            if all(is_risk_assessed(row) for row in saved_rows)
+            else []
+        )
+        if not st.session_state.get("project_name", "").strip():
+            st.warning("Enter a Project Name on Overview before saving the risk register.")
+            return
+        ok = save_session(auto=False)
+        if not ok:
+            st.error("Register could not be saved.")
+            return
+        st.success("✅ Risk register saved.")
+        st.rerun()
+
+    # ------------------------------------------------------------------
+    # Portfolio reporting: deliberately separated from the editing table.
+    # ------------------------------------------------------------------
+    risk_data = st.session_state.get("risk_register", [])
+    risk_df = pd.DataFrame(risk_data)
+    distribution = _risk_distribution(risk_df)
+
+    st.markdown('<div class="surm-section-header">Risk Distribution</div>', unsafe_allow_html=True)
+    distribution_df = pd.DataFrame(
+        {"Risks": [distribution[level] for level in ["Extreme", "High", "Medium", "Low", "Not Assessed"]]},
+        index=["Extreme", "High", "Medium", "Low", "Not Assessed"],
+    )
+    st.bar_chart(
+        distribution_df,
+        use_container_width=True,
+        height=320,
+    )
+
+    # ------------------------------------------------------------------
+    # Bowtie authoring: one persistent document per risk_id.
+    # ------------------------------------------------------------------
+    st.markdown(
+        '<div class="surm-section-header">Bowtie Analysis</div>',
+        unsafe_allow_html=True,
+    )
+    risk_options = [
+        f'{row.get("risk_id", "")} — {row.get("Risk", "Risk")}'
+        for row in risk_data
+    ]
+    selected_label = st.selectbox(
+        "Risk",
+        risk_options,
+        key="bowtie_risk_selection",
+    )
+    selected_index = risk_options.index(selected_label)
+    selected_record = risk_data[selected_index]
+    selected_risk_id = str(selected_record.get("risk_id", "")).strip()
+
+    registry = st.session_state.get("bowtie_register", {})
+    document = registry.get(selected_risk_id)
+
+    if document is None:
+        document = refresh_bowtie_document(
+            selected_record,
+            uncertainties=st.session_state.get("uncertainties", []),
+            resolution_list=st.session_state.get("resolution_list", {}),
+            resolution_planner=st.session_state.get("resolution_planner", []),
+        )
+        registry[selected_risk_id] = document
+        st.session_state["bowtie_register"] = registry
+
+    if document.get("needs_refresh"):
+        st.warning(
+            "The upstream Risk Register changed after this Bowtie was created. "
+            "Review the existing diagram or refresh it from the current risk data."
+        )
+
+    action_cols = st.columns([1.4, 1.4, 1.4, 2.8])
+    with action_cols[0]:
+        refresh_clicked = st.button(
+            "Refresh from Risk",
+            key="refresh_selected_bowtie",
+            use_container_width=True,
+        )
+    with action_cols[1]:
+        save_bowtie = st.button(
+            "Save Bowtie",
+            type="primary",
+            key="save_selected_bowtie",
+            use_container_width=True,
+        )
+    with action_cols[2]:
+        json_payload = json.dumps(document, indent=2, ensure_ascii=False)
+        st.download_button(
+            "Download JSON",
+            data=json_payload,
+            file_name=f"SURM_{selected_risk_id}_Bowtie.json",
+            mime="application/json",
+            use_container_width=True,
+            key="download_selected_bowtie_json",
+        )
+    with action_cols[3]:
+        st.caption(
+            "Bowtie edits are session drafts. Saving the study persists the diagram "
+            "with this risk without changing SURM risk scoring."
+        )
+
+    if refresh_clicked:
+        registry[selected_risk_id] = refresh_bowtie_document(
+            selected_record,
+            uncertainties=st.session_state.get("uncertainties", []),
+            resolution_list=st.session_state.get("resolution_list", {}),
+            resolution_planner=st.session_state.get("resolution_planner", []),
+        )
+        st.session_state["bowtie_register"] = registry
+        st.rerun()
+
+    changed_document = render_bowtie_editor(
+        registry[selected_risk_id],
+        key=f"surm_bowtie_{selected_risk_id}_{st.session_state.get('study_id', 'new')}",
+        height=760,
+    )
+    if isinstance(changed_document, dict) and isinstance(changed_document.get("document"), dict):
+        incoming = changed_document["document"]
+        if int(incoming.get("editor_revision", 0)) >= int(
+            registry[selected_risk_id].get("editor_revision", 0)
+        ):
+            registry[selected_risk_id] = incoming
+            st.session_state["bowtie_register"] = registry
+
+    if save_bowtie:
+        if not st.session_state.get("project_name", "").strip():
+            st.warning("Enter a Project Name on Overview before saving the Bowtie.")
+        else:
+            ok = save_session(auto=False)
+            if ok:
+                st.success(f"Bowtie for {selected_risk_id} saved with the study.")
+            else:
+                st.error("Bowtie could not be saved.")
+

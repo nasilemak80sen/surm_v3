@@ -16,8 +16,10 @@ from typing import Any, cast
 import streamlit as st
 
 from components.header import render_header as render_shared_header
-from components.workflow import render_page_footer, render_page_frame, render_workflow_list
+from components.workflow import render_page_frame, render_workflow_list
 from utils.analytics import build_study_analytics
+from utils.assurance import study_is_editable
+from utils.auth import auth_required, can_delete_study, can_edit_study, current_user_label, resolve_identity
 from utils.styles import load_css
 from utils.workflow import current_stage, stage_results, validate_stage
 
@@ -27,7 +29,7 @@ from utils.workflow import current_stage, stage_results, validate_stage
 # ============================================================================
 
 APP_NAME = "SURM Toolkit"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.2.0"
 APP_SUBTITLE = "Subsurface Uncertainty & Risk Management"
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -69,6 +71,10 @@ from modules.tab6_resolution_planner import render as render_resolution_planner
 from modules.tab7_risk_register import render as render_risk_register
 from modules.tab_pra_output import render as render_pra_output
 from modules.tab_study_repository import render as render_study_repository
+from modules.tab_intelligence import render as render_intelligence
+from modules.tab_barrier_management import render as render_barrier_management
+from modules.tab_assurance import render as render_assurance
+from modules.tab_revision_history import render as render_revision_history
 
 
 # ============================================================================
@@ -191,19 +197,9 @@ def calculate_study_progress() -> dict:
         and str(item.get("Name", "")).strip()
     )
 
-    checks = [
-        bool(ss.get("project_name", "").strip()),
-        selected_uncertainties > 0,
-        decisions > 0,
-        bool(ss.get("impact_assessment")),
-        included_key_uncertainties > 0,
-        bool(ss.get("resolution_list")),
-        actions > 0,
-        risks > 0,
-    ]
-
+    stages = stage_results(ss)
     progress = round(
-        (sum(checks) / len(checks)) * 100
+        (sum(stage.complete for stage in stages) / len(stages)) * 100
     )
 
     return {
@@ -230,6 +226,11 @@ def _delete_selected_session(project_name: str, field_name: str) -> None:
     """Streamlit callback for deleting a saved study."""
     from utils.persistence import delete_session
 
+    allowed, reason = can_delete_study()
+    if not allowed:
+        st.error(reason)
+        return
+
     if delete_session(project_name, field_name):
         if (
             st.session_state.get("project_name", "").strip() == project_name
@@ -253,6 +254,10 @@ def _render_read_only_page(page_name: str) -> None:
         "6️⃣ Resolution Planner": ["resolution_planner"],
         "7️⃣ Risk Register": ["risk_register"],
         "📄 PRA Output": ["pra_output"],
+        "📊 Intelligence": ["risk_register", "resolution_planner", "bowtie_register", "barrier_register"],
+        "🛡️ Barrier Management": ["barrier_register", "bowtie_register"],
+        "✅ Assurance & Review": ["study_reviews", "study_lifecycle"],
+        "🕘 Revision History": ["study_change_log", "study_revision"],
     }
     st.info("Read-only view. Select Edit Study to unlock changes.")
     for key in section_keys.get(page_name, []):
@@ -265,6 +270,10 @@ def _render_read_only_page(page_name: str) -> None:
 
 
 def _enable_edit_mode() -> None:
+    allowed, reason = can_edit_study(dict(st.session_state))
+    if not allowed:
+        st.error(reason)
+        return
     st.session_state["study_access_mode"] = "edit"
     st.rerun()
 
@@ -327,6 +336,27 @@ def render_sidebar() -> None:
         )
 
         st.divider()
+
+        # --------------------------------------------------------------------
+        # IDENTITY
+        # --------------------------------------------------------------------
+
+        st.markdown(
+            '<div class="sidebar-section-title">Identity</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(f"Active user: {current_user_label()}")
+        if auth_required():
+            st.caption("Authentication: enforced")
+            if resolve_identity().authenticated:
+                st.button(
+                    "Log out",
+                    key="sidebar_logout",
+                    use_container_width=True,
+                    on_click=st.logout,
+                )
+        else:
+            st.caption("Authentication: local development mode")
 
         # --------------------------------------------------------------------
         # PROJECT CONTEXT
@@ -399,12 +429,10 @@ def render_sidebar() -> None:
                 "page": label,
                 "completed": stage.complete,
                 "locked": not stage.available,
+                "description": None,
             }
             for index, (label, stage) in enumerate(
-                zip(
-                    list(PAGE_DEFINITIONS.keys())[4:12],
-                    stage_results(session),
-                ),
+                zip(WORKFLOW_PAGES, stage_results(session)),
                 start=1,
             )
         ]
@@ -413,50 +441,6 @@ def render_sidebar() -> None:
             workflow_items,
             current_page=ss.get("current_page"),
         )
-
-        # --------------------------------------------------------------------
-        # STATISTICS
-        # --------------------------------------------------------------------
-
-        stat_items = [
-            (
-                "Uncertainties",
-                f'{stats["selected_uncertainties"]} / '
-                f'{stats["total_uncertainties"]}',
-            ),
-            (
-                "Key Decisions",
-                stats["key_decisions"],
-            ),
-            (
-                "Key Uncertainties",
-                stats["key_uncertainties"],
-            ),
-            (
-                "Resolution Actions",
-                stats["resolution_actions"],
-            ),
-            (
-                "Risks",
-                stats["risks"],
-            ),
-            (
-                "Team Members",
-                stats["team_members"],
-            ),
-        ]
-
-        for label, value in stat_items:
-            col_label, col_value = st.columns([3, 1])
-
-            with col_label:
-                st.caption(label)
-
-            with col_value:
-                st.markdown(
-                    f"<div class='sidebar-stat-value'>{value}</div>",
-                    unsafe_allow_html=True,
-                )
 
         st.divider()
 
@@ -629,9 +613,9 @@ def render_sidebar() -> None:
 
 PAGE_DEFINITIONS = {
     "🗂️ Study Repository": render_study_repository,
+    "📖 How to Use": render_how_to_use,
     "📋 Overview": render_frontpage,
     "👥 Team": render_documentation,
-    "📖 How to Use": render_how_to_use,
     "1️⃣ Uncertainties": render_uncertainties,
     "2️⃣ Key Decisions": render_key_decisions,
     "3️⃣ Impact Assessment": render_impact_assessment,
@@ -640,15 +624,30 @@ PAGE_DEFINITIONS = {
     "6️⃣ Resolution Planner": render_resolution_planner,
     "7️⃣ Risk Register": render_risk_register,
     "📄 PRA Output": render_pra_output,
+    "📊 Intelligence": render_intelligence,
+    "🛡️ Barrier Management": render_barrier_management,
+    "✅ Assurance & Review": render_assurance,
+    "🕘 Revision History": render_revision_history,
 }
+ 
+WORKFLOW_PAGES = [
+    "1️⃣ Uncertainties",
+    "2️⃣ Key Decisions",
+    "3️⃣ Impact Assessment",
+    "4️⃣ Key Uncertainties",
+    "5️⃣ Resolution List",
+    "6️⃣ Resolution Planner",
+    "7️⃣ Risk Register",
+    "📄 PRA Output",
+]
 
 
 def render_navigation() -> None:
     """
     Render page navigation.
 
-    Phase 1 keeps navigation simple and reliable.
-    Phase 2 will redesign this into the full workflow UI.
+    Navigation remains intentionally simple and reliable; workflow state and
+    form guidance are provided by the shared workflow engine.
     """
 
     page_names = list(PAGE_DEFINITIONS.keys())
@@ -657,8 +656,8 @@ def render_navigation() -> None:
         selected_page = page_names[0]
 
     selected_index = page_names.index(selected_page)
-    workflow_index = selected_index - 4
-    is_workflow_page = 0 <= workflow_index < 8
+    is_workflow_page = selected_page in WORKFLOW_PAGES
+    workflow_index = WORKFLOW_PAGES.index(selected_page) if is_workflow_page else -1
     title = selected_page.split(" ", 1)[-1]
     descriptions = {
         "🗂️ Study Repository": "Browse, view, and edit saved field studies.",
@@ -673,6 +672,10 @@ def render_navigation() -> None:
         "6️⃣ Resolution Planner": "Turn selected resolution actions into an owned, trackable workplan.",
         "7️⃣ Risk Register": "Convert study outputs into a managed risk register and bowtie view.",
         "📄 PRA Output": "Review the read-only portfolio output generated from the risk register.",
+        "📊 Intelligence": "See study health, risk portfolio, actions, barriers, QA and traceability in one place.",
+        "🛡️ Barrier Management": "Manage owners, status, verification and administrative health for Bowtie barriers.",
+        "✅ Assurance & Review": "Control study lifecycle, review decisions, validation and approval readiness.",
+        "🕘 Revision History": "Inspect immutable study revisions and compare durable changes.",
     }
 
     if is_workflow_page:
@@ -682,17 +685,28 @@ def render_navigation() -> None:
         if not allowed:
             render_page_frame(title, descriptions.get(selected_page, "SURM study workspace."), step=workflow_index + 1)
             st.warning(f"This stage is not ready yet. {reason}")
-            st.info(f"Current study stage: {current_stage(session).label}")
-            render_page_footer(previous_page=page_names[selected_index - 1] if selected_index else None)
+            current = current_stage(session)
+            st.info(f"Current study stage: **{current.label}** — {current.guidance}")
             return
 
-    render_page_frame(
-        title,
-        descriptions.get(selected_page, "SURM study workspace."),
-        step=workflow_index + 1 if is_workflow_page else None,
-    )
+    custom_header_pages = {
+        "🗂️ Study Repository",
+        "📖 How to Use",
+        "📋 Overview",
+        "👥 Team",
+        "📊 Intelligence",
+        "🛡️ Barrier Management",
+        "✅ Assurance & Review",
+        "🕘 Revision History",
+    }
+    if not is_workflow_page and selected_page not in custom_header_pages:
+        render_page_frame(
+            title,
+            descriptions.get(selected_page, "SURM study workspace."),
+        )
+
     if (
-        st.session_state.get("study_access_mode") == "view"
+        not study_is_editable(dict(st.session_state))
         and selected_page != "🗂️ Study Repository"
     ):
         edit_col, _ = st.columns([1, 5])
@@ -702,9 +716,6 @@ def render_navigation() -> None:
     else:
         PAGE_DEFINITIONS[selected_page]()
 
-    previous_page = page_names[selected_index - 1] if selected_index else None
-    next_page = page_names[selected_index + 1] if selected_index < len(page_names) - 1 else None
-    render_page_footer(previous_page=previous_page, next_page=next_page)
 
 
 def render_top_navigation() -> None:
@@ -794,6 +805,12 @@ def main() -> None:
     # ------------------------------------------------------------------------
     load_css()
     init_session()
+
+    if auth_required() and not resolve_identity().authenticated:
+        st.title("SURM Toolkit")
+        st.info("Authentication is required for this deployment.")
+        st.button("Log in", on_click=st.login, type="primary")
+        st.stop()
 
     # Saved studies are loaded explicitly from the sidebar.
 

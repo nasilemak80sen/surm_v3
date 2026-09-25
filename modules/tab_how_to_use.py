@@ -1,54 +1,100 @@
-"""modules/tab_how_to_use.py — User guide"""
+"""modules/tab_how_to_use.py — visual onboarding and workflow guide."""
+
 import streamlit as st
 
+from utils.form_ui import render_form_header
+
+
 def render():
-    st.markdown('<div class="surm-section-header">📖 How to Use the SURM Toolkit</div>', unsafe_allow_html=True)
+    render_form_header(
+        "START HERE",
+        "How to Use SURM",
+        "A visual walkthrough of the study journey. Use this page to understand the flow before entering assessment data.",
+        next_step="Overview",
+    )
 
-    steps = [
-        ("1️⃣", "Front Page",          "Fill in project name, field, phase and sign-off details."),
-        ("2️⃣", "Documentation",        "Add all team members who contributed to this SURM study."),
-        ("3️⃣", "Tab 1 – Uncertainties","Tick all uncertainties relevant to your field. Associated risks auto-flag."),
-        ("4️⃣", "Tab 2 – Key Decisions","List the key project decisions. Assign weight factors (1–3)."),
-        ("5️⃣", "Tab 3 – Impact Assessment","Rate each uncertainty's degree (H/M/L) and its impact on each decision. Scores auto-calculate."),
-        ("6️⃣", "Tab 4 – Key Uncertainties","Review ranked uncertainties. Select which to carry forward. View the Uncertainty Matrix and Tornado Chart."),
-        ("7️⃣", "Tab 5 – Resolution List","For each key uncertainty, select which resolution actions will address it."),
-        ("8️⃣", "Tab 6 – Resolution Planner","Click Update Planner. Fill in description, duration, owners, dates and progress for each action."),
-        ("9️⃣", "Tab 7 – Risk Register","Click Populate Risk Register. Fill in contingency, consequence and L/I ratings. Generate Bowtie diagrams."),
-        ("🔟", "PRA Output",            "Review the final PRA-formatted table. Download the full SURM workbook as Excel."),
+    st.markdown(
+        """
+        <div class="surm-guide-hero">
+            <div>
+                <div class="surm-guide-kicker">THE SURM METHOD</div>
+                <div class="surm-guide-title">From uncertainty → decision → action → risk</div>
+                <div class="surm-guide-subtitle">Each stage narrows the problem and produces something the next stage can use.</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="surm-flow-label">Study flow</div>', unsafe_allow_html=True)
+    flow = [
+        ("1", "Select", "Uncertainties"),
+        ("2", "Frame", "Key Decisions"),
+        ("3", "Assess", "Impact"),
+        ("4", "Prioritise", "Key Uncertainties"),
+        ("5", "Resolve", "Resolution List"),
+        ("6", "Plan", "Workplan"),
+        ("7", "Manage", "Risk Register"),
+        ("→", "Output", "PRA"),
     ]
-
-    for icon, title, desc in steps:
-        st.markdown(
-            f'<div style="display:flex;align-items:flex-start;margin:10px 0;padding:10px;'
-            f'background:#FAFAFA;border:1px solid #E0E0E0;border-radius:4px;border-left:4px solid #1F6B3A;">'
-            f'<div style="font-size:22px;margin-right:14px;line-height:1.2;">{icon}</div>'
-            f'<div><div style="font-weight:700;font-size:13px;color:#1F6B3A;">{title}</div>'
-            f'<div style="font-size:12px;color:#555;margin-top:2px;">{desc}</div></div>'
-            f'</div>',
-            unsafe_allow_html=True
+    nodes = []
+    for index, (num, verb, label) in enumerate(flow):
+        arrow = '<div class="surm-flow-arrow">→</div>' if index < len(flow) - 1 else ''
+        nodes.append(
+            f"""
+            <div class="surm-flow-node">
+                <div class="surm-flow-num">{num}</div>
+                <div class="surm-flow-verb">{verb}</div>
+                <div class="surm-flow-label">{label}</div>
+            </div>{arrow}
+            """
         )
+    st.markdown(f'<div class="surm-flow-figure">{"".join(nodes)}</div>', unsafe_allow_html=True)
 
-    st.divider()
-    st.markdown('<div class="surm-section-header">💡 Key Principles</div>', unsafe_allow_html=True)
-    principles = [
-        ("Be Specific", "When defining uncertainties and risks, avoid generic statements. Name the exact parameter and its specific uncertainty range."),
-        ("Decision-Driven", "Always ask: does this activity impact a key decision? If not, deprioritise it."),
-        ("Living Document", "SURM should be updated as new data comes in or when moving to the next project phase."),
-        ("Cascade Flow", "Each tab feeds the next. Changes in Tab 1–2 will need you to refresh downstream tabs."),
+    st.markdown('<div class="surm-guide-grid">', unsafe_allow_html=True)
+    guide_cards = [
+        ("Before you start", "Set the study context on Overview, confirm contributors on Team, then work left-to-right through the numbered stages."),
+        ("What the app calculates", "Ranking, weighted impact, combined ratings, resolution coverage and risk ratings are system-derived. Keep those outputs intact."),
+        ("What the team decides", "Selection, decision weights, resolution actions, ownership, timing and risk assessment remain human inputs."),
+        ("When something changes", "Changing an upstream stage intentionally refreshes downstream derived information so the study does not silently carry stale outputs."),
     ]
-    for title, desc in principles:
+    for title, body in guide_cards:
         st.markdown(
-            f'<div style="margin:8px 0;padding:8px 12px;background:#E8F5E9;border-radius:3px;">'
-            f'<span style="font-weight:700;color:#1F6B3A;">🌿 {title}:</span> '
-            f'<span style="font-size:12px;color:#333;">{desc}</span></div>',
-            unsafe_allow_html=True
+            f'<div class="surm-guide-card"><div class="surm-guide-card-title">{title}</div><div class="surm-guide-card-body">{body}</div></div>',
+            unsafe_allow_html=True,
         )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.divider()
-    st.markdown('<div class="surm-section-header">⚠️ Important Notes</div>', unsafe_allow_html=True)
-    st.markdown("""
-- **Session is not saved** — always export to Excel before closing the browser.
-- When you update Tab 1 or Tab 2, click the **Update / Populate** buttons in Tabs 6 and 7 to refresh downstream data.
-- PNG downloads require `kaleido` to be installed (`pip install kaleido`).
-- Custom uncertainties added in Tab 1 will persist for the current session only.
-    """)
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown('<div class="surm-guide-section-title">Page-by-page</div>', unsafe_allow_html=True)
+        rows = [
+            ("Overview", "Report front page, study identity, progress and export."),
+            ("Team", "Contributors, roles and sign-off governance."),
+            ("1 — Uncertainties", "Select the subsurface uncertainties relevant to the study."),
+            ("2 — Key Decisions", "Define the decisions the uncertainty assessment must support."),
+            ("3 — Impact Assessment", "Rate uncertainty and decision impact; scores are calculated."),
+            ("4 — Key Uncertainties", "Review ranking and choose what carries into the plan."),
+            ("5 — Resolution List", "Map each selected uncertainty to viable resolution actions."),
+            ("6 — Resolution Planner", "Assign ownership, timing, resources and progress."),
+            ("7 — Risk Register", "Assess likelihood/impact, ownership, consequence and contingency."),
+            ("PRA Output", "Read-only final output generated from the completed risk register."),
+        ]
+        for title, body in rows:
+            st.markdown(f'<div class="surm-guide-row"><strong>{title}</strong><span>{body}</span></div>', unsafe_allow_html=True)
+
+    with right:
+        st.markdown('<div class="surm-guide-section-title">A good working rhythm</div>', unsafe_allow_html=True)
+        rhythm = [
+            ("1", "Think first", "Capture the uncertainties and the decisions they could affect."),
+            ("2", "Assess once", "Use the agreed rating scale consistently; do not bypass the calculated ranking."),
+            ("3", "Carry only what matters", "Keep the plan focused on uncertainties the team is willing to resolve."),
+            ("4", "Make ownership explicit", "An action without an owner is not yet a workplan action; a risk without governance detail is not complete."),
+        ]
+        for num, title, body in rhythm:
+            st.markdown(
+                f'<div class="surm-guide-rhythm"><span class="surm-guide-rhythm-num">{num}</span><div><strong>{title}</strong><div>{body}</div></div></div>',
+                unsafe_allow_html=True,
+            )
+
+    st.caption("Tip: use the navigation bar at the top to jump directly to a page. The workflow itself remains dependency-aware, so a page can be visible while still being locked until its prerequisites are complete.")

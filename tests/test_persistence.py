@@ -17,6 +17,10 @@ class PersistenceTests(unittest.TestCase):
         self.assertIn("project_name", DEFAULT_SESSION_STATE)
         self.assertIn("field_name", DEFAULT_SESSION_STATE)
         self.assertIn("team_members", DEFAULT_SESSION_STATE)
+        self.assertIn("bowtie_register", DEFAULT_SESSION_STATE)
+        self.assertIn("barrier_register", DEFAULT_SESSION_STATE)
+        self.assertIn("study_reviews", DEFAULT_SESSION_STATE)
+        self.assertIn("study_role", DEFAULT_SESSION_STATE)
 
     def test_load_session_record_uses_project_and_field(self):
         with patch("utils.persistence.load_session", return_value=True) as mock_load:
@@ -60,6 +64,7 @@ class PersistenceTests(unittest.TestCase):
                 "project_phase": "PGR1",
                 "team_members": [{"Name": "Engineer", "Function / Role": "RE", "Date": "19/08/2026"}],
                 "key_decisions": [{"Key Decision": "Well placement", "Weight (1-3)": 3, "Description": ""}],
+                "bowtie_register": {"RSK-001": {"risk_id": "RSK-001", "version": "SURM-BOWTIE-1"}},
             }
             record = {
                 "session": payload,
@@ -113,6 +118,52 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(summaries[0]["study_revision"], 3)
         self.assertEqual(summaries[0]["last_edited_by"], "Engineer A")
         self.assertEqual(summaries[0]["last_edited_at"], "2026-09-01T12:30:00")
+
+    def test_sqlite_version_and_record_queries_support_history_and_portfolio(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = SQLiteDB()
+            database.db_path = f"{directory}\\history.db"
+            database.init()
+            record = {
+                "session": {
+                    "project_name": "Alpha",
+                    "field_name": "Beta",
+                    "study_revision": 2,
+                    "study_lifecycle": "In Review",
+                },
+                "meta": {
+                    "project_phase": "PGR2",
+                    "completion": 80,
+                    "auto_saved": False,
+                    "saved_at": "2026-09-22T12:00:00",
+                },
+            }
+            self.assertTrue(database.save_bundle("Alpha", "Beta", 2, record))
+            versions = database.list_versions("Alpha", "Beta")
+            revision = database.load_version("Alpha", "Beta", 2)
+            records = database.list_all_records()
+
+        self.assertEqual(versions[0]["revision"], 2)
+        self.assertEqual(revision["session"]["study_revision"], 2)
+        self.assertEqual(records[0]["session"]["project_name"], "Alpha")
+
+    def test_delete_removes_current_study_and_its_revision_history(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = SQLiteDB()
+            database.db_path = f"{directory}\\delete-history.db"
+            database.init()
+            record = {
+                "session": {"project_name": "Alpha", "field_name": "Beta", "study_revision": 1},
+                "meta": {
+                    "project_phase": "PGR1",
+                    "completion": 20,
+                    "auto_saved": False,
+                    "saved_at": "2026-09-22T12:00:00",
+                },
+            }
+            self.assertTrue(database.save_bundle("Alpha", "Beta", 1, record))
+            self.assertTrue(database.delete("Alpha", "Beta"))
+            self.assertEqual(database.list_versions("Alpha", "Beta"), [])
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ from openpyxl.styles import (Font, PatternFill, Alignment, Border, Side,
                               GradientFill)
 from openpyxl.utils import get_column_letter
 import streamlit as st
+from utils.study_document import StudyDocument
 
 # ── Colour palette matching SURM Excel ───────────────────────────────
 GREEN_DARK   = "1F6B3A"
@@ -78,10 +79,14 @@ def build_excel_export() -> bytes:
     Assembles the full SURM workbook from session state.
     Returns bytes for st.download_button().
     """
+    # Import lazily to avoid Streamlit hot-reload import races between service modules.
+    from utils.intelligence import build_traceability
+
     wb = Workbook()
     wb.remove(wb.active)  # remove default blank sheet
 
-    ss = st.session_state
+    document = StudyDocument.from_session(dict(st.session_state))
+    study = document.to_dict()
 
     # ── Sheet: Front Page ─────────────────────────────────────────────
     ws = wb.create_sheet("Front Page")
@@ -98,9 +103,13 @@ def build_excel_export() -> bytes:
     ws.row_dimensions[1].height = 36
 
     fields = [
-        ("Project Name",  ss.get("project_name",  "")),
-        ("Field Name",    ss.get("field_name",    "")),
-        ("Project Phase", ss.get("project_phase", "")),
+        ("Study ID",      study.get("study_id", "")),
+        ("Project Name",  study.get("project_name", "")),
+        ("Field Name",    study.get("field_name", "")),
+        ("Project Phase", study.get("project_phase", "")),
+        ("Methodology",   study.get("methodology_version", "")),
+        ("Lifecycle",     study.get("study_lifecycle", "Draft")),
+        ("Revision",      study.get("study_revision", 0)),
     ]
     for i, (label, val) in enumerate(fields, 3):
         ws.cell(row=i, column=1, value=label).font = Font(name="Calibri", bold=True, size=11)
@@ -109,54 +118,54 @@ def build_excel_export() -> bytes:
     # Sign-off block
     signoff_headers = ["Role", "Name", "Date"]
     signoff_data    = [
-        ["Prepared By",      ss.get("prep_name", ""),      ss.get("prep_date", "")],
-        ["Reviewed By (G&G)", ss.get("rev_gg_name", ""),    ss.get("rev_gg_date", "")],
-        ["Reviewed By (RE)",  ss.get("rev_re_name", ""),    ss.get("rev_re_date", "")],
-        ["Reviewed By (PP)",  ss.get("rev_pp_name", ""),    ss.get("rev_pp_date", "")],
-        ["Endorsed By",       ss.get("endorsed_name", ""), ss.get("endorsed_date", "")],
+        ["Prepared By",      study.get("prep_name", ""),      study.get("prep_date", "")],
+        ["Reviewed By (G&G)", study.get("rev_gg_name", ""),    study.get("rev_gg_date", "")],
+        ["Reviewed By (RE)",  study.get("rev_re_name", ""),    study.get("rev_re_date", "")],
+        ["Reviewed By (PP)",  study.get("rev_pp_name", ""),    study.get("rev_pp_date", "")],
+        ["Endorsed By",       study.get("endorsed_name", ""), study.get("endorsed_date", "")],
     ]
-    ws.cell(row=7, column=1, value="Sign-Off").font = Font(name="Calibri", bold=True, size=12, color="FFFFFF")
-    ws.cell(row=7, column=1).fill = PatternFill("solid", fgColor=GREEN_DARK)
-    ws.merge_cells("A7:C7")
+    ws.cell(row=12, column=1, value="Sign-Off").font = Font(name="Calibri", bold=True, size=12, color="FFFFFF")
+    ws.cell(row=12, column=1).fill = PatternFill("solid", fgColor=GREEN_DARK)
+    ws.merge_cells("A12:C12")
     for ci, h in enumerate(signoff_headers, 1):
-        cell = ws.cell(row=8, column=ci, value=h)
+        cell = ws.cell(row=13, column=ci, value=h)
         cell.font = HEADER_FONT
         cell.fill = PatternFill("solid", fgColor="2E7D52")
-    for ri, row in enumerate(signoff_data, 9):
+    for ri, row in enumerate(signoff_data, 14):
         for ci, val in enumerate(row, 1):
             ws.cell(row=ri, column=ci, value=val).border = THIN_BORDER
 
     # ── Sheet: Team ───────────────────────────────────────────────────
     ws2 = wb.create_sheet("Documentation")
-    team_df = pd.DataFrame(ss.get("team_members", []))
+    team_df = pd.DataFrame(study.get("team_members", []))
     _write_df_to_sheet(ws2, team_df, "Team Members & Documentation")
 
     # ── Sheet: Tab 1 — Uncertainties ─────────────────────────────────
     ws3 = wb.create_sheet("1. Uncertainties List")
     unc_rows = [
         {"Discipline": u["discipline"], "Uncertainty": u["name"], "Selected": "Y" if u["selected"] else ""}
-        for u in ss.get("uncertainties", [])
+        for u in study.get("uncertainties", [])
     ]
     _write_df_to_sheet(ws3, pd.DataFrame(unc_rows), "Uncertainties List")
 
     # ── Sheet: Tab 2 — Key Decisions ─────────────────────────────────
     ws4 = wb.create_sheet("2. Key Decisions")
-    kd_df = pd.DataFrame(ss.get("key_decisions", []))
+    kd_df = pd.DataFrame(study.get("key_decisions", []))
     _write_df_to_sheet(ws4, kd_df, "Key Project Decisions")
 
     # ── Sheet: Tab 3 — Impact Assessment ─────────────────────────────
     ws5 = wb.create_sheet("3. Impact Assessment")
-    ia_df = pd.DataFrame(ss.get("impact_assessment", []))
+    ia_df = pd.DataFrame(study.get("impact_assessment", []))
     _write_df_to_sheet(ws5, ia_df, "Impact Assessment")
 
     # ── Sheet: Tab 4 — Key Uncertainties ─────────────────────────────
     ws6 = wb.create_sheet("4. Key Uncertainties")
-    ku_df = pd.DataFrame(ss.get("key_uncertainties", []))
+    ku_df = pd.DataFrame(study.get("key_uncertainties", []))
     _write_df_to_sheet(ws6, ku_df, "Key Uncertainties (Ranked)")
 
     # ── Sheet: Tab 5 — Resolution List ───────────────────────────────
     ws7 = wb.create_sheet("5. Resolution List")
-    rl_data = ss.get("resolution_list", {})
+    rl_data = study.get("resolution_list", {})
     rl_rows = []
     for name, opts in rl_data.items():
         row = {"Uncertainty": name}
@@ -166,17 +175,76 @@ def build_excel_export() -> bytes:
 
     # ── Sheet: Tab 6 — Resolution Planner ────────────────────────────
     ws8 = wb.create_sheet("6. Resolution Planner")
-    rp_df = pd.DataFrame(ss.get("resolution_planner", []))
+    rp_df = pd.DataFrame(study.get("resolution_planner", []))
     _write_df_to_sheet(ws8, rp_df, "Resolution Planner")
 
     # ── Sheet: Tab 7 — Risk Register ─────────────────────────────────
     ws9 = wb.create_sheet("7. Risk Register")
-    rr_df = pd.DataFrame(ss.get("risk_register", []))
+    rr_df = pd.DataFrame(study.get("risk_register", []))
     _write_df_to_sheet(ws9, rr_df, "Risk Register")
+
+    # ── Sheet: Bowtie Register ────────────────────────────────────────
+    ws9b = wb.create_sheet("7b. Bowtie Register")
+    bowtie_rows = []
+    risks_by_id = {
+        str(row.get("risk_id", "")): row
+        for row in study.get("risk_register", [])
+        if isinstance(row, dict)
+    }
+    for risk_id, diagram in study.get("bowtie_register", {}).items():
+        risk_row = risks_by_id.get(str(risk_id), {})
+        bowtie_rows.append({
+            "Risk ID": risk_id,
+            "Risk": risk_row.get("Risk", diagram.get("name", "")),
+            "Top Event": diagram.get("pages", [{}])[0].get("topLevelEvent", {}).get("name", ""),
+            "Causes": len(diagram.get("causes", [])),
+            "Preventive Barriers": len(diagram.get("preventativeBarriers", [])),
+            "Mitigative Barriers": len(diagram.get("mitigativeBarriers", [])),
+            "Consequences": len(diagram.get("outcomes", [])),
+            "Editor Revision": diagram.get("editor_revision", 0),
+            "Needs Refresh": "Y" if diagram.get("needs_refresh") else "",
+        })
+    _write_df_to_sheet(
+        ws9b,
+        pd.DataFrame(bowtie_rows) if bowtie_rows else pd.DataFrame(),
+        "Registered Bowtie Diagrams",
+    )
+
+    # ── Sheet: Barrier Management ───────────────────────────────────
+    ws10b = wb.create_sheet("8. Barrier Management")
+    barrier_rows = []
+    for barrier_id, barrier in study.get("barrier_register", {}).items():
+        row = dict(barrier)
+        row["barrier_id"] = barrier_id
+        row["risk_ids"] = ", ".join(str(x) for x in row.get("risk_ids", []))
+        barrier_rows.append(row)
+    _write_df_to_sheet(
+        ws10b,
+        pd.DataFrame(barrier_rows) if barrier_rows else pd.DataFrame(),
+        "Managed Barrier Register",
+    )
+
+    # ── Sheet: Assurance & Reviews ──────────────────────────────────
+    ws10c = wb.create_sheet("9. Assurance & Reviews")
+    reviews_df = pd.DataFrame(study.get("study_reviews", []))
+    _write_df_to_sheet(
+        ws10c,
+        reviews_df,
+        "Study Lifecycle & Review History",
+    )
+
+    # ── Sheet: Traceability ─────────────────────────────────────────
+    ws10d = wb.create_sheet("10. Traceability")
+    traceability = build_traceability({**study, **{"_mapping": st.session_state.get("_mapping", {})}})
+    _write_df_to_sheet(
+        ws10d,
+        pd.DataFrame(traceability) if traceability else pd.DataFrame(),
+        "Risk Traceability — Risk → Uncertainty → Resolution → Barrier",
+    )
 
     # ── Sheet: PRA Output ─────────────────────────────────────────────
     ws10 = wb.create_sheet("PRA Output")
-    pra_df = pd.DataFrame(ss.get("pra_output", []))
+    pra_df = pd.DataFrame(study.get("pra_output", []))
     _write_df_to_sheet(ws10, pra_df, "PRA Output — Risk Register")
 
     # ── Save to bytes ─────────────────────────────────────────────────

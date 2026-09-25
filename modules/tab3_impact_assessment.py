@@ -1,133 +1,366 @@
 """
-modules/tab3_impact_assessment.py
-H/M/L scoring — wrapped in st.form() to prevent mid-edit reruns.
-Bulk H/M/L buttons are form submit buttons — no data loss on click.
-"""
-import streamlit as st
-import pandas as pd
-from utils.logic import compute_weighted_score, score_to_bin, compute_combined_rating
-from utils.persistence import save_session
+Tab 3 — Impact Assessment.
 
-DEG_OPTIONS    = ["H", "M", "L"]
+This form preserves the existing weighted scoring methodology while requiring
+the user to explicitly choose a degree of uncertainty before the assessment
+can progress.
+"""
+
+from __future__ import annotations
+
+import pandas as pd
+import streamlit as st
+
+from utils.form_ui import render_form_header, render_save_hint, render_stage_status
+from utils.logic import (
+    compute_combined_rating,
+    compute_weighted_score,
+    score_to_bin,
+)
+from utils.persistence import save_session
+from utils.workflow import mark_stage_changed
+
+
+DEG_OPTIONS = ["", "H", "M", "L"]
 RATING_OPTIONS = ["H", "M", "L", "NA"]
 
+
 def render():
-    selected  = [u for u in st.session_state["uncertainties"] if u["selected"]]
-    decisions = st.session_state.get("key_decisions", [])
+    selected = [
+        uncertainty
+        for uncertainty in st.session_state["uncertainties"]
+        if uncertainty.get("selected")
+    ]
+    decisions = [
+        decision
+        for decision in st.session_state.get("key_decisions", [])
+        if str(decision.get("Key Decision", "")).strip()
+    ]
 
     if not selected:
-        st.info("⬅️ Go to **Tab 1** and select at least one uncertainty first.")
+        st.info(
+            "⬅️ Go to **Tab 1** and select at least one uncertainty first."
+        )
         return
+
     if not decisions:
-        st.info("⬅️ Go to **Tab 2** and define at least one key decision first.")
+        st.info(
+            "⬅️ Go to **Tab 2** and define at least one key decision first."
+        )
         return
 
-    st.info("Rate each uncertainty and its impact on every key decision. Use quick-fill for bulk updates, then save to calculate weighted scores and combined ratings.")
+    render_form_header(
+        "STEP 3 OF 7",
+        "Impact Assessment",
+        "Rate how uncertain each topic is and how strongly it can affect the "
+        "decisions that matter to the project. The weighted impact calculation "
+        "and combined rating are calculated for you after saving.",
+        next_step="Key Uncertainties",
+    )
 
-    decision_names = [d["Key Decision"] for d in decisions]
+    saved_assessment = st.session_state.get("impact_assessment", [])
+    saved_by_name = {
+        row["Uncertainty"]: row
+        for row in saved_assessment
+        if isinstance(row, dict) and row.get("Uncertainty")
+    }
 
-    # Build df_in from current session state
-    existing = {row["Uncertainty"]: row for row in st.session_state.get("impact_assessment", [])}
+    unresolved_degree = [
+        uncertainty["name"]
+        for uncertainty in selected
+        if str(
+            saved_by_name.get(
+                uncertainty["name"],
+                {},
+            ).get("Degree of Uncertainty", "")
+        ).strip().upper()
+        not in {"H", "M", "L"}
+    ]
+
+    if unresolved_degree:
+        render_stage_status(
+            label="Assessment status",
+            value=(
+                f"{len(unresolved_degree)} uncertainties still need an explicit "
+                "Degree of Uncertainty. New rows are intentionally blank so the "
+                "form does not make an assessment on your behalf."
+            ),
+            tone="warning",
+        )
+    else:
+        render_stage_status(
+            label="Assessment status",
+            value=f"{len(selected)} uncertainties have an explicit degree rating.",
+            tone="success",
+        )
+
+    st.info(
+        "Use **NA** when a decision genuinely does not apply. NA is excluded "
+        "from the weighted denominator, preserving the existing SURM scoring rule."
+    )
+
+    decision_names = [
+        decision["Key Decision"]
+        for decision in decisions
+    ]
+
     rows = []
-    for u in selected:
-        ex  = existing.get(u["name"], {})
-        row = {"Uncertainty": u["name"],
-               "Degree of Uncertainty": ex.get("Degree of Uncertainty", "L")}
-        for dn in decision_names:
-            row[dn] = ex.get(dn, "NA")
+    for uncertainty in selected:
+        name = uncertainty["name"]
+        existing = saved_by_name.get(name, {})
+        row = {
+            "uncertainty_id": uncertainty.get("uncertainty_id", ""),
+            "Uncertainty": name,
+            "Degree of Uncertainty": existing.get(
+                "Degree of Uncertainty",
+                "",
+            ),
+        }
+
+        for decision_name in decision_names:
+            row[decision_name] = existing.get(
+                decision_name,
+                "",
+            )
+
         rows.append(row)
+
     df_in = pd.DataFrame(rows)
 
-    st.markdown('<div class="surm-section-header">📊 Impact Assessment Matrix</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="surm-section-header">📊 Impact Assessment Matrix</div>',
+        unsafe_allow_html=True,
+    )
 
-    # ── Form: bulk buttons + data editor ─────────────────────────────
-    with st.form("impact_form"):
-        st.markdown(
-            '<div style="font-size:11px;color:#888;margin-bottom:8px;">'
-            '⚠️ Click <b>Save Assessment</b> before switching tabs — edits are only captured on save.'
-            '</div>', unsafe_allow_html=True)
+    with st.form("impact_form", enter_to_submit=False):
+        render_save_hint(
+            "Fill the assessment matrix, then click Save Assessment. "
+            "Bulk buttons are useful for repeated values, but review each row "
+            "before committing the study results."
+        )
 
-        # Bulk-fill buttons (all form_submit_buttons so they batch with edits)
-        bc = st.columns([1, 1, 1, 1, 0.5, 2])
-        with bc[0]: btn_h   = st.form_submit_button("Degree → All H", help="Set all Degree of Uncertainty to H")
-        with bc[1]: btn_m   = st.form_submit_button("Degree → All M")
-        with bc[2]: btn_l   = st.form_submit_button("Degree → All L")
-        with bc[3]: btn_na  = st.form_submit_button("Impacts → All NA", help="Reset all decision impacts to NA")
-        with bc[5]: btn_save= st.form_submit_button("✅ Save Assessment", type="primary")
+        button_cols = st.columns([1, 1, 1, 1, 0.5, 2])
+        with button_cols[0]:
+            degree_h = st.form_submit_button(
+                "Degree → All H",
+                key="impact_degree_all_h",
+                help="Set every degree to High in the session draft.",
+            )
+        with button_cols[1]:
+            degree_m = st.form_submit_button(
+                "Degree → All M",
+                key="impact_degree_all_m",
+                help="Set every degree to Medium in the session draft.",
+            )
+        with button_cols[2]:
+            degree_l = st.form_submit_button(
+                "Degree → All L",
+                key="impact_degree_all_l",
+                help="Set every degree to Low in the session draft.",
+            )
+        with button_cols[3]:
+            impacts_na = st.form_submit_button(
+                "Impacts → All NA",
+                key="impact_all_na",
+                help="Set all decision impacts to Not Applicable in the session draft.",
+            )
+        with button_cols[5]:
+            save_clicked = st.form_submit_button(
+                "✅ Save Assessment",
+                key="save_impact_assessment",
+                type="primary",
+            )
 
-        col_cfg = {
-            "Uncertainty":           st.column_config.TextColumn("Uncertainty", width="large", disabled=True),
-            "Degree of Uncertainty": st.column_config.SelectboxColumn("Degree", options=DEG_OPTIONS, width="small"),
+        column_config = {
+            "uncertainty_id": st.column_config.TextColumn(
+                "ID",
+                width="small",
+                disabled=True,
+            ),
+            "Uncertainty": st.column_config.TextColumn(
+                "Uncertainty",
+                width="large",
+                disabled=True,
+            ),
+            "Degree of Uncertainty": st.column_config.SelectboxColumn(
+                "Degree",
+                options=DEG_OPTIONS,
+                width="small",
+                help="Choose H, M, or L explicitly.",
+            ),
         }
-        for dn in decision_names:
-            col_cfg[dn] = st.column_config.SelectboxColumn(dn, options=RATING_OPTIONS, width="small")
+
+        for decision_name in decision_names:
+            column_config[decision_name] = st.column_config.SelectboxColumn(
+                decision_name,
+                options=RATING_OPTIONS,
+                width="small",
+                help=f"Rate the impact on '{decision_name}'.",
+            )
 
         edited = st.data_editor(
-            df_in, column_config=col_cfg,
-            hide_index=True, width="stretch",
-            num_rows="fixed", key=f"impact_editor_{st.session_state.get('study_id', 'new')}",
+            df_in,
+            column_config=column_config,
+            hide_index=True,
+                use_container_width=True,
+            num_rows="fixed",
+            key=f"impact_editor_{st.session_state.get('study_id', 'new')}",
         )
 
-    # ── Handle form submission ────────────────────────────────────────
-    any_submit = btn_h or btn_m or btn_l or btn_na or btn_save
-    if any_submit:
-        data = edited.to_dict("records")
-        if btn_h:
-            for row in data: row["Degree of Uncertainty"] = "H"
-        elif btn_m:
-            for row in data: row["Degree of Uncertainty"] = "M"
-        elif btn_l:
-            for row in data: row["Degree of Uncertainty"] = "L"
-        elif btn_na:
-            for row in data:
-                for dn in decision_names:
-                    row[dn] = "NA"
+    submitted = (
+        degree_h
+        or degree_m
+        or degree_l
+        or impacts_na
+        or save_clicked
+    )
 
-        # Compute scores and save
+    if submitted:
+        data = edited.to_dict("records")
+
+        if degree_h:
+            for row in data:
+                row["Degree of Uncertainty"] = "H"
+        elif degree_m:
+            for row in data:
+                row["Degree of Uncertainty"] = "M"
+        elif degree_l:
+            for row in data:
+                row["Degree of Uncertainty"] = "L"
+
+        if impacts_na:
+            for row in data:
+                for decision_name in decision_names:
+                    row[decision_name] = "NA"
+
+        if save_clicked:
+            missing_degree = [
+                row["Uncertainty"]
+                for row in data
+                if str(
+                    row.get("Degree of Uncertainty", "")
+                ).strip().upper()
+                not in {"H", "M", "L"}
+            ]
+            missing_impacts = [
+                f'{row["Uncertainty"]} → {decision_name}'
+                for row in data
+                for decision_name in decision_names
+                if str(row.get(decision_name, "") or "").strip().upper()
+                not in {"H", "M", "L", "NA"}
+            ]
+            if missing_degree:
+                st.warning(
+                    "Before saving, choose a Degree of Uncertainty for: "
+                    + ", ".join(missing_degree[:5])
+                    + ("…" if len(missing_degree) > 5 else "")
+                )
+                return
+            if missing_impacts:
+                st.warning(
+                    "Before saving, explicitly rate each decision impact as H, M, L or NA. "
+                    "Missing examples: "
+                    + ", ".join(missing_impacts[:5])
+                    + ("…" if len(missing_impacts) > 5 else "")
+                )
+                return
+
         scored = []
         for row in data:
-            deg   = row.get("Degree of Uncertainty", "L")
+            degree = row.get("Degree of Uncertainty", "")
             score = compute_weighted_score(row, decisions)
-            imp   = score_to_bin(score)
-            rated = compute_combined_rating(deg, imp)
-            scored.append({**row, "Impact (Weighted)": round(score,3),
-                           "Impact Bin": imp, "Combined Rating": rated})
+            impact_bin = score_to_bin(score)
+            combined = compute_combined_rating(
+                degree,
+                impact_bin,
+            )
+
+            scored.append({
+                **row,
+                "Impact (Weighted)": round(score, 3),
+                "Impact Bin": impact_bin,
+                "Combined Rating": combined,
+            })
 
         st.session_state["impact_assessment"] = scored
-        st.session_state["key_uncertainties"] = []
-        st.session_state["resolution_list"] = {}
-        st.session_state["resolution_planner"] = []
-        st.session_state["risk_register"] = []
-        st.session_state["pra_output"] = []
-        save_session(auto=True)
+        mark_stage_changed(
+            st.session_state,
+            "impact_assessment",
+        )
+
+        if save_clicked:
+            ok = save_session(auto=False)
+            if not ok:
+                st.error("Assessment could not be saved.")
+                return
+            st.success("✅ Impact assessment saved.")
+        else:
+            st.info(
+                "Draft updated. Review the matrix, then click **Save Assessment** "
+                "to persist the assessment."
+            )
+
         st.rerun()
 
-    # ── Live score preview (read-only, from last saved state) ─────────
-    saved_ia = st.session_state.get("impact_assessment", [])
-    if saved_ia:
-        st.markdown('<div class="surm-section-header">🏆 Current Rankings (from last save)</div>', unsafe_allow_html=True)
-        preview_rows = []
-        for row in saved_ia:
-            preview_rows.append({
-                "Uncertainty":       row["Uncertainty"],
-                "Degree":            row.get("Degree of Uncertainty","—"),
-                "Score":             row.get("Impact (Weighted)", "—"),
-                "Impact":            row.get("Impact Bin","—"),
-                "Rating":            row.get("Combined Rating","—"),
-            })
-        preview_df = pd.DataFrame(preview_rows).sort_values("Score", ascending=False)
+    # ------------------------------------------------------------------
+    # Saved score preview
+    # ------------------------------------------------------------------
+    saved_impact = st.session_state.get("impact_assessment", [])
 
-        def _style_rating(val):
-            colors = {"HH":"background:#C00000;color:white","HM":"background:#FF4500;color:white",
-                      "HL":"background:#FFA500","MH":"background:#FF8C00;color:white",
-                      "MM":"background:#FFD700","ML":"background:#A5D6A7",
-                      "LH":"background:#FFC107","LM":"background:#C8E6C9","LL":"background:#00B050;color:white"}
-            return colors.get(val,"")
+    if saved_impact:
+        st.markdown(
+            '<div class="surm-section-header">🏆 Current Rankings</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "These scores reflect the last saved assessment. Changing upstream "
+            "inputs will invalidate downstream ranking and resolution stages."
+        )
+
+        preview_rows = [
+            {
+                "Uncertainty": row["Uncertainty"],
+                "Degree": row.get("Degree of Uncertainty", "—"),
+                "Score": row.get("Impact (Weighted)", "—"),
+                "Impact": row.get("Impact Bin", "—"),
+                "Rating": row.get("Combined Rating", "—"),
+            }
+            for row in saved_impact
+        ]
+
+        preview_df = pd.DataFrame(preview_rows).sort_values(
+            "Score",
+            ascending=False,
+        )
+
+        def style_rating(value):
+            colors = {
+                "HH": "background:#C00000;color:white",
+                "HM": "background:#FF4500;color:white",
+                "HL": "background:#FFA500",
+                "MH": "background:#FF8C00;color:white",
+                "MM": "background:#FFD700",
+                "ML": "background:#A5D6A7",
+                "LH": "background:#FFC107",
+                "LM": "background:#C8E6C9",
+                "LL": "background:#00B050;color:white",
+            }
+            return colors.get(value, "")
 
         st.dataframe(
-            preview_df.style.map(_style_rating, subset=["Rating"]),
-            width="stretch", hide_index=True,
+            preview_df.style.map(
+                style_rating,
+                subset=["Rating"],
+            ),
+                use_container_width=True,
+            hide_index=True,
         )
-        st.success(f"✅ {len(saved_ia)} rows saved — proceed to **Tab 4 → Key Uncertainties**.")
+
+        st.success(
+            f"✅ {len(saved_impact)} rows saved. "
+            "Proceed to **Tab 4 → Key Uncertainties**."
+        )
     else:
-        st.info("Fill in the table above and click **Save Assessment** to see rankings.")
+        st.info(
+            "Complete the matrix and click **Save Assessment** to calculate rankings."
+        )

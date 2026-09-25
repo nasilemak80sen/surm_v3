@@ -1,116 +1,203 @@
-"""
-modules/tab5_resolution_list.py
-Resolution alternatives matrix.
-Wrapped in st.form() — no reruns during editing.
-Y for All / Clear All as form submit buttons.
-"""
-import streamlit as st
+"""Tab 5 — Resolution List: action selection with live coverage."""
+
+from __future__ import annotations
+
 import pandas as pd
+import streamlit as st
+
+from utils.form_ui import render_form_header, render_save_hint, render_stage_status
 from utils.persistence import save_session
+from utils.workflow import mark_stage_changed
+
+
+def _coverage(rows: list[dict], options: list[str]) -> tuple[int, int, list[str]]:
+    covered = 0
+    uncovered: list[str] = []
+    for row in rows:
+        name = str(row.get("Uncertainty", "")).strip()
+        has_resolution = any(row.get(option, "") == "Y" for option in options)
+        if has_resolution:
+            covered += 1
+        elif name:
+            uncovered.append(name)
+    return covered, len(rows), uncovered
+
 
 def render():
-    ku_list = [r for r in st.session_state.get("key_uncertainties",[]) if r.get("Include in Plan")]
-    if not ku_list:
-        st.info("⬅️ Go to **Tab 4** and select uncertainties to include in the plan.")
+    key_uncertainties = [
+        row for row in st.session_state.get("key_uncertainties", [])
+        if row.get("Include in Plan")
+    ]
+
+    if not key_uncertainties:
+        st.info("⬅️ Go to **Tab 4** and select at least one uncertainty to carry into resolution planning.")
         return
 
-    st.info("For each uncertainty, mark Y for the actions that address it. Use bulk controls, refine the matrix, and save your selections.")
-
     options = st.session_state["_mapping"]["resolution_options"]
-    ku_df   = pd.DataFrame(ku_list)
+    saved_state = st.session_state.get("resolution_list", {})
 
-    # Build df_in from current session state
-    existing = st.session_state.get("resolution_list", {})
     rows = []
-    for _, r in ku_df.iterrows():
-        row = {"Uncertainty": r["Uncertainty"], "Rating": r["Combined Rating"]}
-        ex  = existing.get(r["Uncertainty"], {})
-        for opt in options:
-            row[opt] = ex.get(opt, "")
-        rows.append(row)
-    df_in = pd.DataFrame(rows)
-
-    st.markdown('<div class="surm-section-header">🛠️ Resolution Alternatives Matrix</div>', unsafe_allow_html=True)
-
-    # ── Form ─────────────────────────────────────────────────────────
-    with st.form("res_list_form"):
-        st.markdown(
-            '<div style="font-size:11px;color:#888;margin-bottom:8px;">'
-            '⚠️ Click <b>Save Selections</b> before switching tabs.'
-            '</div>', unsafe_allow_html=True)
-
-        bc = st.columns([1, 1, 0.5, 3])
-        with bc[0]: btn_y_all   = st.form_submit_button("✅ Y for All",   help="Mark Y for every cell")
-        with bc[1]: btn_clr_all = st.form_submit_button("☐ Clear All",   help="Clear all selections")
-        with bc[3]: btn_save    = st.form_submit_button("💾 Save Selections", type="primary")
-
-        col_cfg = {
-            "Uncertainty": st.column_config.TextColumn("Uncertainty", width="large", disabled=True),
-            "Rating":      st.column_config.TextColumn("Rating",      width="small", disabled=True),
+    for uncertainty in key_uncertainties:
+        name = uncertainty["Uncertainty"]
+        existing = saved_state.get(name, {})
+        row = {
+            "uncertainty_id": uncertainty.get("uncertainty_id", ""),
+            "Uncertainty": name,
+            "Rating": uncertainty["Combined Rating"],
         }
-        for opt in options:
-            col_cfg[opt] = st.column_config.SelectboxColumn(
-                opt, options=["", "Y"], width="small",
-                help=f"Select Y if '{opt}' will address this uncertainty")
+        for option in options:
+            row[option] = existing.get(option, "")
+        rows.append(row)
+
+    render_form_header(
+        "STEP 5 OF 7",
+        "Resolution List",
+        "Map each selected uncertainty to one or more engineering actions. Coverage is shown below the matrix.",
+        next_step="Resolution Planner",
+    )
+
+    persisted_rows = []
+    for row in key_uncertainties:
+        name = row["Uncertainty"]
+        persisted_rows.append({
+            "Uncertainty": name,
+            "Rating": row["Combined Rating"],
+            **saved_state.get(name, {}),
+        })
+
+    covered, total, uncovered = _coverage(persisted_rows, options)
+    mapped_actions = sum(
+        1
+        for row in persisted_rows
+        for option in options
+        if row.get(option) == "Y"
+    )
+    coverage_pct = round((covered / max(total, 1)) * 100)
+
+    # KPI cards stay together at the top so users get the decision signal
+    # before working through the wider resolution matrix.
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Uncertainties", total)
+    metric_cols[1].metric("Covered", f"{covered}/{total}")
+    metric_cols[2].metric("Coverage", f"{coverage_pct}%")
+    metric_cols[3].metric("Mapped actions", mapped_actions)
+
+    if uncovered:
+        render_stage_status(
+            label="Action needed",
+            value=f"{len(uncovered)} uncertainty{'ies' if len(uncovered) != 1 else ''} still need an action.",
+            tone="warning",
+        )
+    else:
+        render_stage_status(
+            label="Ready",
+            value="Every selected uncertainty has at least one resolution action.",
+            tone="success",
+        )
+
+    st.markdown('<div class="surm-section-header">Resolution Matrix</div>', unsafe_allow_html=True)
+    render_save_hint(
+        "Resolution mappings are a session draft until you click Save selections. "
+        "Bulk actions apply the draft but do not persist it."
+    )
+
+    with st.form("res_list_form", enter_to_submit=False):
+        button_cols = st.columns([1, 1, 2.2, 3.6])
+        with button_cols[0]:
+            select_all = st.form_submit_button("Y for all", key="res_select_all")
+        with button_cols[1]:
+            clear_all = st.form_submit_button("Clear all", key="res_clear_all")
+        with button_cols[2]:
+            save_clicked = st.form_submit_button(
+                "Save selections",
+                key="save_resolution_list",
+                type="primary",
+            )
+        with button_cols[3]:
+            st.caption("Use Y only when the engineering action genuinely addresses the selected uncertainty.")
+
+        column_config = {
+            "uncertainty_id": st.column_config.TextColumn("ID", width="small", disabled=True),
+            "Uncertainty": st.column_config.TextColumn("Uncertainty", width="large", disabled=True),
+            "Rating": st.column_config.TextColumn("Rating", width="small", disabled=True),
+        }
+        for option in options:
+            column_config[option] = st.column_config.SelectboxColumn(
+                option,
+                options=["", "Y"],
+                width="small",
+                help=f"Select Y when '{option}' will address this uncertainty.",
+            )
 
         edited = st.data_editor(
-            df_in, column_config=col_cfg, hide_index=True,
-            width="stretch", num_rows="fixed",
+            pd.DataFrame(rows),
+            column_config=column_config,
+            hide_index=True,
+            use_container_width=True,
+            num_rows="fixed",
+            height=min(720, max(280, len(rows) * 58 + 90)),
             key=f"res_list_editor_{st.session_state.get('study_id', 'new')}",
         )
 
-    # ── Handle submission ─────────────────────────────────────────────
-    any_submit = btn_y_all or btn_clr_all or btn_save
-    if any_submit:
+    if select_all or clear_all or save_clicked:
         data = edited.to_dict("records")
-        if btn_y_all:
+        if select_all:
             for row in data:
-                for opt in options:
-                    row[opt] = "Y"
-        elif btn_clr_all:
+                for option in options:
+                    row[option] = "Y"
+        elif clear_all:
             for row in data:
-                for opt in options:
-                    row[opt] = ""
+                for option in options:
+                    row[option] = ""
 
-        res_dict = {}
-        for row in data:
-            name = row["Uncertainty"]
-            res_dict[name] = {opt: row.get(opt,"") for opt in options}
-        st.session_state["resolution_list"] = res_dict
-        st.session_state["resolution_planner"] = []
-        st.session_state["risk_register"] = []
-        st.session_state["pra_output"] = []
-        save_session(auto=True)
+        resolution_dict = {
+            row["Uncertainty"]: {option: row.get(option, "") for option in options}
+            for row in data
+        }
+        previous = st.session_state.get("resolution_list", {})
+        st.session_state["resolution_list"] = resolution_dict
+
+        if previous != resolution_dict:
+            mark_stage_changed(st.session_state, "resolution_list")
+
+        if save_clicked:
+            if not st.session_state.get("project_name", "").strip():
+                st.warning("Enter a Project Name on Overview before saving the resolution mapping.")
+                return
+            ok = save_session(auto=False)
+            if not ok:
+                st.error("Resolution mapping could not be saved.")
+                return
+            st.success("✅ Resolution selections saved.")
+        else:
+            st.info("Draft updated. Click **Save selections** to persist the resolution mapping.")
         st.rerun()
 
-    # ── Coverage summary (from saved state) ───────────────────────────
-    saved_rl = st.session_state.get("resolution_list", {})
-    if saved_rl:
-        st.divider()
-        st.markdown('<div class="surm-section-header">📈 Coverage Summary</div>', unsafe_allow_html=True)
-        cov_rows = []
-        for opt in options:
-            count = sum(1 for v in saved_rl.values() if v.get(opt) == "Y")
-            if count > 0:
-                cov_rows.append({"Resolution Action": opt, "Uncertainties Addressed": count})
+    # The chart and diagnostics live below the matrix rather than squeezing
+    # the engineering editor into a narrow side column.
+    if total:
+        action_counts = [
+            (option, sum(1 for row in persisted_rows if row.get(option) == "Y"))
+            for option in options
+        ]
+        action_counts = [(name, count) for name, count in action_counts if count]
+        action_counts.sort(key=lambda item: item[1], reverse=True)
 
-        if cov_rows:
-            cov_df = pd.DataFrame(cov_rows).sort_values("Uncertainties Addressed", ascending=False)
-            for _, cr in cov_df.iterrows():
-                pct = int(cr["Uncertainties Addressed"] / max(len(ku_list),1) * 100)
-                st.markdown(
-                    f'<div style="display:flex;align-items:center;margin:4px 0;">'
-                    f'<div style="width:280px;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">{cr["Resolution Action"]}</div>'
-                    f'<div style="width:{pct*2}px;max-width:200px;height:10px;background:#1F6B3A;border-radius:3px;margin:0 8px;"></div>'
-                    f'<div style="font-size:11px;color:#555;">{int(cr["Uncertainties Addressed"])} ({pct}%)</div>'
-                    f'</div>', unsafe_allow_html=True)
+        if action_counts:
+            st.markdown('<div class="surm-section-header">Resolution Coverage by Action</div>', unsafe_allow_html=True)
+            chart_df = pd.DataFrame(
+                {"Uncertainties covered": [count for _, count in action_counts]},
+                index=[name for name, _ in action_counts],
+            )
+            st.bar_chart(
+                chart_df,
+                use_container_width=True,
+                height=300,
+            )
 
-        # Warn on uncovered uncertainties
-        uncov = [n for n,v in saved_rl.items() if all(v.get(opt,"") != "Y" for opt in options)]
-        if uncov:
-            st.warning(f"⚠️ {len(uncov)} uncertainties have no resolution selected: " +
-                       ", ".join(uncov[:3]) + ("..." if len(uncov)>3 else ""))
-        else:
-            st.success("✅ All uncertainties have at least one resolution action — proceed to **Tab 6 → Resolution Planner**.")
-    else:
-        st.info("Fill in the table above and click **Save Selections** to see the coverage summary.")
+        if uncovered:
+            st.caption(
+                "Still uncovered: "
+                + ", ".join(uncovered[:6])
+                + ("…" if len(uncovered) > 6 else "")
+            )

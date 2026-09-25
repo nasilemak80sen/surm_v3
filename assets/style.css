@@ -1762,3 +1762,382 @@ textarea:focus-visible {
 .surm-workflow-current { background: rgba(255, 255, 255, 0.12); border-radius: var(--surm-radius-sm); }
 .surm-workflow-current .surm-workflow-indicator { background: white; border-color: white; color: var(--surm-primary-dark); }
 .surm-workflow-locked { opacity: 0.55; }
+
+/* ==========================================================================
+   SURM 360 MINIMAL UI OVERHAUL
+   Keep the existing component system; reduce visual competition and let the
+   active task + its immediate output dominate the page.
+   ========================================================================== */
+
+.block-container {
+    max-width: 1500px;
+    padding-top: 1.25rem;
+    padding-bottom: 2.5rem;
+}
+
+.surm-header {
+    margin-bottom: 1rem;
+    padding: 1rem 1.15rem;
+    border-radius: 12px;
+    box-shadow: none;
+}
+
+.surm-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    font-size: 1.35rem;
+}
+
+.surm-title { font-size: 1.25rem; }
+.surm-subtitle { font-size: 0.7rem; }
+.surm-header-meta { gap: 0.35rem; }
+.surm-meta-item { padding: 0.35rem 0.55rem; border-radius: 7px; }
+
+.surm-top-navigation-label {
+    margin: 0.15rem 0 0.3rem;
+}
+
+.surm-top-navigation-label + div {
+    margin-bottom: 0.7rem;
+}
+
+.surm-page-header {
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--surm-border);
+}
+
+.surm-page-title {
+    font-size: 1.35rem !important;
+}
+
+.surm-page-description {
+    max-width: 900px;
+    font-size: 0.72rem;
+}
+
+.surm-form-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 0 0.8rem;
+    padding: 0 0 0.55rem;
+    border-bottom: 1px solid var(--surm-border);
+}
+
+.surm-form-step {
+    color: var(--surm-primary);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.surm-form-title {
+    margin-top: 0.1rem;
+    color: var(--surm-text);
+    font-size: 1.1rem;
+    font-weight: 750;
+    line-height: 1.2;
+}
+
+.surm-form-purpose {
+    margin-top: 0.18rem;
+    color: var(--surm-text-muted);
+    font-size: 0.72rem;
+    line-height: 1.45;
+    max-width: 880px;
+}
+
+.surm-form-next {
+    color: var(--surm-text-muted);
+    font-size: 0.68rem;
+    white-space: nowrap;
+}
+
+.surm-save-hint {
+    margin: 0 0 0.4rem;
+    color: var(--surm-text-muted);
+    font-size: 0.67rem;
+}
+
+.surm-stage-status {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0 0 0.55rem;
+    color: var(--surm-text-secondary);
+    font-size: 0.7rem;
+}
+
+.surm-stage-status-icon {
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.58rem;
+    font-weight: 800;
+}
+
+.surm-stage-success .surm-stage-status-icon { background: var(--surm-success-soft); color: var(--surm-success); }
+.surm-stage-warning .surm-stage-status-icon { background: var(--surm-warning-soft); color: var(--surm-warning); }
+.surm-stage-error .surm-stage-status-icon { background: var(--surm-danger-soft); color: var(--surm-danger); }
+.surm-stage-info .surm-stage-status-icon { background: var(--surm-primary-soft); color: var(--surm-primary); }
+
+.surm-card {
+    margin-bottom: 0.65rem;
+    padding: 0.9rem;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.surm-card:hover {
+    box-shadow: none;
+}
+
+.surm-section-header {
+    margin-top: 0.9rem;
+    margin-bottom: 0.45rem;
+    font-size: 0.82rem;
+}
+
+[data-testid="stMetric"] {
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--surm-border);
+    border-radius: 9px;
+    background: var(--surm-surface);
+}
+
+[data-testid="stDataFrame"] {
+    border: 1px solid var(--surm-border);
+    border-radius: 9px;
+}
+
+section[data-testid="stSidebar"] {
+    background: #123B2A;
+}
+
+section[data-testid="stSidebar"] .stButton > button {
+    border-color: rgba(255,255,255,0.14);
+}
+
+.surm-workflow-item {
+    margin-bottom: 0.05rem;
+    padding: 0.22rem 0.15rem;
+}
+
+.surm-workflow-description {
+    display: none;
+}
+
+.surm-workflow-label {
+    font-size: 0.7rem;
+}
+
+.surm-workflow-current .surm-workflow-label,
+.surm-workflow-completed .surm-workflow-label {
+    color: white;
+}
+
+.surm-guide-hero {
+    margin-bottom: 1rem;
+    padding: 1rem 1.1rem;
+    background: var(--surm-primary-soft);
+    border: 1px solid #CDE1D4;
+    border-radius: 11px;
+}
+
+.surm-guide-kicker,
+.surm-flow-label,
+.surm-guide-section-title {
+    color: var(--surm-primary);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.surm-guide-title {
+    margin-top: 0.2rem;
+    color: var(--surm-text);
+    font-size: 1.15rem;
+    font-weight: 750;
+}
+
+.surm-guide-subtitle {
+    margin-top: 0.2rem;
+    color: var(--surm-text-muted);
+    font-size: 0.72rem;
+}
+
+.surm-flow-label { margin: 0 0 0.45rem; }
+
+.surm-flow-figure {
+    display: flex;
+    align-items: stretch;
+    gap: 0.25rem;
+    overflow-x: auto;
+    padding: 0.15rem 0 0.9rem;
+}
+
+.surm-flow-node {
+    min-width: 125px;
+    flex: 1 1 0;
+    padding: 0.6rem 0.65rem;
+    background: var(--surm-surface);
+    border: 1px solid var(--surm-border);
+    border-radius: 9px;
+}
+
+.surm-flow-num {
+    color: var(--surm-primary);
+    font-size: 0.62rem;
+    font-weight: 800;
+}
+
+.surm-flow-verb {
+    margin-top: 0.2rem;
+    color: var(--surm-text);
+    font-size: 0.78rem;
+    font-weight: 750;
+}
+
+.surm-flow-label {
+    margin-top: 0.12rem;
+    color: var(--surm-text-muted);
+    font-size: 0.66rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.surm-flow-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--surm-border-strong);
+    font-size: 1rem;
+}
+
+.surm-guide-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.55rem;
+    margin-bottom: 1rem;
+}
+
+.surm-guide-card {
+    padding: 0.7rem;
+    border: 1px solid var(--surm-border);
+    border-radius: 9px;
+    background: var(--surm-surface);
+}
+
+.surm-guide-card-title {
+    color: var(--surm-text);
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+.surm-guide-card-body,
+.surm-guide-row span,
+.surm-guide-rhythm div div {
+    color: var(--surm-text-muted);
+    font-size: 0.66rem;
+    line-height: 1.45;
+}
+
+.surm-guide-card-body { margin-top: 0.22rem; }
+
+.surm-guide-section-title { margin-bottom: 0.35rem; }
+
+.surm-guide-row {
+    display: grid;
+    grid-template-columns: 145px 1fr;
+    gap: 0.65rem;
+    padding: 0.32rem 0;
+    border-bottom: 1px solid #EEF2EF;
+}
+
+.surm-guide-row strong {
+    color: var(--surm-text);
+    font-size: 0.68rem;
+}
+
+.surm-guide-rhythm {
+    display: grid;
+    grid-template-columns: 25px 1fr;
+    gap: 0.55rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid #EEF2EF;
+}
+
+.surm-guide-rhythm-num {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--surm-primary-soft);
+    color: var(--surm-primary);
+    font-size: 0.62rem;
+    font-weight: 800;
+}
+
+.overview-cover {
+    margin: 0 0 0.9rem;
+    padding: 1.15rem;
+    background: var(--surm-surface);
+    border: 1px solid var(--surm-border);
+    border-radius: 12px;
+}
+
+.overview-cover-kicker {
+    color: var(--surm-primary);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.overview-cover-title {
+    margin-top: 0.2rem;
+    color: var(--surm-text);
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.overview-cover-meta {
+    margin-top: 0.45rem;
+    color: var(--surm-text-muted);
+    font-size: 0.72rem;
+}
+
+.surm-live-panel {
+    padding: 0.8rem;
+    border: 1px solid var(--surm-border);
+    border-radius: 9px;
+    background: var(--surm-surface);
+}
+
+.surm-live-panel-title {
+    color: var(--surm-text);
+    font-size: 0.74rem;
+    font-weight: 750;
+    margin-bottom: 0.35rem;
+}
+
+@media (max-width: 1050px) {
+    .surm-guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 850px) {
+    .surm-flow-node { min-width: 108px; }
+    .surm-flow-figure { align-items: stretch; }
+    .surm-guide-grid { grid-template-columns: 1fr; }
+    .surm-form-header { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
+}

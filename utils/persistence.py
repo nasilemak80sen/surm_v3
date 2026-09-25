@@ -5,8 +5,10 @@ Session persistence — delegates to SQLite or PostgreSQL via db.py
 import json
 from datetime import datetime
 import streamlit as st
+from utils.auth import auth_required, can_delete_study, can_edit_study, current_user_label
+from utils.coercion import safe_int
 from utils.db import get_db
-from utils.session import DEFAULT_SESSION_STATE
+from utils.session import DEFAULT_SESSION_STATE, normalize_entity_ids
 from utils.study_document import StudyDocument
 from utils.workflow import completion_percent
 import math
@@ -26,6 +28,11 @@ def save_session(auto: bool = False) -> bool:
     Overwrites if session for this project/field already exists.
     Returns True on success.
     """
+    allowed, reason = can_edit_study(dict(st.session_state))
+    if not allowed:
+        st.warning(reason)
+        return False
+
     db = get_db()
     project = st.session_state.get("project_name", "").strip()
     field   = st.session_state.get("field_name", "").strip()
@@ -36,6 +43,16 @@ def save_session(auto: bool = False) -> bool:
     # honor user preference for auto-save
     if auto and not st.session_state.get("_auto_save_enabled", True):
         return False
+
+    # Keep managed barrier metadata aligned with current Bowties before
+    # constructing the canonical durable document.
+    try:
+        from utils.intelligence import sync_barrier_register
+        sync_barrier_register(st.session_state)
+    except Exception:
+        # Persistence must remain available even when optional intelligence
+        # calculations are unavailable.
+        pass
 
     payload = {}
     def _sanitize(o):
@@ -61,8 +78,17 @@ def save_session(auto: bool = False) -> bool:
         except Exception:
             return ""
 
-    document = StudyDocument.from_session({str(key): value for key, value in st.session_state.items()})
-    document.study_revision = int(st.session_state.get("study_revision", 0)) + 1
+    previous_revision = safe_int(
+        st.session_state.get("study_revision", 0),
+        default=0,
+    )
+    document = StudyDocument.from_session(
+        {str(key): value for key, value in st.session_state.items()}
+    )
+    if auth_required() and document.study_owner in ("", "local-user"):
+        document.study_owner = current_user_label()
+
+    document.study_revision = previous_revision + 1
     document.study_change_log = list(document.study_change_log or []) + [{
         "revision": document.study_revision,
         "saved_at": datetime.now().isoformat(timespec="seconds"),
@@ -90,17 +116,25 @@ def save_session(auto: bool = False) -> bool:
             "study_lifecycle": st.session_state.get("study_lifecycle", "Draft"),
             "study_id": document.study_id,
             "study_owner": document.study_owner,
+            "methodology_version": document.methodology_version,
         },
         "session": payload,
     }
 
-    ok = db.save_bundle(project, field, revision, data)
+    ok = db.save_bundle(
+        project,
+        field,
+        revision,
+        data,
+        expected_previous_revision=previous_revision,
+    )
     if ok:
         st.session_state["_last_saved"]     = now
         st.session_state["_last_save_auto"] = auto
         st.session_state["_resume_message"] = ""
         st.session_state["study_revision"] = revision
         st.session_state["study_id"] = document.study_id
+        st.session_state["study_owner"] = document.study_owner
         verified = db.load(project, field)
         saved_document = StudyDocument.from_record(verified) if verified else None
         if not saved_document or saved_document.to_dict() != document.to_dict():
@@ -147,6 +181,7 @@ def load_session(project_name: str, field_name: str, phase_name: str = "") -> bo
         document.apply_to_session(st.session_state, keys=saved_keys)
         if mapping:
             st.session_state["_mapping"] = mapping
+        normalize_entity_ids()
         meta = data.get("meta", {})
         # Older saves may contain an empty session payload because durable
         # keys were not registered. The database row still has study identity.
@@ -168,7 +203,7 @@ def load_session(project_name: str, field_name: str, phase_name: str = "") -> bo
         )
         st.session_state["_last_saved"] = meta.get("saved_at", "")
         st.session_state["_last_save_auto"] = bool(meta.get("auto_saved", False))
-        st.session_state["study_revision"] = int(meta.get("study_revision", data.get("session", {}).get("study_revision", 0)) or 0)
+        st.session_state["study_revision"] = safe_int(meta.get("study_revision", data.get("session", {}).get("study_revision", 0)), default=0)
         st.session_state["study_lifecycle"] = meta.get("study_lifecycle", data.get("session", {}).get("study_lifecycle", "Draft"))
         st.session_state["study_mode"] = "loaded"
         st.session_state["study_access_mode"] = "view"
@@ -222,6 +257,9 @@ def resume_latest_session() -> bool:
 
 
 def delete_session(project_name: str, field_name: str) -> bool:
-    """Delete a session from database."""
-    db = get_db()
-    return db.delete(project_name, field_name)
+    """Delete a session from database when deployment authorization permits it."""
+    allowed, reason = can_delete_study()
+    if not allowed:
+        st.warning(reason)
+        return False
+    return get_db().delete(project_name, field_name)

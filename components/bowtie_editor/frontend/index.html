@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SURM Bowtie V2</title>
+<style>
+:root{
+  --ink:#193127;--muted:#63746c;--border:#d7e1db;--panel:#f6f9f7;--surface:#fff;
+  --threat:#f7e8c5;--threat-line:#b57a17;
+  --prevent:#e5f4ec;--prevent-line:#168a62;
+  --event:#b51218;--event-dark:#8d0d12;
+  --mitigate:#ece9fb;--mitigate-line:#564ab5;
+  --outcome:#f8e4dc;--outcome-line:#a84c2f;
+  --grid:#d9e4de;--connector:#72827a;--focus:#176b3a;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:Calibri,Arial,sans-serif;background:var(--surface);color:var(--ink);overflow:hidden}
+button,input,textarea,select{font:inherit}
+button{
+  border:1px solid #b8c8bf;background:#fff;color:var(--ink);border-radius:7px;
+  padding:7px 10px;cursor:pointer;line-height:1.1;white-space:nowrap
+}
+button:hover{background:#f1f6f3}
+button.primary{background:#176b3a;color:#fff;border-color:#176b3a}
+button.danger{color:#a51d2d}
+button:disabled{opacity:.45;cursor:not-allowed}
+.toolbar{
+  min-height:62px;display:flex;align-items:center;gap:6px;padding:7px 10px;
+  border-bottom:1px solid var(--border);background:#fff;flex-wrap:wrap
+}
+.toolbar .title{font-size:16px;font-weight:700;min-width:180px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toolbar .section-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 1px 0 7px}
+.toolbar .sep{width:1px;height:26px;background:var(--border);margin:0 3px}
+.layout{height:calc(100vh - 62px);display:grid;grid-template-columns:minmax(760px,1fr) 330px}
+.canvas-wrap{position:relative;overflow:hidden;background:#fbfdfb}
+svg{width:100%;height:100%;display:block;touch-action:none;user-select:none}
+.side{
+  border-left:1px solid var(--border);background:var(--panel);padding:12px;overflow:auto
+}
+.side h3{font-size:15px;margin:0 0 5px}
+.small{font-size:11px;line-height:1.45;color:var(--muted)}
+.badge{
+  display:inline-flex;align-items:center;border-radius:999px;padding:2px 7px;
+  font-size:10px;font-weight:700;background:#e5ece7;color:var(--ink)
+}
+.section{padding:10px 0;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:0}
+.section-title{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-bottom:7px}
+.health{display:flex;flex-wrap:wrap;gap:5px}
+.health-chip{
+  padding:3px 7px;border-radius:999px;background:#fff;border:1px solid var(--border);
+  font-size:10px;color:var(--ink)
+}
+.health-chip.warn{border-color:#e2ad62;background:#fff8e8}
+.health-chip.ok{border-color:#8cc9aa;background:#f1faf5}
+.list{display:grid;gap:4px;max-height:220px;overflow:auto}
+.list button{text-align:left;font-size:11px;padding:6px 8px;overflow:hidden;text-overflow:ellipsis}
+.list button.active{outline:2px solid #79ad92;background:#ebf6ef}
+input,textarea,select{
+  width:100%;border:1px solid #c8d3cd;border-radius:6px;padding:7px;background:#fff;color:var(--ink)
+}
+textarea{min-height:70px;resize:vertical}
+.field{margin-top:7px}
+label{display:block;font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.inspector-action{margin-top:8px;width:100%}
+.status{min-height:15px;font-size:10px;color:#176b3a;margin-top:6px}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:10px;color:var(--muted)}
+.legend div{display:flex;align-items:center;gap:5px}
+.sw{width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.15);flex:0 0 auto}
+.link-row{display:flex;align-items:center;gap:7px;margin:5px 0;font-size:11px}
+.link-row input{width:auto}
+.link-row .link-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.connection-chip{
+  display:inline-block;padding:2px 6px;border-radius:999px;font-size:9px;
+  background:#e9efeb;color:#53635b
+}
+svg .lane{stroke-width:1}
+svg .lane-title{font-size:13px;font-weight:700;letter-spacing:.04em}
+svg .lane-subtitle{font-size:10px;fill:#718178}
+svg .event{fill:var(--event);stroke:var(--event-dark);stroke-width:2}
+svg .event-kicker{font-size:10px;letter-spacing:.1em;fill:#ffdfe0;font-weight:700}
+svg .event-text{font-size:17px;font-weight:700;fill:#fff}
+svg .node{cursor:grab}
+svg .node:active{cursor:grabbing}
+svg .node rect{stroke-width:1.5}
+svg .cause rect{fill:var(--threat);stroke:var(--threat-line)}
+svg .preventativeBarrier rect{fill:var(--prevent);stroke:var(--prevent-line)}
+svg .mitigativeBarrier rect{fill:var(--mitigate);stroke:var(--mitigate-line)}
+svg .outcome rect{fill:var(--outcome);stroke:var(--outcome-line)}
+svg .node.selected rect{stroke:var(--focus);stroke-width:3}
+svg .node-label{font-size:13px;font-weight:600;fill:var(--ink);pointer-events:none}
+svg .barrier-label{font-size:11px;font-weight:600;fill:var(--ink);pointer-events:none}
+svg .node-meta{font-size:9px;fill:#61726a;pointer-events:none}
+svg .connector{fill:none;stroke:var(--connector);stroke-width:2;vector-effect:non-scaling-stroke;pointer-events:none}
+svg .connector.secondary{stroke-width:1.6;opacity:.9}
+svg .connector.direct{stroke-dasharray:5 4}
+svg .port{fill:#fff;stroke:var(--connector);stroke-width:1.5}
+svg .grid-dot{fill:var(--grid);opacity:.5}
+svg .focus-ring{fill:none;stroke:#72a488;stroke-width:2;stroke-dasharray:6 4;opacity:.7}
+svg .health-dot{stroke:#fff;stroke-width:1.5}
+svg .empty-hint{font-size:12px;fill:#788880}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <div class="title" id="title">SURM Bowtie</div>
+  <span class="section-label">Layout</span>
+  <button id="auto">Auto layout</button>
+  <button id="fit">Fit</button>
+  <button id="zoomOut" aria-label="Zoom out">−</button>
+  <button id="zoomReset">100%</button>
+  <button id="zoomIn" aria-label="Zoom in">+</button>
+  <span class="sep"></span>
+  <button id="undo" disabled>Undo</button>
+  <button id="redo" disabled>Redo</button>
+  <span class="section-label">Add</span>
+  <button id="addCause">+ Threat</button>
+  <button id="addPrevent">+ Preventive</button>
+  <button id="addMitigate">+ Mitigative</button>
+  <button id="addOutcome">+ Consequence</button>
+  <span class="sep"></span>
+  <button id="exportSvg">Export SVG</button>
+  <button id="exportPng">Export PNG</button>
+  <button id="delete" class="danger" disabled>Delete</button>
+</div>
+<div class="layout">
+  <div class="canvas-wrap">
+    <svg id="svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" aria-label="SURM Bowtie canvas"></svg>
+  </div>
+  <aside class="side">
+    <div class="section">
+      <h3>Bowtie structure</h3>
+      <div class="small" id="riskInfo"></div>
+      <div class="health" id="health"></div>
+      <div class="status" id="status"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Navigator</div>
+      <div class="list" id="objects"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Object inspector</div>
+      <div id="editor"><div class="small">Select a node to edit.</div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Connections</div>
+      <div id="relationships"><div class="small">Select a threat or consequence to manage barrier relationships.</div></div>
+    </div>
+    <div class="section">
+      <div class="legend">
+        <div><span class="sw" style="background:var(--threat)"></span>Threat</div>
+        <div><span class="sw" style="background:var(--prevent)"></span>Preventive</div>
+        <div><span class="sw" style="background:var(--event)"></span>Top Event</div>
+        <div><span class="sw" style="background:var(--mitigate)"></span>Mitigative</div>
+        <div><span class="sw" style="background:var(--outcome)"></span>Consequence</div>
+      </div>
+      <div class="small" style="margin-top:7px">
+        Drag nodes vertically to refine spacing. Lanes stay locked; nodes snap to the 20 px grid.
+        Drag the blank canvas to pan. Use the wheel or zoom controls to inspect dense diagrams.
+      </div>
+    </div>
+  </aside>
+</div>
+<script src="bowtie_v2.js"></script>
+</body>
+</html>
