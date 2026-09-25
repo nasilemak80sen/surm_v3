@@ -259,39 +259,51 @@ def render():
         matrix_display.insert(0, "Matrix #", range(1, len(matrix_display) + 1))
 
         matrix_figure = build_uncertainty_matrix(matrix_display)
-        st.plotly_chart(
-            matrix_figure,
-            use_container_width=True,
-            config={"displayModeBar": False, "responsive": True},
-        )
-        st.caption("Numbers in the matrix map directly to the detail table below.")
-        st.dataframe(
-            matrix_display[
-                [
-                    "Matrix #",
-                    "Uncertainty",
-                    "Degree of Uncertainty",
-                    "Impact Bin",
-                    "Combined Rating",
-                    "Impact (Weighted)",
-                    "Rank",
-                ]
-            ].rename(
-                columns={
-                    "Degree of Uncertainty": "Degree",
-                    "Impact Bin": "Impact",
-                    "Combined Rating": "Rating",
-                    "Impact (Weighted)": "Weighted Score",
-                }
-            ),
-            hide_index=True,
-            use_container_width=True,
-            height=min(420, max(120, len(matrix_display) * 48 + 48)),
-        )
+
+        matrix_col, matrix_detail_col = st.columns([3, 2], gap="large")
+        with matrix_col:
+            st.plotly_chart(
+                matrix_figure,
+                use_container_width=True,
+                config={"displayModeBar": False, "responsive": True},
+            )
+        with matrix_detail_col:
+            st.markdown("### Matrix details")
+            st.caption("The numbered dots map directly to the full uncertainty names and ranking below.")
+            st.dataframe(
+                matrix_display[
+                    [
+                        "Matrix #",
+                        "Uncertainty",
+                        "Degree of Uncertainty",
+                        "Impact Bin",
+                        "Combined Rating",
+                        "Impact (Weighted)",
+                        "Rank",
+                    ]
+                ].rename(
+                    columns={
+                        "Degree of Uncertainty": "Degree",
+                        "Impact Bin": "Impact",
+                        "Combined Rating": "Rating",
+                        "Impact (Weighted)": "Weighted Score",
+                    }
+                ),
+                hide_index=True,
+                use_container_width=True,
+                height=min(520, max(260, len(matrix_display) * 48 + 48)),
+            )
+
+        st.caption("The interactive matrix stays intentionally compact; the PNG export includes the full uncertainty names.")
         try:
+            matrix_export = build_uncertainty_matrix(matrix_display, show_full_names=True)
             st.download_button(
                 "Download matrix",
-                data=fig_to_png_bytes(matrix_figure, width=1500, height=700),
+                data=fig_to_png_bytes(
+                    matrix_export,
+                    width=1900,
+                    height=max(760, 560 + ((len(matrix_display) + 1) // 2) * 30),
+                ),
                 file_name="SURM_Uncertainty_Matrix.png",
                 mime="image/png",
                 use_container_width=True,
@@ -304,19 +316,54 @@ def render():
             '<div class="surm-section-header">Priority Ranking — Weighted Impact</div>',
             unsafe_allow_html=True,
         )
-        tornado_figure = build_tornado_chart(active)
-        st.plotly_chart(
-            tornado_figure,
-            use_container_width=True,
-            config={"displayModeBar": False, "responsive": True},
+        tornado_display = (
+            active[
+                [
+                    "Rank",
+                    "Uncertainty",
+                    "Impact (Weighted)",
+                    "Combined Rating",
+                    "Degree of Uncertainty",
+                    "Impact Bin",
+                ]
+            ]
+            .sort_values(["Rank", "Impact (Weighted)"], ascending=[True, False])
+            .rename(
+                columns={
+                    "Impact (Weighted)": "Weighted Score",
+                    "Combined Rating": "Rating",
+                    "Degree of Uncertainty": "Degree",
+                    "Impact Bin": "Impact",
+                }
+            )
         )
+
+        tornado_figure = build_tornado_chart(active)
+        tornado_col, tornado_detail_col = st.columns([3, 2], gap="large")
+        with tornado_col:
+            st.plotly_chart(
+                tornado_figure,
+                use_container_width=True,
+                config={"displayModeBar": False, "responsive": True},
+            )
+        with tornado_detail_col:
+            st.markdown("### Ranking details")
+            st.caption("Full uncertainty names, ranking and weighted impact are shown alongside the chart.")
+            st.dataframe(
+                tornado_display,
+                hide_index=True,
+                use_container_width=True,
+                height=min(520, max(260, len(tornado_display) * 48 + 48)),
+            )
+
         try:
+            tornado_export = build_tornado_chart(active, full_labels=True)
             st.download_button(
                 "Download tornado",
                 data=fig_to_png_bytes(
-                    tornado_figure,
-                    width=1500,
-                    height=max(520, len(active) * 55 + 140),
+                    tornado_export,
+                    width=1900,
+                    height=max(620, len(active) * 58 + 160),
                 ),
                 file_name="SURM_Tornado_Chart.png",
                 mime="image/png",
