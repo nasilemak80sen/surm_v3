@@ -85,7 +85,8 @@ def test_uncertainty_matrix_export_includes_full_name_panel():
     figure = build_uncertainty_matrix(frame, show_full_names=True)
 
     annotations = [str(item.text) for item in figure.layout.annotations if item.text]
-    assert any("Very long reservoir connectivity uncertainty label" in text for text in annotations)
+    normalized_annotations = [text.replace("<br>", " ") for text in annotations]
+    assert any("Very long reservoir connectivity uncertainty label" in text for text in normalized_annotations)
     assert any("Full uncertainty names" in text for text in annotations)
     assert list(figure.layout.xaxis.domain) == [0.0, 0.62]
 
