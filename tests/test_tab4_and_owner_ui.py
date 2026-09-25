@@ -22,5 +22,5 @@ def test_team_and_planner_owner_controls_are_present():
     assert "TEAM_ROLE_OPTIONS" in team_source
     assert "build_owner_options(st.session_state)" in planner_source
     assert "SelectboxColumn(" in planner_source
-    assert "_OTHER_OWNER_OPTION = "Others"" in planner_source
+    assert '_OTHER_OWNER_OPTION = "Others"' in planner_source
     assert "Other Owner Name" in planner_source
