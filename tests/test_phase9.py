@@ -265,6 +265,14 @@ def test_phase9_authenticated_identity_controls_roles(monkeypatch):
         )
         assert allowed, reason
 
+        approver_allowed, reason = auth.can_edit_study(
+            {
+                "study_role": "Author",
+                "study_owner": "engineer@example.com",
+            }
+        )
+        assert approver_allowed, reason
+
         denied, reason = auth.can_edit_study(
             {
                 "study_role": "Approver",
