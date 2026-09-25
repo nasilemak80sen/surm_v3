@@ -34,6 +34,7 @@
   let camera = { x: 0, y: 0, w: VIEW_W, h: VIEW_H };
   let currentFingerprint = "";
   let inspectorDirty = false;
+  let inspectorTargetId = null;
 
   const svg = document.getElementById("svg");
   const objectsEl = document.getElementById("objects");
@@ -982,13 +983,14 @@
 
   function applyInspectorChanges(options) {
     const settings = options || {};
-    const p = selected ? placementForId(selected.id) : null;
+    const targetId = settings.targetId || (selected ? selected.id : null);
+    const p = targetId ? placementForId(targetId) : null;
     if (!p || !editable) return false;
 
     const current = nodeFor(p);
     if (!current) return false;
 
-    const values = readInspectorValues();
+    const values = settings.values || readInspectorValues();
     const changed =
       current.name !== values.name ||
       (current.description || "") !== values.description ||
@@ -1024,11 +1026,18 @@
 
   function scheduleInspectorCommit() {
     if (!inspectorDirty || !editable) return;
+    const targetId = inspectorTargetId;
+    const values = readInspectorValues();
     window.setTimeout(function () {
       if (!inspectorDirty || !editorEl) return;
       const active = document.activeElement;
       if (active && editorEl.contains(active)) return;
-      applyInspectorChanges({rerender:true, silent:false});
+      applyInspectorChanges({
+        targetId: targetId,
+        values: values,
+        rerender: true,
+        silent: false,
+      });
     }, 0);
   }
 
@@ -1081,6 +1090,7 @@
 
     editorEl.innerHTML = html;
     inspectorDirty = false;
+    inspectorTargetId = p.id;
 
     ["editName","editDesc","editOwner","editEff","editDegradation","editControls"].forEach(function (id) {
       const field = document.getElementById(id);
@@ -1104,7 +1114,10 @@
       });
     }
 
-    editorEl.addEventListener("focusout", scheduleInspectorCommit);
+    if (editorEl.dataset.inspectorCommitBound !== "1") {
+      editorEl.addEventListener("focusout", scheduleInspectorCommit);
+      editorEl.dataset.inspectorCommitBound = "1";
+    }
     const selectConnections = document.getElementById("selectConnections");
     if (selectConnections) {
       selectConnections.addEventListener("click", function () {
