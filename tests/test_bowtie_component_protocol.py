@@ -1,4 +1,6 @@
 from pathlib import Path
+import shutil
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,3 +77,16 @@ def test_bowtie_delete_is_type_safe_and_removes_placement_library_and_lines():
     assert "doc.library[type] = (doc.library[type] || []).filter(" in source
     assert ".filter(function (line) { return line.originId !== placement.id; })" in source
     assert "stops: (line.stops || []).filter(function (stopId)" in source
+
+def test_bowtie_v2_javascript_passes_node_syntax_check():
+    node = shutil.which("node")
+    if node is None:
+        return
+
+    completed = subprocess.run(
+        [node, "--check", str(JS)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
