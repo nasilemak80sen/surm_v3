@@ -202,6 +202,17 @@ def test_bowtie_v2_browser_layout_interaction_and_round_trip():
             page = browser.new_page(accept_downloads=True)
             page_errors = []
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.add_init_script(
+                """window.__surmScriptErrors = [];
+window.addEventListener("error", event => {
+  window.__surmScriptErrors.push({
+    message: event.message,
+    filename: event.filename,
+    line: event.lineno,
+    column: event.colno
+  });
+});"""
+            )
 
             page.goto(
                 f"http://127.0.0.1:{server.server_port}/index.html",
@@ -238,7 +249,8 @@ def test_bowtie_v2_browser_layout_interaction_and_round_trip():
                 },
             )
 
-            assert not page_errors, page_errors
+            script_errors = page.evaluate("window.__surmScriptErrors")
+            assert not page_errors, {"page_errors": page_errors, "script_errors": script_errors}
 
             expect(page.locator("#riskInfo")).to_contain_text("RSK-001")
             expect(page.locator("#title")).to_have_text("Browser Regression Risk")
