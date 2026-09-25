@@ -110,7 +110,12 @@ See `docs/ROADMAP_PHASE4_10.md` for the active roadmap.
 
 The repository includes deterministic tests for weighted scoring and NA handling, rating thresholds, explicit risk assessment, workflow gating, resolution coverage, downstream invalidation, workflow revision tracking and StudyDocument governance/sign-off round trips.
 
-GitHub Actions is configured to run the regression suite on the main branch and enhancement branches.
+GitHub Actions runs two hardening lanes on the main branch and enhancement branches:
+
+- Python regression coverage for workflow, persistence, governance, export, intelligence and database concurrency.
+- Playwright browser regression coverage for the custom Bowtie component.
+
+Phase 9 production-hardening controls are documented in `docs/PRODUCTION_HARDENING.md`.
 
 ## Run locally
 
@@ -133,6 +138,8 @@ The default Streamlit port is 8501.
 ## Deployment
 
 The project supports Streamlit Community Cloud, Docker, Docker Compose, SQLite for local use and PostgreSQL for shared/production deployments.
+
+For secured deployments, set `SURM_AUTH_REQUIRED=1` and configure `SURM_ROLE_MAP` as documented in `docs/PRODUCTION_HARDENING.md`. Streamlit's native OIDC identity is used through `st.user`; role assignment remains an application authorization layer.
 
 The repository also includes the existing Streamlit keep-awake GitHub workflow.
 
