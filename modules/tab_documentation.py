@@ -9,6 +9,21 @@ from utils.form_ui import render_form_header, render_save_hint
 from utils.persistence import save_session
 
 
+TEAM_ROLE_OPTIONS = [
+    "",
+    "ES",
+    "PE",
+    "RE",
+    "G&G",
+    "PT",
+    "PP",
+    "FE",
+    "D&C",
+    "FDP Lead",
+    "Other",
+]
+
+
 def render():
     render_form_header(
         "STUDY GOVERNANCE",
@@ -40,7 +55,7 @@ def render():
                 "Function / Role": st.column_config.SelectboxColumn(
                     "Function / Role",
                     width="medium",
-                    options=["", "ES", "PE", "RE", "G&G", "PT", "PP", "FE", "D&C", "FDP Lead", "Other"],
+                    options=TEAM_ROLE_OPTIONS,
                 ),
                 "Date (DD/MM/YYYY)": st.column_config.TextColumn(
                     "Date (DD/MM/YYYY)",
