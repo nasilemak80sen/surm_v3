@@ -238,6 +238,8 @@ def test_bowtie_v2_browser_layout_interaction_and_round_trip():
                 },
             )
 
+            assert not page_errors, page_errors
+
             expect(page.locator("#riskInfo")).to_contain_text("RSK-001")
             expect(page.locator("#title")).to_have_text("Browser Regression Risk")
             expect(page.locator("#health")).to_contain_text("2 threats")
