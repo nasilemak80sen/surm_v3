@@ -10,7 +10,6 @@ from openpyxl.styles import (Font, PatternFill, Alignment, Border, Side,
 from openpyxl.utils import get_column_letter
 import streamlit as st
 from utils.study_document import StudyDocument
-from utils.intelligence import build_traceability
 
 # ── Colour palette matching SURM Excel ───────────────────────────────
 GREEN_DARK   = "1F6B3A"
@@ -80,6 +79,9 @@ def build_excel_export() -> bytes:
     Assembles the full SURM workbook from session state.
     Returns bytes for st.download_button().
     """
+    # Import lazily to avoid Streamlit hot-reload import races between service modules.
+    from utils.intelligence import build_traceability
+
     wb = Workbook()
     wb.remove(wb.active)  # remove default blank sheet
 
