@@ -55,6 +55,8 @@ def test_bowtie_document_seeds_stable_risk_topology():
 
     assert document["version"] == BOWTIE_SCHEMA_VERSION
     assert document["risk_id"] == "RSK-001"
+    assert document["layout_version"] == 2
+    assert document["layout"]["CAUSE-PLACEMENT-1"]["x"] == 120
     assert len(document["causes"]) == 2
     assert len(document["preventativeBarriers"]) == 2
     assert len(document["outcomes"]) == 2

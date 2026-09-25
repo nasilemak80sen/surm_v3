@@ -3,709 +3,167 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SURM Bowtie Editor</title>
+<title>SURM Bowtie V2</title>
 <style>
 :root{
-  --ink:#1d2b24;--muted:#607067;--line:#aab7b0;--panel:#f7faf8;
-  --cause:#fff5df;--cause-line:#c9972e;--prevent:#edf8f2;--prevent-line:#1d9e75;
-  --event:#c00000;--mitigate:#f1eefb;--mitigate-line:#534ab7;
-  --outcome:#fff0e9;--outcome-line:#b95a36;
+  --ink:#193127;--muted:#63746c;--border:#d7e1db;--panel:#f6f9f7;--surface:#fff;
+  --threat:#f7e8c5;--threat-line:#b57a17;
+  --prevent:#e5f4ec;--prevent-line:#168a62;
+  --event:#b51218;--event-dark:#8d0d12;
+  --mitigate:#ece9fb;--mitigate-line:#564ab5;
+  --outcome:#f8e4dc;--outcome-line:#a84c2f;
+  --grid:#d9e4de;--connector:#72827a;--focus:#176b3a;
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:Calibri,Arial,sans-serif;background:white;color:var(--ink);overflow:hidden}
-.toolbar{height:56px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #d9e2dc;background:#fff}
-.toolbar .title{font-size:17px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-button{border:1px solid #b8c5bd;background:#fff;border-radius:7px;padding:7px 11px;font:inherit;color:var(--ink);cursor:pointer}
-button:hover{background:#f2f7f4}
+html,body{height:100%;margin:0}
+body{font-family:Calibri,Arial,sans-serif;background:var(--surface);color:var(--ink);overflow:hidden}
+button,input,textarea,select{font:inherit}
+button{
+  border:1px solid #b8c8bf;background:#fff;color:var(--ink);border-radius:7px;
+  padding:7px 10px;cursor:pointer;line-height:1.1;white-space:nowrap
+}
+button:hover{background:#f1f6f3}
 button.primary{background:#176b3a;color:#fff;border-color:#176b3a}
 button.danger{color:#a51d2d}
 button:disabled{opacity:.45;cursor:not-allowed}
-.layout{height:calc(100vh - 56px);display:grid;grid-template-columns:minmax(720px,1fr) 310px}
-.canvas-wrap{position:relative;overflow:hidden;background:#fbfdfc}
-canvas{width:100%;height:100%;display:block}
-.side{border-left:1px solid #d9e2dc;background:var(--panel);padding:12px;overflow:auto}
-.side h3{margin:0 0 8px;font-size:15px}
-.group{padding:10px 0;border-bottom:1px solid #dce5df}
-.group:last-child{border-bottom:0}
-label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
-input,textarea,select{width:100%;border:1px solid #c6d1cb;border-radius:6px;padding:7px;font:inherit;background:#fff}
-textarea{min-height:72px;resize:vertical}
-.small{font-size:11px;color:var(--muted);line-height:1.4}
-.row{display:flex;gap:6px}
-.row>*{flex:1}
-.list{display:grid;gap:5px;max-height:230px;overflow:auto}
-.list button{text-align:left;font-size:11px;padding:6px 8px}
-.list button.active{outline:2px solid #74a98c;background:#edf8f2}
-.badge{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:700;background:#e5ece7}
-.status{font-size:11px;color:#176b3a;margin-top:6px;min-height:15px}
+.toolbar{
+  min-height:62px;display:flex;align-items:center;gap:6px;padding:7px 10px;
+  border-bottom:1px solid var(--border);background:#fff;flex-wrap:wrap
+}
+.toolbar .title{font-size:16px;font-weight:700;min-width:180px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toolbar .section-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 1px 0 7px}
+.toolbar .sep{width:1px;height:26px;background:var(--border);margin:0 3px}
+.layout{height:calc(100vh - 62px);display:grid;grid-template-columns:minmax(760px,1fr) 330px}
+.canvas-wrap{position:relative;overflow:hidden;background:#fbfdfb}
+svg{width:100%;height:100%;display:block;touch-action:none;user-select:none}
+.side{
+  border-left:1px solid var(--border);background:var(--panel);padding:12px;overflow:auto
+}
+.side h3{font-size:15px;margin:0 0 5px}
+.small{font-size:11px;line-height:1.45;color:var(--muted)}
+.badge{
+  display:inline-flex;align-items:center;border-radius:999px;padding:2px 7px;
+  font-size:10px;font-weight:700;background:#e5ece7;color:var(--ink)
+}
+.section{padding:10px 0;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:0}
+.section-title{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-bottom:7px}
+.health{display:flex;flex-wrap:wrap;gap:5px}
+.health-chip{
+  padding:3px 7px;border-radius:999px;background:#fff;border:1px solid var(--border);
+  font-size:10px;color:var(--ink)
+}
+.health-chip.warn{border-color:#e2ad62;background:#fff8e8}
+.health-chip.ok{border-color:#8cc9aa;background:#f1faf5}
+.list{display:grid;gap:4px;max-height:220px;overflow:auto}
+.list button{text-align:left;font-size:11px;padding:6px 8px;overflow:hidden;text-overflow:ellipsis}
+.list button.active{outline:2px solid #79ad92;background:#ebf6ef}
+input,textarea,select{
+  width:100%;border:1px solid #c8d3cd;border-radius:6px;padding:7px;background:#fff;color:var(--ink)
+}
+textarea{min-height:70px;resize:vertical}
+.field{margin-top:7px}
+label{display:block;font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.inspector-action{margin-top:8px;width:100%}
+.status{min-height:15px;font-size:10px;color:#176b3a;margin-top:6px}
 .legend{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:10px;color:var(--muted)}
 .legend div{display:flex;align-items:center;gap:5px}
-.sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.15)}
-svg{width:100%;height:100%;display:block}
-.svg-bg{fill:#fbfdfc}
-.lane{fill:#fff;stroke:#d8e1db}
-.lane-title{font-size:15px;font-weight:700}
-.event{fill:var(--event);stroke:#850000;stroke-width:2}
-.node-text{font-size:14px;font-weight:600;fill:#1c2b24;pointer-events:none}
-.event-text{font-size:17px;font-weight:700;fill:#fff;pointer-events:none}
-.barrier-text{font-size:12px;font-weight:600;fill:#1c2b24;pointer-events:none}
-.arrow{stroke:#8a9891;stroke-width:2.2;fill:none}
-.node{cursor:grab}
-.node:active{cursor:grabbing}
-.selected{stroke:#176b3a!important;stroke-width:3!important}
+.sw{width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.15);flex:0 0 auto}
+.link-row{display:flex;align-items:center;gap:7px;margin:5px 0;font-size:11px}
+.link-row input{width:auto}
+.link-row .link-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.connection-chip{
+  display:inline-block;padding:2px 6px;border-radius:999px;font-size:9px;
+  background:#e9efeb;color:#53635b
+}
+svg .lane{stroke-width:1}
+svg .lane-title{font-size:13px;font-weight:700;letter-spacing:.04em}
+svg .lane-subtitle{font-size:10px;fill:#718178}
+svg .event{fill:var(--event);stroke:var(--event-dark);stroke-width:2}
+svg .event-kicker{font-size:10px;letter-spacing:.1em;fill:#ffdfe0;font-weight:700}
+svg .event-text{font-size:17px;font-weight:700;fill:#fff}
+svg .node{cursor:grab}
+svg .node:active{cursor:grabbing}
+svg .node rect{stroke-width:1.5}
+svg .cause rect{fill:var(--threat);stroke:var(--threat-line)}
+svg .preventativeBarrier rect{fill:var(--prevent);stroke:var(--prevent-line)}
+svg .mitigativeBarrier rect{fill:var(--mitigate);stroke:var(--mitigate-line)}
+svg .outcome rect{fill:var(--outcome);stroke:var(--outcome-line)}
+svg .node.selected rect{stroke:var(--focus);stroke-width:3}
+svg .node-label{font-size:13px;font-weight:600;fill:var(--ink);pointer-events:none}
+svg .barrier-label{font-size:11px;font-weight:600;fill:var(--ink);pointer-events:none}
+svg .node-meta{font-size:9px;fill:#61726a;pointer-events:none}
+svg .connector{fill:none;stroke:var(--connector);stroke-width:2;vector-effect:non-scaling-stroke;pointer-events:none}
+svg .connector.secondary{stroke-width:1.6;opacity:.9}
+svg .connector.direct{stroke-dasharray:5 4}
+svg .port{fill:#fff;stroke:var(--connector);stroke-width:1.5}
+svg .grid-dot{fill:var(--grid);opacity:.5}
+svg .focus-ring{fill:none;stroke:#72a488;stroke-width:2;stroke-dasharray:6 4;opacity:.7}
+svg .health-dot{stroke:#fff;stroke-width:1.5}
+svg .empty-hint{font-size:12px;fill:#788880}
 </style>
 </head>
 <body>
 <div class="toolbar">
   <div class="title" id="title">SURM Bowtie</div>
-  <button id="auto">Auto-arrange</button><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button>
-  <button id="exportSvg">Export SVG</button><button id="exportPng">Export PNG</button>
-  <button id="addCause">+ Cause</button>
+  <span class="section-label">Layout</span>
+  <button id="auto">Auto layout</button>
+  <button id="fit">Fit</button>
+  <button id="zoomOut" aria-label="Zoom out">−</button>
+  <button id="zoomReset">100%</button>
+  <button id="zoomIn" aria-label="Zoom in">+</button>
+  <span class="sep"></span>
+  <button id="undo" disabled>Undo</button>
+  <button id="redo" disabled>Redo</button>
+  <span class="section-label">Add</span>
+  <button id="addCause">+ Threat</button>
   <button id="addPrevent">+ Preventive</button>
   <button id="addMitigate">+ Mitigative</button>
   <button id="addOutcome">+ Consequence</button>
+  <span class="sep"></span>
+  <button id="exportSvg">Export SVG</button>
+  <button id="exportPng">Export PNG</button>
   <button id="delete" class="danger" disabled>Delete</button>
 </div>
 <div class="layout">
-  <div class="canvas-wrap"><svg id="svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <div class="canvas-wrap">
+    <svg id="svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" aria-label="SURM Bowtie canvas"></svg>
+  </div>
   <aside class="side">
-    <h3>Bowtie Structure</h3>
-    <div class="small" id="riskInfo"></div>
-    <div class="group">
-      <label>Objects</label>
+    <div class="section">
+      <h3>Bowtie structure</h3>
+      <div class="small" id="riskInfo"></div>
+      <div class="health" id="health"></div>
+      <div class="status" id="status"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Navigator</div>
       <div class="list" id="objects"></div>
     </div>
-    <div class="group">
-      <label>Selected object</label>
+    <div class="section">
+      <div class="section-title">Object inspector</div>
       <div id="editor"><div class="small">Select a node to edit.</div></div>
     </div>
-    <div class="group">
-      <label>Line relationships</label>
-      <div id="relationships"><div class="small">Select a Cause or Consequence to manage its barriers.</div></div>
+    <div class="section">
+      <div class="section-title">Connections</div>
+      <div id="relationships"><div class="small">Select a threat or consequence to manage barrier relationships.</div></div>
     </div>
-    <div class="group">
+    <div class="section">
       <div class="legend">
-        <div><span class="sw" style="background:var(--cause)"></span>Threat / Cause</div>
+        <div><span class="sw" style="background:var(--threat)"></span>Threat</div>
         <div><span class="sw" style="background:var(--prevent)"></span>Preventive</div>
         <div><span class="sw" style="background:var(--event)"></span>Top Event</div>
         <div><span class="sw" style="background:var(--mitigate)"></span>Mitigative</div>
         <div><span class="sw" style="background:var(--outcome)"></span>Consequence</div>
       </div>
-      <div class="status" id="status"></div>
+      <div class="small" style="margin-top:7px">
+        Drag nodes vertically to refine spacing. Lanes stay locked; nodes snap to the 20 px grid.
+        Drag the blank canvas to pan. Use the wheel or zoom controls to inspect dense diagrams.
+      </div>
     </div>
   </aside>
 </div>
-<script>
-(function(){
-  let args = null;
-  let editable = true;
-  let doc = null;
-  let selected = null;
-  let dirtyTimer = null;
-  let lastSentRevision = -1;
-  let undoStack = [];
-  let redoStack = [];
-  let historySuspended = false;
-
-  const svg = document.getElementById('svg');
-  const objectsEl = document.getElementById('objects');
-  const editorEl = document.getElementById('editor');
-  const relationshipsEl = document.getElementById('relationships');
-  const statusEl = document.getElementById('status');
-
-  function post(type, data){
-    const message = Object.assign(
-      {isStreamlitMessage:true, type:type},
-      data || {}
-    );
-    window.parent.postMessage(message,'*');
-  }
-  function ready(height){
-    post('streamlit:componentReady',{apiVersion:1});
-    post('streamlit:setFrameHeight',{height:Number(height)||760});
-  }
-  function setStatus(text){ statusEl.textContent = text || ''; }
-
-  function normalizeDocument(raw){
-    const value=clone(raw||{});
-    value.name=String(value.name||'SURM Bowtie');
-    value.risk_id=String(value.risk_id||'');
-    value.editor_revision=Number(value.editor_revision||0);
-    value.pages=Array.isArray(value.pages)?value.pages:[];
-    value.lines=Array.isArray(value.lines)?value.lines:[];
-    value.causes=Array.isArray(value.causes)?value.causes:[];
-    value.preventativeBarriers=Array.isArray(value.preventativeBarriers)?value.preventativeBarriers:[];
-    value.mitigativeBarriers=Array.isArray(value.mitigativeBarriers)?value.mitigativeBarriers:[];
-    value.outcomes=Array.isArray(value.outcomes)?value.outcomes:[];
-    value.library=value.library||{};
-    value.library.cause=Array.isArray(value.library.cause)?value.library.cause:[];
-    value.library.preventativeBarrier=Array.isArray(value.library.preventativeBarrier)?value.library.preventativeBarrier:[];
-    value.library.mitigativeBarrier=Array.isArray(value.library.mitigativeBarrier)?value.library.mitigativeBarrier:[];
-    value.library.outcome=Array.isArray(value.library.outcome)?value.library.outcome:[];
-    value.causes.forEach(p=>{
-      p.type='cause';
-      p.w=Math.max(Number(p.w)||210,210);
-      p.h=Math.max(Number(p.h)||72,80);
-    });
-    value.preventativeBarriers.forEach((p,i)=>{
-      p.type='preventativeBarrier';
-      const legacySize=Number(p.w||0)<80;
-      p.w=120;
-      p.h=112;
-      if(legacySize){
-        p.x=410+(i%3)*90;
-        p.y=150+Math.floor(i/3)*190;
-      }
-    });
-    value.mitigativeBarriers.forEach((p,i)=>{
-      p.type='mitigativeBarrier';
-      const legacySize=Number(p.w||0)<80;
-      p.w=120;
-      p.h=112;
-      if(legacySize){
-        p.x=1040+(i%3)*90;
-        p.y=150+Math.floor(i/3)*190;
-      }
-    });
-    value.outcomes.forEach(p=>{
-      p.type='outcome';
-      p.w=Math.max(Number(p.w)||210,210);
-      p.h=Math.max(Number(p.h)||72,80);
-    });
-    value.preventativeBarriers.forEach(p=>p.type='preventativeBarrier');
-    value.mitigativeBarriers.forEach(p=>p.type='mitigativeBarrier');
-    value.library.preventativeBarrier.forEach(n=>{
-      n.degradation_factors=Array.isArray(n.degradation_factors)?n.degradation_factors:[];
-      n.controls=Array.isArray(n.controls)?n.controls:[];
-    });
-    value.library.mitigativeBarrier.forEach(n=>{
-      n.degradation_factors=Array.isArray(n.degradation_factors)?n.degradation_factors:[];
-      n.controls=Array.isArray(n.controls)?n.controls:[];
-    });
-    return value;
-  }
-
-  function esc(s){
-    return String(s ?? '').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-  }
-  function itemsFor(type){
-    return type==='cause'?doc.causes:
-      type==='outcome'?doc.outcomes:
-      type==='preventativeBarrier'?doc.preventativeBarriers:doc.mitigativeBarriers;
-  }
-  function nodeFor(placement){
-    const bucket=doc.library[placement.type]||[];
-    return bucket.find(n=>n.id===placement.nodeId)||null;
-  }
-  function allPlacements(){
-    return [...doc.causes,...doc.preventativeBarriers,...doc.mitigativeBarriers,...doc.outcomes];
-  }
-  function lineForOrigin(id){
-    return doc.lines.find(l=>l.originId===id)||null;
-  }
-
-  function clone(o){ return JSON.parse(JSON.stringify(o)); }
-
-  function updateHistoryButtons(){
-    document.getElementById('undo').disabled=undoStack.length===0;
-    document.getElementById('redo').disabled=redoStack.length===0;
-  }
-
-  function rememberBeforeMutation(){
-    if(historySuspended || !doc) return;
-    undoStack.push(clone(doc));
-    if(undoStack.length>50) undoStack.shift();
-    redoStack=[];
-    updateHistoryButtons();
-  }
-
-  function undoChange(){
-    if(!doc || !undoStack.length) return;
-    const previous=undoStack.pop();
-    redoStack.push(clone(doc));
-    historySuspended=true;
-    doc=normalizeDocument(previous);
-    historySuspended=false;
-    emitChange();
-    render();
-    updateHistoryButtons();
-  }
-
-  function redoChange(){
-    if(!doc || !redoStack.length) return;
-    const next=redoStack.pop();
-    undoStack.push(clone(doc));
-    historySuspended=true;
-    doc=normalizeDocument(next);
-    historySuspended=false;
-    emitChange();
-    render();
-    updateHistoryButtons();
-  }
-
-  function emitChange(){
-    if(!editable) return;
-    doc.editor_revision = Number(doc.editor_revision||0)+1;
-    if(dirtyTimer) clearTimeout(dirtyTimer);
-    dirtyTimer=setTimeout(()=>{
-      window.parent.postMessage({
-        isStreamlitMessage:true,
-        type:'streamlit:setComponentValue',
-        value:{document:clone(doc),revision:doc.editor_revision}
-      },'*');
-      setStatus('Draft synced to SURM session');
-    },180);
-  }
-
-  function makeId(prefix){
-    const used=new Set(allPlacements().map(x=>x.id));
-    let n=1,id;
-    do{id=prefix+'-'+n++;}while(used.has(id));
-    return id;
-  }
-  function makeNodeId(type){
-    const used=new Set((doc.library[type]||[]).map(x=>x.id));
-    const p=type==='cause'?'C':type==='outcome'?'O':type==='preventativeBarrier'?'PB':'MB';
-    let n=1,id;
-    do{id=p+'_'+n++;}while(used.has(id));
-    return id;
-  }
-  function barrierPlacement(type,nodeId,index){
-    return {
-      id:makeId(type==='preventativeBarrier'?'PREVENTIVE-PLACEMENT':'MITIGATIVE-PLACEMENT'),
-      type,
-      nodeId,
-      x:type==='preventativeBarrier' ? 410+(index%3)*90 : 1040+(index%3)*90,
-      y:150+Math.floor(index/3)*190,
-      w:100,
-      h:110,
-      pageId:'PAGE_1'
-    };
-  }
-
-  function addObject(type){
-    rememberBeforeMutation();
-    const nodeId=makeNodeId(type);
-    const name=type==='cause'?'New Threat':type==='outcome'?'New Consequence':
-      type==='preventativeBarrier'?'New Preventive Barrier':'New Mitigative Barrier';
-    const node={id:nodeId,type,name,description:'',surm_source:{type:'manual'}};
-    if(type==='preventativeBarrier'||type==='mitigativeBarrier'){
-      node.owner='';
-      node.effectiveness='';
-      node.degradation_factors=[];
-      node.controls=[];
-    }
-    doc.library[type]=doc.library[type]||[];
-    doc.library[type].push(node);
-    const list=itemsFor(type);
-    const p=type==='cause'?
-      {id:makeId('CAUSE-PLACEMENT'),nodeId,x:120,y:160+list.length*115,w:220,h:72,pageId:'PAGE_1'}:
-      type==='outcome'?
-      {id:makeId('OUTCOME-PLACEMENT'),nodeId,x:1260,y:160+list.length*115,w:220,h:72,pageId:'PAGE_1'}:
-      barrierPlacement(type,nodeId,list.length);
-    p.type=type;
-    list.push(p);
-    if(type==='cause'){
-      doc.lines.push({id:makeId('LINE-CAUSE'),originType:'cause',originId:p.id,stops:[],pageId:'PAGE_1'});
-    }
-    if(type==='outcome'){
-      doc.lines.push({id:makeId('LINE-OUTCOME'),originType:'outcome',originId:p.id,stops:[],pageId:'PAGE_1'});
-    }
-    selected={type,id:p.id};
-    emitChange();render();
-  }
-
-  function removeSelected(){
-    if(!selected || !doc) return false;
-    rememberBeforeMutation();
-
-    const buckets=[
-      ['cause',doc.causes],
-      ['preventativeBarrier',doc.preventativeBarriers],
-      ['mitigativeBarrier',doc.mitigativeBarriers],
-      ['outcome',doc.outcomes]
-    ];
-    let type=null;
-    let placement=null;
-
-    for(const [bucketType,list] of buckets){
-      const found=list.find(p=>p.id===selected.id);
-      if(found){
-        type=bucketType;
-        placement=found;
-        break;
-      }
-    }
-
-    if(!placement || !type) return false;
-
-    const list=itemsFor(type);
-    const beforeCount=list.length;
-    const key=type==='cause'?'causes':type==='outcome'?'outcomes':type==='preventativeBarrier'?'preventativeBarriers':'mitigativeBarriers';
-    doc[key]=list.filter(p=>p.id!==placement.id);
-
-    if(placement.nodeId){
-      doc.library[type]=(doc.library[type]||[]).filter(n=>n.id!==placement.nodeId);
-    }
-
-    // Remove an origin line owned by the deleted Cause/Consequence and
-    // remove the placement from any other line's barrier stops.
-    doc.lines=(doc.lines||[])
-      .filter(line=>line.originId!==placement.id)
-      .map(line=>Object.assign({},line,{
-        stops:(line.stops||[]).filter(stopId=>stopId!==placement.id)
-      }));
-
-    selected=null;
-    if(doc[key].length!==beforeCount){
-      emitChange();
-      render();
-      setStatus('Deleted '+type+' from the Bowtie draft');
-      return true;
-    }
-    return false;
-  }
-
-  function autoArrange(){
-    rememberBeforeMutation();
-    const causes=doc.causes, prev=doc.preventativeBarriers, mit=doc.mitigativeBarriers, outs=doc.outcomes;
-    causes.forEach((p,i)=>{
-      p.w=210;p.h=80;p.x=120;p.y=150+i*135;
-    });
-    outs.forEach((p,i)=>{
-      p.w=210;p.h=80;p.x=1440;p.y=150+i*135;
-    });
-    prev.forEach((p,i)=>{
-      p.w=120;p.h=112;p.x=410+(i%3)*90;p.y=150+Math.floor(i/3)*190;
-    });
-    mit.forEach((p,i)=>{
-      p.w=120;p.h=112;p.x=1040+(i%3)*90;p.y=150+Math.floor(i/3)*190;
-    });
-    emitChange();render();
-  }
-
-  function selectedObject(){
-    return selected?allPlacements().find(p=>p.id===selected.id):null;
-  }
-
-  function renderEditor(){
-    const p=selectedObject();
-    if(!p){ editorEl.innerHTML='<div class="small">Select a node to edit.</div>'; return; }
-    const n=nodeFor(p);
-    if(!n){editorEl.innerHTML='';return;}
-    if(!editable){
-      editorEl.innerHTML='<div class="small">Read-only reporting view.</div>';
-      return;
-    }
-    editorEl.innerHTML=
-      '<label>Name</label><input id="editName" value="'+esc(n.name)+'">'+
-      '<label>Description</label><textarea id="editDesc">'+esc(n.description||'')+'</textarea>'+
-      ((p.type==='preventativeBarrier'||p.type==='mitigativeBarrier')?
-        '<label>Owner</label><input id="editOwner" value="'+esc(n.owner||'')+'">'+
-        '<label>Effectiveness</label><select id="editEff">'+
-          '<option value=""></option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>'+
-        '</select>'+
-        '<label>Degradation factors</label><textarea id="editDegradation">'+esc((n.degradation_factors||[]).join("\n"))+'</textarea>'+
-        '<label>Controls</label><textarea id="editControls">'+esc((n.controls||[]).join("\n"))+'</textarea>':'');
-    const eff=document.getElementById('editEff'); if(eff) eff.value=n.effectiveness||'';
-    ['editName','editDesc','editOwner','editEff','editDegradation','editControls'].filter(Boolean).forEach(id=>{
-      const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{
-        rememberBeforeMutation();
-        n.name=document.getElementById('editName').value;
-        n.description=document.getElementById('editDesc').value;
-        const o=document.getElementById('editOwner'); if(o) n.owner=o.value;
-        const e=document.getElementById('editEff'); if(e) n.effectiveness=e.value;
-        const d=document.getElementById('editDegradation'); if(d) n.degradation_factors=d.value.split(/\n/).map(x=>x.trim()).filter(Boolean);
-        const ctrl=document.getElementById('editControls'); if(ctrl) n.controls=ctrl.value.split(/\n/).map(x=>x.trim()).filter(Boolean);
-        emitChange();render();
-      });
-    });
-  }
-
-  function renderRelationships(){
-    const p=selectedObject();
-    if(!p || !['cause','outcome'].includes(p.type)){
-      relationshipsEl.innerHTML='<div class="small">Select a Cause or Consequence to manage its barriers.</div>';return;
-    }
-    const line=lineForOrigin(p.id);
-    if(!line){relationshipsEl.innerHTML='<div class="small">No line exists.</div>';return;}
-    const barrierType=p.type==='cause'?'preventativeBarrier':'mitigativeBarrier';
-    const barriers=itemsFor(barrierType);
-    if(!editable){
-      relationshipsEl.innerHTML='<div class="small">Read-only reporting view.</div>';
-      return;
-    }
-    const checks=barriers.map(b=>{
-      const n=nodeFor(b);
-      const checked=(line.stops||[]).includes(b.id);
-      return '<label style="display:flex;align-items:center;gap:6px;margin:5px 0;color:var(--ink)"><input type="checkbox" data-rel="'+b.id+'" '+(checked?'checked':'')+'> '+esc(n?n.name:b.nodeId)+'</label>';
-    }).join('');
-    relationshipsEl.innerHTML=checks||'<div class="small">No '+(p.type==='cause'?'preventive':'mitigative')+' barriers exist.</div>';
-    relationshipsEl.querySelectorAll('input[data-rel]').forEach(cb=>cb.addEventListener('change',()=>{
-      const id=cb.getAttribute('data-rel');
-      rememberBeforeMutation();
-      line.stops=line.stops||[];
-      if(cb.checked){ if(!line.stops.includes(id)) line.stops.push(id); }
-      else line.stops=line.stops.filter(x=>x!==id);
-      emitChange();render();
-    }));
-  }
-
-  function renderObjects(){
-    const groups=[['cause','Threats'],['preventativeBarrier','Preventive Barriers'],['mitigativeBarrier','Mitigative Barriers'],['outcome','Consequences']];
-    objectsEl.innerHTML=groups.map(([type,title])=>{
-      const list=itemsFor(type);
-      return '<div style="font-size:10px;color:var(--muted);margin:5px 0 3px">'+title+'</div>'+
-        (list.length?list.map(p=>{
-          const n=nodeFor(p);
-          return '<button class="'+(selected&&selected.id===p.id?'active':'')+'" data-p="'+p.id+'">'+esc(n?n.name:p.nodeId)+'</button>';
-        }).join(''):'<div class="small">None</div>');
-    }).join('');
-    objectsEl.querySelectorAll('button[data-p]').forEach(btn=>btn.addEventListener('click',()=>{
-      selected={id:btn.getAttribute('data-p')}; render();
-    }));
-  }
-
-  function textWrap(text,max=25,limit=4){
-    const words=String(text||'').trim().split(/\s+/).filter(Boolean);
-    if(!words.length) return [''];
-    const out=[];let line='';
-    words.forEach(word=>{
-      const next=line?line+' '+word:word;
-      if(next.length>max && line){
-        out.push(line);
-        line=word;
-      } else {
-        line=next;
-      }
-    });
-    if(line) out.push(line);
-    if(out.length<=limit) return out;
-    const clipped=out.slice(0,limit);
-    clipped[limit-1]=clipped[limit-1].replace(/[\s.,;:]+$/,'')+'…';
-    return clipped;
-  }
-
-  function card(g,x,y,w,h,text,cls,kind,id){
-    const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
-    r.setAttribute('x',x-w/2);r.setAttribute('y',y-h/2);r.setAttribute('width',w);r.setAttribute('height',h);
-    r.setAttribute('rx',8);r.setAttribute('fill',cls==='cause'?'#fff5df':'#fff0e9');r.setAttribute('stroke',cls==='cause'?'#c9972e':'#b95a36');r.setAttribute('stroke-width',selected&&selected.id===id?3:1.5);r.setAttribute('class','node '+cls+(selected&&selected.id===id?' selected':''));
-    r.dataset.id=id;r.dataset.kind=kind;g.appendChild(r);
-    const lines=textWrap(text,28,4);
-    lines.forEach((line,i)=>{
-      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
-      t.setAttribute('x',x);
-      t.setAttribute('y',y+(i-(lines.length-1)/2)*18);
-      t.setAttribute('text-anchor','middle');
-      t.setAttribute('class','node-text');
-      t.textContent=line;
-      g.appendChild(t);
-    });
-  }
-
-  function barrier(g,p,kind){
-    const n=nodeFor(p);const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
-    r.setAttribute('x',p.x-p.w/2);r.setAttribute('y',p.y-p.h/2);r.setAttribute('width',p.w);r.setAttribute('height',p.h);
-    r.setAttribute('rx',5);r.setAttribute('fill',kind==='preventativeBarrier'?'#edf8f2':'#f1eefb');
-    r.setAttribute('stroke',kind==='preventativeBarrier'?'#1d9e75':'#534ab7');
-    r.setAttribute('stroke-width',selected&&selected.id===p.id?3:1.5);
-    r.classList.add('node');r.dataset.id=p.id;r.dataset.kind=kind;g.appendChild(r);
-    const health=n && n.surm_management ? String(n.surm_management.health||'') : '';
-    if(health){
-      const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
-      dot.setAttribute('cx',p.x+p.w/2-10);
-      dot.setAttribute('cy',p.y-p.h/2+10);
-      dot.setAttribute('r',5);
-      dot.setAttribute('fill',health==='Healthy'?'#2E7D32':health==='At Risk'?'#E65100':'#607D8B');
-      g.appendChild(dot);
-    }
-    const lines=textWrap(n?n.name:p.nodeId,15,5);
-    lines.forEach((line,i)=>{
-      const t=document.createElementNS('http://www.w3.org/2000/svg','text');
-      t.setAttribute('x',p.x);
-      t.setAttribute('y',p.y+(i-(lines.length-1)/2)*15);
-      t.setAttribute('text-anchor','middle');
-      t.setAttribute('class','barrier-text');
-      t.textContent=line;
-      g.appendChild(t);
-    });
-  }
-
-  function route(points, arrowEnd=true){
-    if(!points || points.length<2)return;
-    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
-    p.setAttribute('d','M '+points.map(pt=>pt[0]+' '+pt[1]).join(' L '));
-    p.setAttribute('class','arrow');
-    if(arrowEnd)p.setAttribute('marker-end','url(#arrowhead)');
-    svg.appendChild(p);
-  }
-  function arrow(x1,y1,x2,y2){ route([[x1,y1],[x2,y2]],true); }
-
-  function render(){
-    if(!doc)return;
-    svg.innerHTML='';
-    const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
-    defs.innerHTML='<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#8a9891"/></marker>';
-    svg.appendChild(defs);
-    const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');bg.setAttribute('x',0);bg.setAttribute('y',0);bg.setAttribute('width',1600);bg.setAttribute('height',900);bg.setAttribute('class','svg-bg');svg.appendChild(bg);
-    const lanes=[
-      [180,50,260,780,'THREATS / CAUSES','#fff5df','#d9a441'],
-      [500,50,260,780,'PREVENTIVE BARRIERS','#edf8f2','#1d9e75'],
-      [800,50,260,780,'TOP EVENT','#fff3f3','#c00000'],
-      [1100,50,260,780,'MITIGATIVE BARRIERS','#f1eefb','#534ab7'],
-      [1400,50,260,780,'CONSEQUENCES','#fff0e9','#b95a36']
-    ];
-    lanes.forEach(([x,y,w,h,title,fill,stroke])=>{
-      const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
-      rect.setAttribute('x',x-w/2);rect.setAttribute('y',y);rect.setAttribute('width',w);rect.setAttribute('height',h);
-      rect.setAttribute('rx',12);rect.setAttribute('fill',fill);rect.setAttribute('stroke',stroke);rect.setAttribute('class','lane');svg.appendChild(rect);
-      const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',x);t.setAttribute('y',88);t.setAttribute('text-anchor','middle');t.setAttribute('class','lane-title');t.setAttribute('fill',stroke);t.textContent=title;svg.appendChild(t);
-    });
-
-    const eventX=800,eventY=450;
-    arrow(315,eventY,660,eventY);arrow(940,eventY,1285,eventY);
-
-    const ev=document.createElementNS('http://www.w3.org/2000/svg','rect');
-    ev.setAttribute('x',665);ev.setAttribute('y',385);ev.setAttribute('width',270);ev.setAttribute('height',130);ev.setAttribute('rx',12);ev.setAttribute('class','event');
-    ev.dataset.id='TLE_1';ev.dataset.kind='topLevelEvent';svg.appendChild(ev);
-    const et=document.createElementNS('http://www.w3.org/2000/svg','text');et.setAttribute('x',800);et.setAttribute('y',438);et.setAttribute('text-anchor','middle');et.setAttribute('class','event-text');et.textContent='TOP EVENT';svg.appendChild(et);
-    textWrap(doc.pages?.[0]?.topLevelEvent?.name||doc.name,26).forEach((line,i)=>{
-      const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',800);t.setAttribute('y',465+i*18);t.setAttribute('text-anchor','middle');t.setAttribute('class','event-text');t.setAttribute('font-size','14');t.textContent=line;svg.appendChild(t);
-    });
-
-    doc.causes.forEach((p)=>card(svg,p.x,p.y,p.w,p.h,nodeFor(p)?.name||p.nodeId,'cause', 'cause',p.id));
-    doc.outcomes.forEach((p)=>card(svg,p.x,p.y,p.w,p.h,nodeFor(p)?.name||p.nodeId,'outcome','outcome',p.id));
-    doc.preventativeBarriers.forEach(p=>barrier(svg,p,'preventativeBarrier'));
-    doc.mitigativeBarriers.forEach(p=>barrier(svg,p,'mitigativeBarrier'));
-
-    doc.lines.filter(l=>l.originType==='cause').forEach(l=>{
-      const o=doc.causes.find(p=>p.id===l.originId);if(!o)return;
-      let lastX=o.x+o.w/2;
-      let lastY=o.y;
-      (l.stops||[]).forEach(stopId=>{
-        const b=doc.preventativeBarriers.find(p=>p.id===stopId);if(!b)return;
-        const entryX=b.x-b.w/2;
-        route([[lastX,lastY],[entryX,lastY],[entryX,b.y]],false);
-        lastX=b.x+b.w/2;
-        lastY=b.y;
-      });
-      route([[lastX,lastY],[665,eventY]],true);
-    });
-    doc.lines.filter(l=>l.originType==='outcome').forEach(l=>{
-      const o=doc.outcomes.find(p=>p.id===l.originId);if(!o)return;
-      let lastX=o.x-o.w/2;
-      let lastY=o.y;
-      (l.stops||[]).slice().reverse().forEach(stopId=>{
-        const b=doc.mitigativeBarriers.find(p=>p.id===stopId);if(!b)return;
-        const entryX=b.x+b.w/2;
-        route([[lastX,lastY],[entryX,lastY],[entryX,b.y]],false);
-        lastX=b.x-b.w/2;
-        lastY=b.y;
-      });
-      route([[935,eventY],[lastX,lastY]],true);
-      route([[lastX,lastY],[o.x-o.w/2,o.y]],true);
-    });
-
-    svg.querySelectorAll('.node').forEach(el=>{
-      el.addEventListener('click',e=>{e.stopPropagation();selected={id:el.dataset.id};render();});
-      let dragging=false,startX=0,startY=0,origX=0,origY=0;
-      el.addEventListener('pointerdown',e=>{
-        if(!editable)return;
-        const p=allPlacements().find(x=>x.id===el.dataset.id);if(!p)return;
-        rememberBeforeMutation();
-        dragging=true;selected={id:p.id};startX=e.clientX;startY=e.clientY;origX=p.x;origY=p.y;el.setPointerCapture(e.pointerId);
-      });
-      el.addEventListener('pointermove',e=>{
-        if(!dragging)return;
-        const rect=svg.getBoundingClientRect();
-        const dx=(e.clientX-startX)*(1600/rect.width),dy=(e.clientY-startY)*(900/rect.height);
-        const p=allPlacements().find(x=>x.id===el.dataset.id);if(!p)return;
-        p.x=origX+dx;p.y=origY+dy;
-        el.setAttribute('transform','translate('+dx+' '+dy+')');
-      });
-      el.addEventListener('pointerup',()=>{if(dragging){dragging=false;render();emitChange();}});
-    });
-
-    document.getElementById('title').textContent=doc.name||'SURM Bowtie';
-    document.getElementById('riskInfo').innerHTML='<span class="badge">'+esc(doc.risk_id||'')+'</span> '+esc(doc.name||'');
-    document.getElementById('delete').disabled=!selected;
-    renderObjects();renderEditor();renderRelationships();
-  }
-
-  window.addEventListener('message',event=>{
-    const data=event.data||{};
-    if(data.type!=='streamlit:render')return;
-
-    args=data.args||{};
-    editable=args.editable!==false;
-    ['addCause','addPrevent','addMitigate','addOutcome','delete'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.style.display=editable?'inline-block':'none';
-    });
-
-    const incoming=args.document;
-    if(incoming) {
-      if(!doc || Number(incoming.editor_revision||0)>=Number(doc.editor_revision||0)){
-        doc=normalizeDocument(incoming);
-        render();
-      }
-    }
-    setTimeout(()=>ready(args.height),0);
-  });
-
-  document.getElementById('exportSvg').onclick=()=>{
-    const cloneSvg=svg.cloneNode(true);
-    cloneSvg.setAttribute('xmlns','http://www.w3.org/2000/svg');
-    const source='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(cloneSvg);
-    const blob=new Blob([source],{type:'image/svg+xml;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;
-    a.download=(doc && doc.risk_id ? 'SURM_'+doc.risk_id+'_Bowtie.svg' : 'SURM_Bowtie.svg');
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  document.getElementById('exportPng').onclick=()=>{
-    if(!doc)return;
-    const cloneSvg=svg.cloneNode(true);
-    cloneSvg.setAttribute('xmlns','http://www.w3.org/2000/svg');
-    const source=new XMLSerializer().serializeToString(cloneSvg);
-    const blob=new Blob([source],{type:'image/svg+xml;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const image=new Image();
-    image.onload=()=>{
-      const canvas=document.createElement('canvas');
-      canvas.width=3200;
-      canvas.height=1800;
-      const ctx=canvas.getContext('2d');
-      ctx.fillStyle='#ffffff';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(image,0,0,canvas.width,canvas.height);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(png=>{
-        if(!png)return;
-        const pngUrl=URL.createObjectURL(png);
-        const a=document.createElement('a');
-        a.href=pngUrl;
-        a.download=(doc.risk_id ? 'SURM_'+doc.risk_id+'_Bowtie.png' : 'SURM_Bowtie.png');
-        a.click();
-        URL.revokeObjectURL(pngUrl);
-      },'image/png');
-    };
-    image.src=url;
-  };
-  document.getElementById('auto').onclick=autoArrange;
-  document.getElementById('undo').onclick=undoChange;
-  document.getElementById('redo').onclick=redoChange;
-  document.getElementById('addCause').onclick=()=>addObject('cause');
-  document.getElementById('addPrevent').onclick=()=>addObject('preventativeBarrier');
-  document.getElementById('addMitigate').onclick=()=>addObject('mitigativeBarrier');
-  document.getElementById('addOutcome').onclick=()=>addObject('outcome');
-  document.getElementById('delete').onclick=removeSelected;
-
-  // First ready handshake. Streamlit will send the initial render only after this.
-  ready(760);
-})();
-</script>
+<script src="bowtie_v2.js"></script>
 </body>
 </html>

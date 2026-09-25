@@ -1,68 +1,76 @@
 from pathlib import Path
 
 
-FRONTEND = Path(__file__).resolve().parents[1] / "components" / "bowtie_editor" / "frontend" / "index.html"
+ROOT = Path(__file__).resolve().parents[1]
+FRONTEND = ROOT / "components" / "bowtie_editor" / "frontend"
+HTML = FRONTEND / "index.html"
+JS = FRONTEND / "bowtie_v2.js"
+
+
+def _source() -> str:
+    return HTML.read_text(encoding="utf-8") + "\n" + JS.read_text(encoding="utf-8")
 
 
 def test_streamlit_v1_component_handshake_uses_top_level_protocol_fields():
-    source = FRONTEND.read_text(encoding="utf-8")
+    source = _source()
 
+    assert '<script src="bowtie_v2.js"></script>' in source
     assert "function post(type, data)" in source
     assert "Object.assign(" in source
     assert "{isStreamlitMessage:true, type:type}" in source
-    assert "post('streamlit:componentReady',{apiVersion:1})" in source
+    assert 'post("streamlit:componentReady", {apiVersion:1})' in source
     assert "function ready(height)" in source
-    assert "post('streamlit:setFrameHeight',{height:Number(height)||760})" in source
+    assert 'post("streamlit:setFrameHeight", {height:Number(height) || 820})' in source
 
     assert "{isStreamlitMessage:true,type,value}" not in source
 
 
 def test_component_value_message_keeps_value_at_top_level():
-    source = FRONTEND.read_text(encoding="utf-8")
+    source = _source()
 
-    assert "type:'streamlit:setComponentValue'" in source
+    assert 'type:"streamlit:setComponentValue"' in source
     assert "value:{document:clone(doc),revision:doc.editor_revision}" in source
 
 
-def test_bowtie_frontend_normalizes_saved_placements_and_uses_fixed_viewport():
-    source = FRONTEND.read_text(encoding="utf-8")
+def test_bowtie_frontend_v2_locks_semantic_lanes_and_persists_layout():
+    source = _source()
 
-    assert "function normalizeDocument(raw)" in source
-    assert "value.causes.forEach(p=>{" in source
-    assert "p.type='cause';" in source
-
-    assert "value.preventativeBarriers.forEach(p=>p.type='preventativeBarrier')" in source
-    assert "value.mitigativeBarriers.forEach(p=>p.type='mitigativeBarrier')" in source
-    assert "value.outcomes.forEach(p=>{" in source
-    assert "p.type='outcome';" in source
-    assert "post('streamlit:setFrameHeight',{height:Number(height)||760})" in source
-    assert "setTimeout(()=>ready(args.height),0)" in source
+    assert "const GRID = 20;" in source
+    assert "const LANE_X = {" in source
+    assert "value.layout_version = 2;" in source
+    assert "function syncLayoutMetadata(target)" in source
+    assert 'targetDoc.layout_version = 2;' in source
+    assert "function autoArrange()" in source
+    assert 'setStatus("Auto layout applied: relationships drive vertical placement")' in source
 
 
-def test_bowtie_frontend_accepts_streamlit_render_without_inbound_marker():
-    source = FRONTEND.read_text(encoding="utf-8")
+def test_bowtie_frontend_routes_relationships_as_edges_and_updates_live():
+    source = _source()
 
-    assert "if(data.type!=='streamlit:render')return;" in source
-    assert "if(!data.isStreamlitMessage)return;" not in source
+    assert "function renderConnectors(layer)" in source
+    assert "drawnBarrierToEvent" in source
+    assert "drawnEventToBarrier" in source
+    assert "function refreshConnectorLayer()" in source
+    assert "el.setAttribute(" + '"transform", "translate("' + " in source
+    assert "setStatus(" + '"Dragging · lane locked · "' + " in source
+
+
+def test_bowtie_frontend_includes_zoom_pan_fit_and_inspector_health():
+    source = _source()
+
+    assert "function fitToContent(padding, announce)" in source
+    assert "svg.addEventListener(" + '"wheel"' + " in source
+    assert "function setZoom(factor, centerX, centerY)" in source
+    assert "function renderEditor()" in source
+    assert "function renderRelationships()" in source
+    assert "function renderHealth()" in source
 
 
 def test_bowtie_delete_is_type_safe_and_removes_placement_library_and_lines():
-    source = FRONTEND.read_text(encoding="utf-8")
+    source = _source()
 
-    assert "const buckets=[" in source
-    assert "doc[key]=list.filter(p=>p.id!==placement.id);" in source
-    assert "doc.library[type]=(doc.library[type]||[]).filter(n=>n.id!==placement.nodeId);" in source
-    assert ".filter(line=>line.originId!==placement.id)" in source
-    assert "stops:(line.stops||[]).filter(stopId=>stopId!==placement.id)" in source
-
-
-def test_bowtie_nodes_use_readable_dimensions_and_text_wrapping():
-    source = FRONTEND.read_text(encoding="utf-8")
-
-    assert "p.w=120;" in source
-    assert "p.h=112;" in source
-    assert ".node-text{font-size:14px;font-weight:600;" in source
-    assert ".barrier-text{font-size:12px;font-weight:600;" in source
-    assert "const lines=textWrap(n?n.name:p.nodeId,15,5);" in source
-    assert "const lines=textWrap(text,28,4);" in source
-    assert "const legacySize=Number(p.w||0)<80;" in source
+    assert "const type = placement.type;" in source
+    assert "doc[key] = doc[key].filter(" in source
+    assert "doc.library[type] = (doc.library[type] || []).filter(" in source
+    assert ".filter(function (line) { return line.originId !== placement.id; })" in source
+    assert "stops: (line.stops || []).filter(function (stopId)" in source

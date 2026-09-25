@@ -296,6 +296,16 @@ def build_bowtie_document(
         "lines": lines,
         "library": library,
         "editor_revision": 0,
+        "layout_version": 2,
+        "layout": {
+            placement["id"]: {
+                "x": placement["x"],
+                "y": placement["y"],
+                "w": placement["w"],
+                "h": placement["h"],
+            }
+            for placement in [*causes, *preventative, *mitigative, *outcomes]
+        },
         "metadata": {
             "risk_id": risk_id,
             "surm_managed": True,
