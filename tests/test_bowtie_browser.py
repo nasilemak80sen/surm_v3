@@ -506,12 +506,12 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             )
             page.wait_for_timeout(60)
 
-            expect(page.locator("#editName")).to_have_value("Updated Threat")
+            expect(page.locator("#editName")).to_have_value("Updated Threat Again")
             expect(page.locator("#delete")).not_to_be_disabled()
             expect(page.locator("#undo")).not_to_be_disabled()
 
             # CREATE + UPDATE + DELETE: preventive barrier and its barrier-specific fields.
-            page.locator("#objects button", has_text="Updated Threat").click()
+            page.locator("#objects button", has_text="Updated Threat Again").click()
             page.locator("#addPrevent").click()
             page.wait_for_timeout(40)
             expect(page.locator("#objects")).to_contain_text("New Preventive Barrier")
@@ -644,10 +644,10 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             )
 
             # DELETE: the updated threat and its origin line.
-            page.locator("#objects button", has_text="Updated Threat").click()
+            page.locator("#objects button", has_text="Updated Threat Again").click()
             page.locator("#delete").click()
             page.wait_for_timeout(100)
-            expect(page.locator("#objects")).not_to_contain_text("Updated Threat")
+            expect(page.locator("#objects")).not_to_contain_text("Updated Threat Again")
             assert page.locator('[data-layer="connectors"] .connector').count() >= 2
 
             assert not page_errors, page_errors
