@@ -1004,9 +1004,10 @@
       JSON.stringify(current.degradation_factors || []) !== JSON.stringify(values.degradation_factors) ||
       JSON.stringify(current.controls || []) !== JSON.stringify(values.controls);
 
+    const wasDirty = inspectorDirty;
     inspectorDirty = false;
 
-    if (!changed && !inspectorDirty) {
+    if (!changed && !wasDirty) {
       if (!settings.silent) setStatus("No changes to apply");
       return false;
     }
