@@ -35,6 +35,7 @@
   let currentFingerprint = "";
   let inspectorDirty = false;
   let inspectorTargetId = null;
+  let inspectorHistoryRecorded = false;
 
   const svg = document.getElementById("svg");
   const objectsEl = document.getElementById("objects");
@@ -1006,7 +1007,10 @@
       return false;
     }
 
-    rememberBeforeMutation();
+    if (!inspectorHistoryRecorded) {
+      rememberBeforeMutation();
+      inspectorHistoryRecorded = true;
+    }
 
     current.name = values.name;
     current.description = values.description;
@@ -1043,6 +1047,22 @@
 
   function markInspectorDirty() {
     inspectorDirty = true;
+  }
+
+  function captureInspectorFieldChange() {
+    inspectorDirty = true;
+    const changed = applyInspectorChanges({
+      targetId: inspectorTargetId,
+      values: readInspectorValues(),
+      rerender: false,
+      silent: true,
+    });
+    if (changed) {
+      renderObjects();
+      renderHealth();
+      renderRelationships();
+      setStatus("Inspector edit captured");
+    }
   }
 
   function renderEditor() {
@@ -1096,14 +1116,17 @@
       const field = document.getElementById(id);
       if (!field) return;
       field.addEventListener("input", markInspectorDirty);
-      field.addEventListener("change", markInspectorDirty);
+      field.addEventListener("change", captureInspectorFieldChange);
     });
+    inspectorHistoryRecorded = false;
 
     const eff = document.getElementById("editEff");
     if (eff) eff.value = n.effectiveness || "";
 
     const apply = document.getElementById("applyChanges");
-    if (apply) apply.addEventListener("click", applyInspectorChanges);
+    if (apply) apply.addEventListener("click", function () {
+      applyInspectorChanges({targetId: inspectorTargetId, rerender: true, silent: false});
+    });
 
     const cancel = document.getElementById("cancelChanges");
     if (cancel) {
