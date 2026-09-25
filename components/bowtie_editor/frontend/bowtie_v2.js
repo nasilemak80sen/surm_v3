@@ -309,6 +309,7 @@
   }
 
   function addObject(type) {
+    flushInspectorDraft(false);
     rememberBeforeMutation();
 
     const nodeId = makeNodeId(type);
@@ -400,6 +401,7 @@
 
   function removeSelected() {
     if (!selected || !doc) return false;
+    flushInspectorDraft(false);
     const placement = placementForId(selected.id);
     if (!placement) return false;
 
@@ -486,6 +488,7 @@
 
   function autoArrange() {
     if (!doc || !editable) return;
+    flushInspectorDraft(false);
     rememberBeforeMutation();
 
     const causeYs = evenlySpaced(doc.causes.length, 180, 720);
@@ -959,6 +962,7 @@
 
     objectsEl.querySelectorAll("button[data-p]").forEach(function (btn) {
       btn.addEventListener("click", function () {
+        flushInspectorDraft(false);
         selected = {id:btn.getAttribute("data-p")};
         render();
       });
@@ -1002,7 +1006,7 @@
 
     inspectorDirty = false;
 
-    if (!changed) {
+    if (!changed && !inspectorDirty) {
       if (!settings.silent) setStatus("No changes to apply");
       return false;
     }
@@ -1045,24 +1049,47 @@
     }, 0);
   }
 
+  function flushInspectorDraft(rerender) {
+    if (!inspectorDirty || !editable) return false;
+    return applyInspectorChanges({
+      targetId: inspectorTargetId,
+      values: readInspectorValues(),
+      rerender: rerender === true,
+      silent: true,
+    });
+  }
+
   function markInspectorDirty() {
     inspectorDirty = true;
   }
 
   function captureInspectorFieldChange() {
-    inspectorDirty = true;
-    const changed = applyInspectorChanges({
-      targetId: inspectorTargetId,
-      values: readInspectorValues(),
-      rerender: false,
-      silent: true,
-    });
-    if (changed) {
-      renderObjects();
-      renderHealth();
-      renderRelationships();
-      setStatus("Inspector edit captured");
+    const targetId = inspectorTargetId;
+    const p = targetId ? placementForId(targetId) : null;
+    const current = p ? nodeFor(p) : null;
+    if (!p || !current || !editable) return;
+
+    const values = readInspectorValues();
+    if (!inspectorHistoryRecorded) {
+      rememberBeforeMutation();
+      inspectorHistoryRecorded = true;
     }
+
+    current.name = values.name;
+    current.description = values.description;
+
+    if (p.type === "preventativeBarrier" || p.type === "mitigativeBarrier") {
+      current.owner = values.owner;
+      current.effectiveness = values.effectiveness;
+      current.degradation_factors = values.degradation_factors;
+      current.controls = values.controls;
+    }
+
+    inspectorDirty = true;
+    renderObjects();
+    renderHealth();
+    renderRelationships();
+    setStatus("Inspector edit captured locally");
   }
 
   function renderEditor() {
@@ -1132,6 +1159,7 @@
     if (cancel) {
       cancel.addEventListener("click", function () {
         inspectorDirty = false;
+        inspectorHistoryRecorded = false;
         renderEditor();
         setStatus("Inspector changes cancelled");
       });
@@ -1264,6 +1292,7 @@
     svg.querySelectorAll(".node").forEach(function (el) {
       el.addEventListener("click", function (event) {
         event.stopPropagation();
+        flushInspectorDraft(false);
         if (dragState && dragState.moved) return;
         const id = el.getAttribute("data-id");
         selected = {id:id};
@@ -1273,6 +1302,7 @@
       el.addEventListener("pointerdown", function (event) {
         if (!editable) return;
         event.stopPropagation();
+        flushInspectorDraft(false);
 
         const p = placementForId(el.getAttribute("data-id"));
         if (!p) return;
@@ -1449,6 +1479,7 @@
   svg.addEventListener("pointerdown", function (event) {
     if (!editable) return;
     if (event.target.closest && event.target.closest(".node")) return;
+    flushInspectorDraft(false);
 
     panState = {
       startClientX:event.clientX,
@@ -1478,6 +1509,7 @@
 
   svg.addEventListener("click", function (event) {
     if (event.target.getAttribute && event.target.getAttribute("data-canvas-bg") === "1") {
+      flushInspectorDraft(false);
       selected = null;
       render();
     }
@@ -1489,7 +1521,9 @@
   }, {passive:false});
 
   function undoChange() {
-    if (!doc || !undoStack.length || !editable) return;
+    if (!doc || !editable) return;
+    flushInspectorDraft(false);
+    if (!undoStack.length) return;
     const previous = undoStack.pop();
     redoStack.push(clone(doc));
     historySuspended = true;
@@ -1502,7 +1536,9 @@
   }
 
   function redoChange() {
-    if (!doc || !redoStack.length || !editable) return;
+    if (!doc || !editable) return;
+    flushInspectorDraft(false);
+    if (!redoStack.length) return;
     const next = redoStack.pop();
     undoStack.push(clone(doc));
     historySuspended = true;
@@ -1581,10 +1617,10 @@
   }
 
   document.getElementById("auto").addEventListener("click", autoArrange);
-  document.getElementById("fit").addEventListener("click", function () { fitToContent(80); });
-  document.getElementById("zoomOut").addEventListener("click", function () { setZoom(0.88); });
-  document.getElementById("zoomIn").addEventListener("click", function () { setZoom(1.14); });
-  document.getElementById("zoomReset").addEventListener("click", resetZoom);
+  document.getElementById("fit").addEventListener("click", function () { flushInspectorDraft(false); fitToContent(80); });
+  document.getElementById("zoomOut").addEventListener("click", function () { flushInspectorDraft(false); setZoom(0.88); });
+  document.getElementById("zoomIn").addEventListener("click", function () { flushInspectorDraft(false); setZoom(1.14); });
+  document.getElementById("zoomReset").addEventListener("click", function () { flushInspectorDraft(false); resetZoom(); });
   document.getElementById("undo").addEventListener("click", undoChange);
   document.getElementById("redo").addEventListener("click", redoChange);
   document.getElementById("addCause").addEventListener("click", function () { addObject("cause"); });
@@ -1592,8 +1628,8 @@
   document.getElementById("addMitigate").addEventListener("click", function () { addObject("mitigativeBarrier"); });
   document.getElementById("addOutcome").addEventListener("click", function () { addObject("outcome"); });
   document.getElementById("delete").addEventListener("click", removeSelected);
-  document.getElementById("exportSvg").addEventListener("click", exportSvg);
-  document.getElementById("exportPng").addEventListener("click", exportPng);
+  document.getElementById("exportSvg").addEventListener("click", function () { flushInspectorDraft(false); exportSvg(); });
+  document.getElementById("exportPng").addEventListener("click", function () { flushInspectorDraft(false); exportPng(); });
 
   window.addEventListener("message", function (event) {
     const data = event.data || {};
