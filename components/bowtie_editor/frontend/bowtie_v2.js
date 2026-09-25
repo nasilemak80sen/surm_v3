@@ -1384,11 +1384,23 @@
     setStatus("Redo");
   }
 
-  function exportSvg() {
-    if (!doc) return;
+  function prepareExportSvg() {
     const cloneSvg = svg.cloneNode(true);
     cloneSvg.setAttribute("xmlns", NS);
     cloneSvg.setAttribute("viewBox", "0 0 " + VIEW_W + " " + VIEW_H);
+
+    const sourceStyle = document.querySelector("style");
+    if (sourceStyle) {
+      const style = createEl("style", {});
+      style.textContent = sourceStyle.textContent;
+      cloneSvg.insertBefore(style, cloneSvg.firstChild);
+    }
+    return cloneSvg;
+  }
+
+  function exportSvg() {
+    if (!doc) return;
+    const cloneSvg = prepareExportSvg();
     cloneSvg.removeAttribute("aria-label");
     const source =
       '<?xml version="1.0" encoding="UTF-8"?>\n' +
@@ -1407,9 +1419,7 @@
   function exportPng() {
     if (!doc) return;
 
-    const cloneSvg = svg.cloneNode(true);
-    cloneSvg.setAttribute("xmlns", NS);
-    cloneSvg.setAttribute("viewBox", "0 0 " + VIEW_W + " " + VIEW_H);
+    const cloneSvg = prepareExportSvg();
     const source = new XMLSerializer().serializeToString(cloneSvg);
     const blob = new Blob([source], {type:"image/svg+xml;charset=utf-8"});
     const url = URL.createObjectURL(blob);

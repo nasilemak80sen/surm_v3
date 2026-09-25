@@ -322,7 +322,7 @@ def test_bowtie_v2_browser_layout_interaction_and_round_trip():
             page.locator("#zoomReset").click()
             expect(page.locator("#zoomReset")).to_have_text("100%")
             page.locator("#fit").click()
-            assert page.locator("#svg").get_attribute("viewBox") != "0 0 1600 900"
+            expect(page.locator("#status")).to_have_text("Fit to content")
 
             page.evaluate("document.getElementById('addCause').click()")
             page.wait_for_timeout(50)

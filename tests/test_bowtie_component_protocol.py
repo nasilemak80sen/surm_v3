@@ -51,8 +51,8 @@ def test_bowtie_frontend_routes_relationships_as_edges_and_updates_live():
     assert "drawnBarrierToEvent" in source
     assert "drawnEventToBarrier" in source
     assert "function refreshConnectorLayer()" in source
-    assert "el.setAttribute(" + '"transform", "translate("' + " in source
-    assert "setStatus(" + '"Dragging · lane locked · "' + " in source
+    assert 'el.setAttribute("transform", "translate("' in source
+    assert 'setStatus("Dragging · lane locked · "' in source
 
 
 def test_bowtie_frontend_includes_zoom_pan_fit_and_inspector_health():
@@ -64,6 +64,7 @@ def test_bowtie_frontend_includes_zoom_pan_fit_and_inspector_health():
     assert "function renderEditor()" in source
     assert "function renderRelationships()" in source
     assert "function renderHealth()" in source
+    assert "function prepareExportSvg()" in source
 
 
 def test_bowtie_delete_is_type_safe_and_removes_placement_library_and_lines():
