@@ -97,7 +97,7 @@ def test_bowtie_v2_crud_state_management_is_explicit_and_rerun_safe():
 
     assert "let currentFingerprint = \"\";" in source
     assert "function fingerprint(value)" in source
-    assert "function applyInspectorChanges()" in source
+    assert "function applyInspectorChanges(options)" in source
     assert 'id="applyChanges"' in source
     assert 'id="cancelChanges"' in source
     assert "incomingFingerprint !== currentFingerprint" in source
