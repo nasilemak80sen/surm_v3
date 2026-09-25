@@ -60,7 +60,19 @@
   }
 
   function fingerprint(value) {
-    return JSON.stringify(value);
+    function canonicalize(input) {
+      if (Array.isArray(input)) {
+        return input.map(canonicalize);
+      }
+      if (input && typeof input === "object") {
+        return Object.keys(input).sort().reduce(function (out, key) {
+          out[key] = canonicalize(input[key]);
+          return out;
+        }, {});
+      }
+      return input;
+    }
+    return JSON.stringify(canonicalize(value));
   }
 
   function esc(value) {
