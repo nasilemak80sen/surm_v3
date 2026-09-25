@@ -1,6 +1,6 @@
 import pandas as pd
 
-from utils.charts import build_bowtie, build_uncertainty_matrix
+from utils.charts import build_bowtie, build_tornado_chart, build_uncertainty_matrix
 
 
 def test_uncertainty_matrix_uses_numbered_markers_and_readable_scale():
@@ -67,3 +67,44 @@ def test_bowtie_uses_structured_lanes_and_large_text():
         for item in annotations
         if item.text and "TOP EVENT" in str(item.text)
     )
+
+
+
+def test_uncertainty_matrix_export_includes_full_name_panel():
+    frame = pd.DataFrame([
+        {
+            "Matrix #": 1,
+            "Uncertainty": "Very long reservoir connectivity uncertainty label",
+            "Degree of Uncertainty": "H",
+            "Impact Bin": "H",
+            "Combined Rating": "HH",
+            "Impact (Weighted)": 3.0,
+        },
+    ])
+
+    figure = build_uncertainty_matrix(frame, show_full_names=True)
+
+    annotations = [str(item.text) for item in figure.layout.annotations if item.text]
+    assert any("Very long reservoir connectivity uncertainty label" in text for text in annotations)
+    assert any("Full uncertainty names" in text for text in annotations)
+    assert list(figure.layout.xaxis.domain) == [0.0, 0.62]
+
+
+def test_tornado_export_uses_full_uncertainty_labels():
+    frame = pd.DataFrame([
+        {
+            "Uncertainty": "Very long reservoir connectivity uncertainty label",
+            "Combined Rating": "HH",
+            "Impact (Weighted)": 3.0,
+        },
+        {
+            "Uncertainty": "Short uncertainty",
+            "Combined Rating": "MM",
+            "Impact (Weighted)": 2.0,
+        },
+    ])
+
+    figure = build_tornado_chart(frame, full_labels=True)
+
+    assert "Very long reservoir connectivity uncertainty label" in list(figure.data[0].y)
+    assert figure.layout.margin.l == 360
