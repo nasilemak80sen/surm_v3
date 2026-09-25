@@ -21,10 +21,9 @@ SQLITE_TIMEOUT_SECONDS = 30
 
 
 def _sqlite_connect(path: str) -> sqlite3.Connection:
-    """Open a WAL-enabled SQLite connection with a bounded lock wait."""
+    """Open a SQLite connection with a bounded lock wait."""
     conn = sqlite3.connect(path, timeout=SQLITE_TIMEOUT_SECONDS)
     conn.execute("PRAGMA busy_timeout=30000")
-    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
@@ -118,6 +117,7 @@ class SQLiteDB(SessionDB):
     def init(self):
         try:
             conn = _sqlite_connect(self.db_path)
+            conn.execute("PRAGMA journal_mode=WAL")
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS sessions (
