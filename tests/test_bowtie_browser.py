@@ -288,7 +288,7 @@ window.addEventListener("error", event => {
                 box["y"] + box["height"] / 2 + 31,
             )
 
-            during_path = page.locator('[data-layer="connectors"] .connector').first().get_attribute("d")
+            during_path = page.locator('[data-layer="connectors"] .connector').first.get_attribute("d")
             assert during_path != before_path
 
             after_drag_x = float(first_cause.get_attribute("data-x"))
