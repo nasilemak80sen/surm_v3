@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from utils.form_ui import render_form_header
 from utils.history import diff_revisions, list_revisions, load_revision
 
 
@@ -12,7 +13,11 @@ def render():
     project = str(st.session_state.get("project_name", "")).strip()
     field = str(st.session_state.get("field_name", "")).strip()
 
-    st.markdown("## 🕘 Revision History")
+    render_form_header(
+        "AUDIT TRAIL",
+        "Revision History",
+        "Inspect immutable study revisions and compare durable field-level changes.",
+    )
     if not project or not field:
         st.info("Set a Project Name and Field Name first.")
         return
