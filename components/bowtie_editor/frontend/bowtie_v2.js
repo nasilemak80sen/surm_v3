@@ -1056,7 +1056,7 @@
       const n = nodeFor(b);
       return '<div class="link-row">' +
         '<input type="checkbox" data-rel="' + esc(b.id) + '"' +
-        (stopSet.has(b.id) ? " checked" : "") + ">' +
+        (stopSet.has(b.id) ? " checked" : "") + ">" +
         '<span class="link-name">' + esc(n ? n.name : b.nodeId) + "</span>" +
         (n && n.owner ? '<span class="connection-chip">' + esc(n.owner) + "</span>" : "") +
         "</div>";
