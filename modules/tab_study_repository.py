@@ -32,8 +32,12 @@ def _delete_saved(project_name: str, field_name: str) -> None:
 
 
 def render() -> None:
-    st.markdown("## Study Repository")
-    st.info("Browse completed and saved field studies. View opens a study read-only; Edit unlocks its workflow pages.")
+    render_form_header(
+        "STUDY MANAGEMENT",
+        "Study Repository",
+        "Browse saved field studies, open a read-only view, or resume an editable study.",
+        next_step="Overview",
+    )
 
     sessions = list_sessions()
     if not sessions:
