@@ -24,7 +24,7 @@ DEG_MAP    = {"H": 3, "M": 2, "L": 1}
 IMPACT_MAP = {"H": 3, "M": 2, "L": 1}
 
 
-def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
+def build_uncertainty_matrix(key_unc_df: pd.DataFrame, *, show_full_names: bool = False) -> go.Figure:
     """Build a clean 3x3 uncertainty/impact matrix with numbered markers.
 
     Long uncertainty names intentionally stay out of the matrix cells. Each
@@ -137,11 +137,78 @@ def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
             )
         )
 
+    if show_full_names and not key_unc_df.empty:
+        import html
+        import math
+        import textwrap
+
+        names = []
+        for index, (_, row) in enumerate(key_unc_df.iterrows(), start=1):
+            marker_number = str(row.get("Matrix #", index))
+            label = str(row.get("Uncertainty", "") or "Uncertainty").strip()
+            rating = str(row.get("Combined Rating", "") or "")
+            wrapped = "<br>".join(
+                textwrap.wrap(
+                    html.escape(label),
+                    width=34,
+                    break_long_words=False,
+                    break_on_hyphens=False,
+                )
+            )
+            names.append(
+                f"<b>#{html.escape(marker_number)}</b> — {wrapped}"
+                + (f"<br><span style='color:#66736B'>Rating: {html.escape(rating)}</span>" if rating else "")
+            )
+
+        rows_per_column = max(1, math.ceil(len(names) / 2))
+        for index, label in enumerate(names):
+            column = 0 if index < rows_per_column else 1
+            row_index = index if column == 0 else index - rows_per_column
+            x = 0.67 if column == 0 else 0.84
+            y = 0.91 - row_index * min(0.075, 0.86 / max(rows_per_column, 1))
+            fig.add_annotation(
+                x=x,
+                y=max(0.06, y),
+                xref="paper",
+                yref="paper",
+                text=label,
+                showarrow=False,
+                xanchor="left",
+                yanchor="top",
+                align="left",
+                font=dict(size=12, color="#17201B", family=FONT_FAMILY),
+            )
+
+        fig.add_annotation(
+            x=0.75,
+            y=0.995,
+            xref="paper",
+            yref="paper",
+            text="<b>Full uncertainty names</b>",
+            showarrow=False,
+            xanchor="center",
+            yanchor="top",
+            font=dict(size=15, color="#176B3A", family=FONT_FAMILY),
+        )
+        fig.add_shape(
+            type="line",
+            x0=0.64,
+            x1=0.64,
+            y0=0.06,
+            y1=0.94,
+            xref="paper",
+            yref="paper",
+            line=dict(color="#D7E0DB", width=1.5),
+        )
+
+    title_x = 0.31 if show_full_names else 0.5
+    x_domain = [0.0, 0.62] if show_full_names else [0.0, 1.0]
+
     fig.update_layout(
         title=dict(
             text="Uncertainty Matrix",
             font=dict(size=22, color="#176B3A", family=FONT_FAMILY),
-            x=0.5,
+            x=title_x,
             xanchor="center",
         ),
         xaxis=dict(
@@ -159,6 +226,7 @@ def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
             linecolor="#97A49D",
             linewidth=1.5,
             fixedrange=True,
+            domain=x_domain,
         ),
         yaxis=dict(
             title=dict(
@@ -185,18 +253,18 @@ def build_uncertainty_matrix(key_unc_df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
-def build_tornado_chart(key_unc_df: pd.DataFrame) -> go.Figure:
+def build_tornado_chart(key_unc_df: pd.DataFrame, *, full_labels: bool = False) -> go.Figure:
     if key_unc_df.empty:
         return go.Figure()
 
     df = key_unc_df.sort_values("Impact (Weighted)", ascending=True).copy()
     colors = [RATING_COLOR.get(r, "#1F6B3A") for r in df["Combined Rating"]]
-    df["Short Name"] = df["Uncertainty"].apply(
-        lambda x: x[:55] + "…" if len(x) > 57 else x)
+    df["Display Name"] = df["Uncertainty"].apply(
+        lambda x: str(x) if full_labels else (x[:55] + "…" if len(x) > 57 else x))
 
     fig = go.Figure(go.Bar(
         x=df["Impact (Weighted)"],
-        y=df["Short Name"],
+        y=df["Display Name"],
         orientation="h",
         marker=dict(color=colors, line=dict(color="white", width=0.5)),
         text=df["Combined Rating"],
@@ -215,7 +283,7 @@ def build_tornado_chart(key_unc_df: pd.DataFrame) -> go.Figure:
                    tickfont=dict(size=12, family=FONT_FAMILY)),
         plot_bgcolor="white", paper_bgcolor="white",
         height=max(420, len(df) * 42 + 120),
-        margin=dict(l=220, r=90, t=90, b=60),
+        margin=dict(l=360 if full_labels else 220, r=90, t=90, b=60),
         font=dict(family=FONT_FAMILY, size=13),
     )
     fig.update_yaxes(tickfont=dict(size=12), automargin=True)
