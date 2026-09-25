@@ -1,7 +1,33 @@
+import ast
 from pathlib import Path
 
 import pandas as pd
 import pytest
+
+
+def test_shell_uses_one_sidebar_navigation_surface():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    ast.parse(source)
+    assert "def render_top_navigation" not in source
+    assert "render_top_navigation()" not in source
+    assert "_build_sidebar_navigation" in source
+    assert 'with st.expander("Insights & governance", expanded=False)' in source
+    assert 'with st.expander("Session & export", expanded=False)' in source
+    assert 'with st.expander("Account & access", expanded=False)' in source
+
+
+def test_overview_does_not_duplicate_repository_or_export():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "modules/tab_frontpage.py").read_text(encoding="utf-8")
+
+    ast.parse(source)
+    assert "list_sessions" not in source
+    assert "load_session_record" not in source
+    assert "build_excel_export" not in source
+    assert "Download study JSON" not in source
+    assert "Saved studies" not in source
 
 
 TARGET_FORM_FILES = [
