@@ -59,7 +59,7 @@ def test_bowtie_frontend_includes_zoom_pan_fit_and_inspector_health():
     source = _source()
 
     assert "function fitToContent(padding, announce)" in source
-    assert "svg.addEventListener(" + '"wheel"' + " in source
+    assert 'svg.addEventListener("wheel"' in source
     assert "function setZoom(factor, centerX, centerY)" in source
     assert "function renderEditor()" in source
     assert "function renderRelationships()" in source
