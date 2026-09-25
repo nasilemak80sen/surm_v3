@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from utils.auth import can_edit_study, role_is_granted
-from utils.intelligence import build_bowtie_qa
 from utils.workflow import stage_results
 
 
@@ -52,6 +51,9 @@ def approval_readiness(session: dict[str, Any]) -> tuple[bool, list[str]]:
         reasons.append(
             f"Create Bowtie documents for {len(missing_bowties)} assessed risk(s)."
         )
+
+    # Import lazily to avoid Streamlit hot-reload import races between service modules.
+    from utils.intelligence import build_bowtie_qa
 
     qa = build_bowtie_qa(session)
     if qa:
