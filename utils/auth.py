@@ -16,6 +16,7 @@ import streamlit as st
 
 
 ROLE_NAMES = ("Viewer", "Author", "Reviewer", "Approver", "Admin")
+ROLE_RANK = {role: index for index, role in enumerate(ROLE_NAMES)}
 
 
 @dataclass(frozen=True)
@@ -165,15 +166,20 @@ def can_perform(
     if required_role not in ROLE_NAMES:
         return False, f"Unknown authorization role: {required_role}."
 
-    if "Admin" not in identity.roles and required_role not in identity.roles:
+    highest_role_rank = max(
+        (ROLE_RANK.get(role, -1) for role in identity.roles),
+        default=-1,
+    )
+    if highest_role_rank < ROLE_RANK[required_role]:
         return False, (
-            f'Your authenticated identity is not assigned the "{required_role}" role.'
+            f'Your authenticated identity is not assigned the "{required_role}" role '
+            "or a higher role."
         )
 
     if (
         required_role != "Viewer"
         and not _owner_matches(session, identity)
-        and "Admin" not in identity.roles
+        and highest_role_rank < ROLE_RANK["Admin"]
     ):
         return False, "This study is owned by a different authenticated identity."
 
@@ -205,6 +211,13 @@ def role_is_granted(session: dict[str, Any]) -> tuple[bool, str]:
     identity = resolve_identity()
     if not identity.authenticated:
         return False, "Authenticated identity is required for lifecycle actions."
-    if role not in identity.roles and "Admin" not in identity.roles:
-        return False, f'Your authenticated identity is not granted the "{role}" study role.'
+    highest_role_rank = max(
+        (ROLE_RANK.get(granted, -1) for granted in identity.roles),
+        default=-1,
+    )
+    if highest_role_rank < ROLE_RANK.get(role, ROLE_RANK["Author"]):
+        return False, (
+            f'Your authenticated identity is not granted the "{role}" study role '
+            "or a higher role."
+        )
     return True, ""
