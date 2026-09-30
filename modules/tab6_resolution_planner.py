@@ -121,6 +121,8 @@ def render():
         next_step="Risk Register",
     )
 
+    workplan_tab, execution_tab = st.tabs(["1 · Workplan", "2 · Execution pulse"])
+
     planner_data = st.session_state.get("resolution_planner", [])
     workplan_rows = [row for row in planner_data if row.get("Part of Workplan")]
     workplan_count, missing_owner = _planner_quality(planner_data)
@@ -198,128 +200,132 @@ def render():
 
     planner_data = st.session_state.get("resolution_planner", [])
 
-    if not planner_data:
-        render_stage_status(
-            label="Planner",
-            value="No actions loaded yet. Update from Tab 5 to begin.",
-            tone="info",
-        )
-    else:
-        df_in = pd.DataFrame(planner_data)
-        if "Other Owner Name" not in df_in.columns:
-            df_in["Other Owner Name"] = ""
-        owner_options = build_owner_options(st.session_state)
-        render_save_hint(
-            "Planner edits are a session draft until you click Save planner. "
-            "Execution fields such as owner, dates, progress and remarks do not invalidate the risk register."
-        )
-
-        with st.form("planner_form", enter_to_submit=False):
-            button_cols = st.columns([1, 1, 2.2, 3.6])
-            with button_cols[0]:
-                add_all = st.form_submit_button("Add all", key="planner_add_all")
-            with button_cols[1]:
-                remove_all = st.form_submit_button("Remove all", key="planner_remove_all")
-            with button_cols[2]:
-                save_clicked = st.form_submit_button(
-                    "Save planner",
-                    key="save_resolution_planner",
-                    type="primary",
-                )
-            with button_cols[3]:
-                st.caption("Choose an Owner from the Team roster. Select **Others** and fill **Other owner name** for an external contributor.")
-
-            edited = st.data_editor(
-                df_in,
-                column_config={
-                    "resolution_id": st.column_config.TextColumn("ID", width="small", disabled=True),
-                    "#": st.column_config.NumberColumn("#", width="small", disabled=True),
-                    "Resolution Action": st.column_config.TextColumn("Resolution Action", width="medium", disabled=True),
-                    "Associated Uncertainties": st.column_config.TextColumn("Addresses", width="large", disabled=True),
-                    "Ratings": st.column_config.TextColumn("Ratings", width="small", disabled=True),
-                    "Description": st.column_config.TextColumn("Description of Work", width="large"),
-                    "Duration (months)": st.column_config.NumberColumn("Months", min_value=0, max_value=60, step=1),
-                    "Resources": st.column_config.TextColumn("Resources"),
-                    "Constraints": st.column_config.TextColumn("Constraints"),
-                    "Start Date": st.column_config.TextColumn("Start Date", help="DD/MM/YYYY", width="small"),
-                    "Required Completion": st.column_config.TextColumn("Completion", help="DD/MM/YYYY", width="small"),
-                    "Progress (0-1)": st.column_config.NumberColumn(
-                        "Progress",
-                        min_value=0.0,
-                        max_value=1.0,
-                        step=0.05,
-                    ),
-                    "Status": st.column_config.SelectboxColumn("Status", options=_STATUS_OPTIONS),
-                    "Action Owner": st.column_config.SelectboxColumn(
-                        "Owner",
-                        options=owner_options,
-                        help="Choose a Team member. Select Others and enter a name in Other owner name for someone outside the Team roster.",
-                    ),
-                    "Other Owner Name": st.column_config.TextColumn(
-                        "Other owner name",
-                        help="Used only when Owner is Others.",
-                        width="medium",
-                    ),
-                    "Part of Workplan": st.column_config.CheckboxColumn("In Workplan?"),
-                    "Remarks": st.column_config.TextColumn("Remarks", width="large"),
-                },
-                hide_index=True,
-                use_container_width=True,
-                num_rows="fixed",
-                height=min(760, max(330, len(planner_data) * 72 + 90)),
-                key=f"planner_editor_{st.session_state.get('study_id', 'new')}",
+    with workplan_tab:
+        if not planner_data:
+            render_stage_status(
+                label="Planner",
+                value="No actions loaded yet. Update from Tab 5 to begin.",
+                tone="info",
+            )
+        else:
+            df_in = pd.DataFrame(planner_data)
+            if "Other Owner Name" not in df_in.columns:
+                df_in["Other Owner Name"] = ""
+            owner_options = build_owner_options(st.session_state)
+            render_save_hint(
+                "Planner edits are a session draft until you click Save planner. "
+                "Execution fields such as owner, dates, progress and remarks do not invalidate the risk register."
             )
 
-        if add_all or remove_all or save_clicked:
-            data = edited.to_dict("records")
-            if add_all:
-                for row in data:
-                    row["Part of Workplan"] = True
-            elif remove_all:
-                for row in data:
-                    row["Part of Workplan"] = False
+            with st.form("planner_form", enter_to_submit=False):
+                button_cols = st.columns([1, 1, 2.2, 3.6])
+                with button_cols[0]:
+                    add_all = st.form_submit_button("Add all", key="planner_add_all")
+                with button_cols[1]:
+                    remove_all = st.form_submit_button("Remove all", key="planner_remove_all")
+                with button_cols[2]:
+                    save_clicked = st.form_submit_button(
+                        "Save planner",
+                        key="save_resolution_planner",
+                        type="primary",
+                    )
+                with button_cols[3]:
+                    st.caption("Choose an Owner from the Team roster. Select **Others** and fill **Other owner name** for an external contributor.")
 
-            if save_clicked:
-                data = _normalize_owner_rows(data)
-
-            st.session_state["resolution_planner"] = data
-
-            # Planner execution metadata does not alter the generated risk
-            # structure, so do not clear Risk Register/PRA for owner,
-            # progress, description, status or workplan-flag edits.
-            if save_clicked:
-                if not st.session_state.get("project_name", "").strip():
-                    st.warning("Enter a Project Name on Overview before saving the planner.")
-                    return
-                ok = save_session(auto=False)
-                if not ok:
-                    st.error("Planner could not be saved.")
-                    return
-                st.success("✅ Resolution planner saved.")
-            else:
-                st.info("Draft updated. Click **Save planner** to persist the planner.")
-            st.rerun()
-
-    # Detailed reporting is intentionally below the editor.
-    planner_data = st.session_state.get("resolution_planner", [])
-    workplan_rows = [row for row in planner_data if row.get("Part of Workplan")]
-
-    if workplan_rows:
-        st.markdown('<div class="surm-section-header">Execution Status Mix</div>', unsafe_allow_html=True)
-        st.bar_chart(
-            _planner_status_counts(planner_data),
-            use_container_width=True,
-            height=300,
-        )
-
-        st.markdown('<div class="surm-section-header">Execution Pulse</div>', unsafe_allow_html=True)
-        pulse_cols = st.columns(2)
-        for index, row in enumerate(workplan_rows[:8]):
-            progress = int(safe_float(row.get("Progress (0-1)", 0), default=0.0) * 100)
-            owner = _display_owner(row) or "Unassigned"
-            action = str(row.get("Resolution Action", "Unnamed"))[:42]
-            with pulse_cols[index % 2]:
-                st.markdown(
-                    f'<div class="surm-guide-row"><strong>{action}</strong><span>{progress}% · {owner}</span></div>',
-                    unsafe_allow_html=True,
+                edited = st.data_editor(
+                    df_in,
+                    column_config={
+                        "resolution_id": st.column_config.TextColumn("ID", width="small", disabled=True),
+                        "#": st.column_config.NumberColumn("#", width="small", disabled=True),
+                        "Resolution Action": st.column_config.TextColumn("Resolution Action", width="medium", disabled=True),
+                        "Associated Uncertainties": st.column_config.TextColumn("Addresses", width="large", disabled=True),
+                        "Ratings": st.column_config.TextColumn("Ratings", width="small", disabled=True),
+                        "Description": st.column_config.TextColumn("Description of Work", width="large"),
+                        "Duration (months)": st.column_config.NumberColumn("Months", min_value=0, max_value=60, step=1),
+                        "Resources": st.column_config.TextColumn("Resources"),
+                        "Constraints": st.column_config.TextColumn("Constraints"),
+                        "Start Date": st.column_config.TextColumn("Start Date", help="DD/MM/YYYY", width="small"),
+                        "Required Completion": st.column_config.TextColumn("Completion", help="DD/MM/YYYY", width="small"),
+                        "Progress (0-1)": st.column_config.NumberColumn(
+                            "Progress",
+                            min_value=0.0,
+                            max_value=1.0,
+                            step=0.05,
+                        ),
+                        "Status": st.column_config.SelectboxColumn("Status", options=_STATUS_OPTIONS),
+                        "Action Owner": st.column_config.SelectboxColumn(
+                            "Owner",
+                            options=owner_options,
+                            help="Choose a Team member. Select Others and enter a name in Other owner name for someone outside the Team roster.",
+                        ),
+                        "Other Owner Name": st.column_config.TextColumn(
+                            "Other owner name",
+                            help="Used only when Owner is Others.",
+                            width="medium",
+                        ),
+                        "Part of Workplan": st.column_config.CheckboxColumn("In Workplan?"),
+                        "Remarks": st.column_config.TextColumn("Remarks", width="large"),
+                    },
+                    hide_index=True,
+                    use_container_width=True,
+                    num_rows="fixed",
+                    height=min(760, max(330, len(planner_data) * 72 + 90)),
+                    key=f"planner_editor_{st.session_state.get('study_id', 'new')}",
                 )
+
+            if add_all or remove_all or save_clicked:
+                data = edited.to_dict("records")
+                if add_all:
+                    for row in data:
+                        row["Part of Workplan"] = True
+                elif remove_all:
+                    for row in data:
+                        row["Part of Workplan"] = False
+
+                if save_clicked:
+                    data = _normalize_owner_rows(data)
+
+                st.session_state["resolution_planner"] = data
+
+                # Planner execution metadata does not alter the generated risk
+                # structure, so do not clear Risk Register/PRA for owner,
+                # progress, description, status or workplan-flag edits.
+                if save_clicked:
+                    if not st.session_state.get("project_name", "").strip():
+                        st.warning("Enter a Project Name on Overview before saving the planner.")
+                        return
+                    ok = save_session(auto=False)
+                    if not ok:
+                        st.error("Planner could not be saved.")
+                        return
+                    st.success("✅ Resolution planner saved.")
+                else:
+                    st.info("Draft updated. Click **Save planner** to persist the planner.")
+                st.rerun()
+
+
+    with execution_tab:
+            # Detailed reporting is intentionally below the editor.
+            # Detailed reporting is intentionally below the editor.
+            planner_data = st.session_state.get("resolution_planner", [])
+            workplan_rows = [row for row in planner_data if row.get("Part of Workplan")]
+
+            if workplan_rows:
+                st.markdown('<div class="surm-section-header">Execution Status Mix</div>', unsafe_allow_html=True)
+                st.bar_chart(
+                    _planner_status_counts(planner_data),
+                    use_container_width=True,
+                    height=300,
+                )
+
+                st.markdown('<div class="surm-section-header">Execution Pulse</div>', unsafe_allow_html=True)
+                pulse_cols = st.columns(2)
+                for index, row in enumerate(workplan_rows[:8]):
+                    progress = int(safe_float(row.get("Progress (0-1)", 0), default=0.0) * 100)
+                    owner = _display_owner(row) or "Unassigned"
+                    action = str(row.get("Resolution Action", "Unnamed"))[:42]
+                    with pulse_cols[index % 2]:
+                        st.markdown(
+                            f'<div class="surm-guide-row"><strong>{action}</strong><span>{progress}% · {owner}</span></div>',
+                            unsafe_allow_html=True,
+                        )
