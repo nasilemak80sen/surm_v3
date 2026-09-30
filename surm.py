@@ -51,7 +51,6 @@ from components.workflow import render_page_frame
 from utils.assurance import study_is_editable
 from utils.auth import (
     auth_required,
-    can_delete_study,
     can_edit_study,
     current_user_label,
     resolve_identity,
