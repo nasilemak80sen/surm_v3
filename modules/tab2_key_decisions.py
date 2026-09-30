@@ -68,13 +68,15 @@ def render():
             tone="warning",
         )
 
-    st.info(
-        "Think about the decisions the study must help the team make — for example, "
-        "well count, injector strategy, or WAG pattern. Keep one decision per row."
-    )
+    with st.expander("How to define a useful key decision", expanded=False):
+        st.info(
+            "Think about the decisions the study must help the team make — for example, "
+            "well count, injector strategy, or WAG pattern. Keep one decision per row. "
+            "Use the weight to reflect decision importance, not uncertainty severity."
+        )
 
     st.markdown(
-        '<div class="surm-section-header">🎯 Key Project Decisions</div>',
+        '<div class="surm-overview-section-label">DECISION SET</div>',
         unsafe_allow_html=True,
     )
 
@@ -123,50 +125,52 @@ def render():
         "Remove Empty Rows also applies a draft change, but does not persist it to the saved study."
     )
 
-    with st.form("key_decisions_form", enter_to_submit=False):
-        edited = st.data_editor(
-            df,
-            num_rows="dynamic",
-            use_container_width=True,
-            column_config={
-                "decision_id": st.column_config.TextColumn(
-                    "Decision ID",
-                    width="small",
-                    disabled=True,
-                ),
-                "Key Decision": st.column_config.TextColumn(
-                    "Key Decision",
-                    width="large",
-                    help="What decision will this study help the team make?",
-                ),
-                "Weight (1-3)": st.column_config.NumberColumn(
-                    "Weight (1–3)",
-                    min_value=1,
-                    max_value=3,
-                    step=1,
-                    format="%d",
-                    help="1 = Low importance, 2 = Medium, 3 = High importance.",
-                ),
-                "Description": st.column_config.TextColumn(
-                    "Description",
-                    width="large",
-                    help="Brief context so other reviewers understand the decision.",
-                ),
-            },
-            hide_index=True,
-            key=editor_key,
-        )
+    with st.container(border=True):
+        with st.form("key_decisions_form", enter_to_submit=False):
+            edited = st.data_editor(
+                df,
+                num_rows="dynamic",
+                use_container_width=True,
+                column_config={
+                    "decision_id": st.column_config.TextColumn(
+                        "Decision ID",
+                        width="small",
+                        disabled=True,
+                    ),
+                    "Key Decision": st.column_config.TextColumn(
+                        "Key Decision",
+                        width="large",
+                        help="What decision will this study help the team make?",
+                    ),
+                    "Weight (1-3)": st.column_config.NumberColumn(
+                        "Weight (1–3)",
+                        min_value=1,
+                        max_value=3,
+                        step=1,
+                        format="%d",
+                        help="1 = Low importance, 2 = Medium, 3 = High importance.",
+                    ),
+                    "Description": st.column_config.TextColumn(
+                        "Description",
+                        width="large",
+                        help="Brief context so other reviewers understand the decision.",
+                    ),
+                },
+                hide_index=True,
+                key=editor_key,
+            )
 
-        remove_clicked = st.form_submit_button(
-            "Remove Empty Decision Rows",
-            key="remove_empty_decision_rows",
-            help="Remove blank rows created by the dynamic editor.",
-        )
-        save_clicked = st.form_submit_button(
-            "Save decisions",
-            key="save_key_decisions",
-            type="primary",
-        )
+            remove_clicked = st.form_submit_button(
+                "Remove Empty Decision Rows",
+                key="remove_empty_decision_rows",
+                help="Remove blank rows created by the dynamic editor.",
+            )
+            save_clicked = st.form_submit_button(
+                "Save decisions",
+                key="save_key_decisions",
+                type="primary",
+            )
+
 
     submitted = remove_clicked or save_clicked
     if submitted:
