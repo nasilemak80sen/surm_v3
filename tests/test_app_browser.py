@@ -121,17 +121,15 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
         text=True,
     )
 
+    artifact_dir = project_root / "test-artifacts"
     page = None
-    browser = None
 
     try:
         _wait_for_server(port, process)
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
-            # Use a deterministic desktop canvas so sidebar navigation is tested
-            # as a normal user-facing surface rather than against Playwright's
-            # small default viewport.
             page = browser.new_page(viewport={"width": 1600, "height": 1200})
+
             page_errors: list[str] = []
             console_errors: list[str] = []
             request_failures: list[str] = []
@@ -139,7 +137,9 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
             page.on(
                 "console",
-                lambda msg: console_errors.append(msg.text) if msg.type == "error" else None,
+                lambda msg: console_errors.append(msg.text)
+                if msg.type == "error"
+                else None,
             )
             page.on(
                 "requestfailed",
@@ -149,94 +149,145 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             )
 
             try:
-            page.goto(
-                f"http://127.0.0.1:{port}",
-                wait_until="domcontentloaded",
-            )
+                page.goto(
+                    f"http://127.0.0.1:{port}",
+                    wait_until="domcontentloaded",
+                )
 
-            _wait_for_idle(page)
-            _assert_overview_ui(page)
-
-            # Detect the user's flash-then-blank failure rather than only
-            # verifying the first successful paint.
-            last_delay = 0
-            for delay_ms in (1_000, 2_000, 3_000, 5_000):
-                page.wait_for_timeout(delay_ms - last_delay)
                 _wait_for_idle(page)
                 _assert_overview_ui(page)
-                last_delay = delay_ms
 
-            # Exercise a real widget-driven rerun. Project Name uses an
-            # on_change callback, so blur triggers the same rerun path a user
-            # hits while filling the study setup form.
-            project_input = page.get_by_label("Project Name")
-            project_input.fill("Browser Stability Test")
-            project_input.press("Tab")
-            expect(project_input).to_have_value("Browser Stability Test", timeout=10_000)
-            page.wait_for_timeout(2_000)
-            _wait_for_idle(page)
-            _assert_overview_ui(page)
-            expect(project_input).to_have_value("Browser Stability Test", timeout=10_000)
+                # Detect the user's flash-then-blank failure rather than only
+                # verifying the first successful paint.
+                last_delay = 0
+                for delay_ms in (1_000, 2_000, 3_000, 5_000):
+                    page.wait_for_timeout(delay_ms - last_delay)
+                    _wait_for_idle(page)
+                    _assert_overview_ui(page)
+                    last_delay = delay_ms
 
-            sidebar = page.locator('[data-testid="stSidebar"]')
-            team_button = sidebar.get_by_role("button", name="• Team")
-            expect(team_button).to_have_count(1)
-            team_button.scroll_into_view_if_needed()
-            print(
-                "Sidebar geometry:",
-                page.evaluate(
-                    """button => {
-                        const sidebar = document.querySelector('[data-testid="stSidebar"]');
-                        const rect = button.getBoundingClientRect();
-                        const hit = document.elementFromPoint(
-                            rect.left + rect.width / 2,
-                            rect.top + rect.height / 2
-                        );
-                        return {
-                            viewport: {width: window.innerWidth, height: window.innerHeight},
-                            button: {
-                                x: rect.x, y: rect.y, width: rect.width, height: rect.height,
-                            },
-                            sidebar: sidebar ? (() => {
-                                const r = sidebar.getBoundingClientRect();
-                                return {x: r.x, y: r.y, width: r.width, height: r.height};
-                            })() : null,
-                            hitTestTag: hit ? hit.tagName : null,
-                            hitTestText: hit ? (hit.innerText || "").slice(0, 80) : null,
-                        };
-                    }""",
-                    team_button.element_handle(),
-                ),
-            )
-            team_button.click()
-            _wait_for_idle(page)
-            _assert_shell(page)
-            expect(page.get_by_text("Team", exact=True).first).to_be_visible(timeout=10_000)
+                # Exercise a real widget-driven rerun.
+                project_input = page.get_by_label("Project Name")
+                project_input.fill("Browser Stability Test")
+                project_input.press("Tab")
+                expect(project_input).to_have_value(
+                    "Browser Stability Test",
+                    timeout=10_000,
+                )
+                page.wait_for_timeout(2_000)
+                _wait_for_idle(page)
+                _assert_overview_ui(page)
+                expect(project_input).to_have_value(
+                    "Browser Stability Test",
+                    timeout=10_000,
+                )
 
-            sidebar.get_by_role("button", name="• Uncertainties").click()
-            _wait_for_idle(page)
-            _assert_shell(page)
-            expect(page.get_by_text("Uncertainties", exact=True).first).to_be_visible(timeout=10_000)
-            expect(page.get_by_text("Selection Summary", exact=False)).to_be_visible(timeout=10_000)
+                # Navigate using real sidebar buttons.
+                sidebar = page.locator('[data-testid="stSidebar"]')
+                team_button = sidebar.get_by_role(
+                    "button",
+                    name="• Team",
+                )
+                expect(team_button).to_have_count(1)
+                team_button.scroll_into_view_if_needed()
 
-            sidebar.get_by_role("button", name="• Overview").click()
-            _wait_for_idle(page)
-            _assert_overview_ui(page)
+                print(
+                    "Sidebar geometry:",
+                    page.evaluate(
+                        """button => {
+                            const sidebar = document.querySelector('[data-testid="stSidebar"]');
+                            const rect = button.getBoundingClientRect();
+                            const hit = document.elementFromPoint(
+                                rect.left + rect.width / 2,
+                                rect.top + rect.height / 2
+                            );
+                            const chain = [];
+                            let node = button;
+                            for (let i = 0; node && i < 5; i++, node = node.parentElement) {
+                                const style = getComputedStyle(node);
+                                const r = node.getBoundingClientRect();
+                                chain.push({
+                                    tag: node.tagName,
+                                    className: node.className,
+                                    display: style.display,
+                                    position: style.position,
+                                    width: r.width,
+                                    height: r.height,
+                                    x: r.x,
+                                    y: r.y,
+                                    transform: style.transform,
+                                    overflow: style.overflow,
+                                    zIndex: style.zIndex,
+                                });
+                            }
+                            return {
+                                viewport: {width: window.innerWidth, height: window.innerHeight},
+                                button: {
+                                    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+                                },
+                                sidebar: sidebar ? (() => {
+                                    const r = sidebar.getBoundingClientRect();
+                                    const style = getComputedStyle(sidebar);
+                                    return {
+                                        x: r.x, y: r.y, width: r.width, height: r.height,
+                                        display: style.display,
+                                        position: style.position,
+                                        transform: style.transform,
+                                        overflow: style.overflow,
+                                        zIndex: style.zIndex,
+                                    };
+                                })() : null,
+                                hitTestTag: hit ? hit.tagName : null,
+                                hitTestText: hit ? (hit.innerText || "").slice(0, 80) : null,
+                                chain,
+                            };
+                        }""",
+                        team_button.element_handle(),
+                    ),
+                )
 
-            diagnostics = _browser_diagnostics(page)
-            assert diagnostics["app"] is not None, diagnostics
-            assert diagnostics["app"]["connection"] == "CONNECTED", diagnostics
-            assert diagnostics["app"]["script"] == "notRunning", diagnostics
-            assert diagnostics["main"] is not None, diagnostics
-            assert diagnostics["main"]["width"] > 0, diagnostics
-            assert diagnostics["main"]["height"] > 0, diagnostics
+                team_button.click()
+                _wait_for_idle(page)
+                _assert_shell(page)
+                expect(
+                    page.get_by_text("Team", exact=True).first
+                ).to_be_visible(timeout=10_000)
 
-            assert not page_errors, page_errors
-            assert not console_errors, console_errors
-            assert not request_failures, request_failures
+                uncertainties_button = sidebar.get_by_role(
+                    "button",
+                    name="• Uncertainties",
+                )
+                uncertainties_button.click()
+                _wait_for_idle(page)
+                _assert_shell(page)
+                expect(
+                    page.get_by_text("Uncertainties", exact=True).first
+                ).to_be_visible(timeout=10_000)
+                expect(
+                    page.get_by_text("Selection Summary", exact=False)
+                ).to_be_visible(timeout=10_000)
+
+                overview_button = sidebar.get_by_role(
+                    "button",
+                    name="• Overview",
+                )
+                overview_button.click()
+                _wait_for_idle(page)
+                _assert_overview_ui(page)
+
+                diagnostics = _browser_diagnostics(page)
+                assert diagnostics["app"] is not None, diagnostics
+                assert diagnostics["app"]["connection"] == "CONNECTED", diagnostics
+                assert diagnostics["app"]["script"] == "notRunning", diagnostics
+                assert diagnostics["main"] is not None, diagnostics
+                assert diagnostics["main"]["width"] > 0, diagnostics
+                assert diagnostics["main"]["height"] > 0, diagnostics
+
+                assert not page_errors, page_errors
+                assert not console_errors, console_errors
+                assert not request_failures, request_failures
 
             except Exception:
-                artifact_dir = project_root / "test-artifacts"
                 artifact_dir.mkdir(parents=True, exist_ok=True)
 
                 try:
@@ -249,7 +300,10 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
 
                 try:
                     (artifact_dir / "surm-browser-diagnostics.json").write_text(
-                        json.dumps(_browser_diagnostics(page), indent=2),
+                        json.dumps(
+                            _browser_diagnostics(page),
+                            indent=2,
+                        ),
                         encoding="utf-8",
                     )
                 except Exception:
@@ -268,7 +322,6 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
 
         output = process.stdout.read() if process.stdout else ""
         if output:
-            artifact_dir = project_root / "test-artifacts"
             artifact_dir.mkdir(parents=True, exist_ok=True)
             (artifact_dir / "surm-streamlit-server.log").write_text(
                 output,
