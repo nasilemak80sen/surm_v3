@@ -462,6 +462,55 @@ def render_sidebar() -> None:
 
 
 # ============================================================================
+# READ-ONLY VIEW
+# ============================================================================
+
+def _render_read_only_page(page_name: str) -> None:
+    """Render a safe, widget-free snapshot for view-only study sessions.
+
+    Loaded studies intentionally enter ``study_access_mode='view'``. The
+    read-only path must never call editable page renderers because those pages
+    create Streamlit widgets and can mutate session state on rerun.
+    """
+
+    section_keys = {
+        "📋 Overview": ["project_name", "field_name", "project_phase", "study_lifecycle", "study_revision"],
+        "👥 Team": ["team_members"],
+        "1️⃣ Uncertainties": ["uncertainties"],
+        "2️⃣ Key Decisions": ["key_decisions"],
+        "3️⃣ Impact Assessment": ["impact_assessment"],
+        "4️⃣ Key Uncertainties": ["key_uncertainties"],
+        "5️⃣ Resolution List": ["resolution_list"],
+        "6️⃣ Resolution Planner": ["resolution_planner"],
+        "7️⃣ Risk Register": ["risk_register"],
+        "📄 PRA Output": ["pra_output"],
+        "📊 Intelligence": ["risk_register", "resolution_planner", "bowtie_register", "barrier_register"],
+        "🛡️ Barrier Management": ["barrier_register", "bowtie_register"],
+        "✅ Assurance & Review": ["study_reviews", "study_lifecycle"],
+        "🕘 Revision History": ["study_change_log", "study_revision"],
+    }
+
+    st.info("Read-only view. Select **Edit Study** to unlock changes.")
+
+    for key in section_keys.get(page_name, []):
+        value = st.session_state.get(key, "")
+        st.markdown(f"### {key.replace('_', ' ').title()}")
+
+        if isinstance(value, list):
+            if value and all(isinstance(item, dict) for item in value):
+                st.dataframe(value, use_container_width=True, hide_index=True)
+            else:
+                st.write(value or "No records.")
+        elif isinstance(value, dict):
+            if value:
+                st.json(value)
+            else:
+                st.caption("No records.")
+        else:
+            st.write(value if str(value).strip() else "Not configured")
+
+
+# ============================================================================
 # PAGE ROUTER
 # ============================================================================
 
