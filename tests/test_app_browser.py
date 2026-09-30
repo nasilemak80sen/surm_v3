@@ -159,6 +159,21 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             _assert_core_ui(page)
             expect(project_input).to_have_value("Browser Stability Test", timeout=10_000)
 
+            sidebar = page.locator('[data-testid="stSidebar"]')
+            sidebar.get_by_role("button", name="• Team").click()
+            _wait_for_idle(page)
+            expect(page.get_by_text("Team", exact=True).first).to_be_visible(timeout=10_000)
+            _assert_core_ui(page)
+
+            sidebar.get_by_role("button", name="• Uncertainties").click()
+            _wait_for_idle(page)
+            expect(page.get_by_text("Uncertainties", exact=True).first).to_be_visible(timeout=10_000)
+            expect(page.get_by_text("Selection Summary", exact=True)).to_be_visible(timeout=10_000)
+
+            sidebar.get_by_role("button", name="• Overview").click()
+            _wait_for_idle(page)
+            _assert_core_ui(page)
+
             diagnostics = _browser_diagnostics(page)
             assert diagnostics["app"] is not None, diagnostics
             assert diagnostics["app"]["connection"] == "CONNECTED", diagnostics
