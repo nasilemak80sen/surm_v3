@@ -47,8 +47,7 @@ st.set_page_config(
 # no imported module can accidentally issue a Streamlit command first.
 
 from components.header import render_header as render_shared_header
-from components.workflow import render_page_frame, render_workflow_list
-from utils.analytics import build_study_analytics
+from components.workflow import render_page_frame
 from utils.assurance import study_is_editable
 from utils.auth import (
     auth_required,
@@ -61,9 +60,6 @@ from utils.styles import load_css
 from utils.workflow import current_stage, stage_results, validate_stage
 
 
-# ============================================================================
-# CSS
-# ============================================================================
 # ============================================================================
 # APPLICATION SERVICES + PAGE MODULES
 # ============================================================================
@@ -89,27 +85,8 @@ from modules.tab_revision_history import render as render_revision_history
 
 
 # ============================================================================
-# THEME
+# APPLICATION HEADER
 # ============================================================================
-
-def apply_theme() -> None:
-    """Preserve the global console theme while allowing an accent override."""
-    primary = st.session_state.get("ui_primary_color")
-    if not primary:
-        return
-
-    st.markdown(
-        f"""
-        <style>
-        :root {{
-            --surm-primary: {primary};
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 # ============================================================================
 # APPLICATION HEADER
 # ============================================================================
@@ -201,61 +178,6 @@ def calculate_study_progress() -> dict:
         "team_members": team,
         "progress": progress,
     }
-
-
-def _load_selected_session(session_meta: dict) -> None:
-    """Streamlit callback for explicit saved-study loading."""
-    from utils.persistence import load_session_record
-
-    if not load_session_record(session_meta):
-        st.session_state["_resume_message"] = "Unable to load the selected study."
-
-
-def _delete_selected_session(project_name: str, field_name: str) -> None:
-    """Streamlit callback for deleting a saved study."""
-    from utils.persistence import delete_session
-
-    allowed, reason = can_delete_study()
-    if not allowed:
-        st.error(reason)
-        return
-
-    if delete_session(project_name, field_name):
-        if (
-            st.session_state.get("project_name", "").strip() == project_name
-            and st.session_state.get("field_name", "").strip() == field_name
-        ):
-            create_new_study()
-    else:
-        st.session_state["_resume_message"] = "Unable to delete the selected study."
-
-
-def _render_read_only_page(page_name: str) -> None:
-    """Render study data without creating editable Streamlit widgets."""
-    section_keys = {
-        "📋 Overview": ["project_name", "field_name", "project_phase", "study_lifecycle", "study_revision"],
-        "👥 Team": ["team_members"],
-        "1️⃣ Uncertainties": ["uncertainties"],
-        "2️⃣ Key Decisions": ["key_decisions"],
-        "3️⃣ Impact Assessment": ["impact_assessment"],
-        "4️⃣ Key Uncertainties": ["key_uncertainties"],
-        "5️⃣ Resolution List": ["resolution_list"],
-        "6️⃣ Resolution Planner": ["resolution_planner"],
-        "7️⃣ Risk Register": ["risk_register"],
-        "📄 PRA Output": ["pra_output"],
-        "📊 Intelligence": ["risk_register", "resolution_planner", "bowtie_register", "barrier_register"],
-        "🛡️ Barrier Management": ["barrier_register", "bowtie_register"],
-        "✅ Assurance & Review": ["study_reviews", "study_lifecycle"],
-        "🕘 Revision History": ["study_change_log", "study_revision"],
-    }
-    st.info("Read-only view. Select Edit Study to unlock changes.")
-    for key in section_keys.get(page_name, []):
-        value = st.session_state.get(key, "")
-        st.markdown(f"### {key.replace('_', ' ').title()}")
-        if isinstance(value, (list, dict)):
-            st.dataframe(value, use_container_width=True, hide_index=True)
-        else:
-            st.write(value or "Not configured")
 
 
 def _enable_edit_mode() -> None:
@@ -587,7 +509,6 @@ def render_navigation() -> None:
     if selected_page not in PAGE_DEFINITIONS:
         selected_page = page_names[0]
 
-    selected_index = page_names.index(selected_page)
     is_workflow_page = selected_page in WORKFLOW_PAGES
     workflow_index = WORKFLOW_PAGES.index(selected_page) if is_workflow_page else -1
     title = selected_page.split(" ", 1)[-1]
