@@ -13,6 +13,7 @@ def test_shell_uses_one_sidebar_navigation_surface():
     assert "def render_top_navigation" not in source
     assert "render_top_navigation()" not in source
     assert "_build_sidebar_navigation" in source
+    assert "header_slot = st.empty()" not in source
     assert 'with st.expander("Insights & governance", expanded=False)' in source
     assert 'with st.expander("Session & export", expanded=False)' in source
     assert 'with st.expander("Account & access", expanded=False)' in source
