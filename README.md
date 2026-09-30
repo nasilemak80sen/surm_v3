@@ -30,7 +30,8 @@ P2 focuses on information density without changing the engineering methodology:
 - **Overview** is treated as the report front page: study identity, readiness, governance and export live together without duplicating every downstream detail.
 - Workflow pages use a **work-left / inspect-right** layout where practical, keeping the user's primary input alongside the immediate chart, coverage, execution or risk output.
 - The sidebar is the single primary navigation surface, grouped into Study, Workflow, Insights & governance and Support. Redundant top-level page switchers and previous/next navigation have been removed.
-- Workflow pages use a compact task header and reserve visual emphasis for the active form and its decision-support output.
+- Workflow pages use a compact task header and reserve visual emphasis for the active form and its immediate decision-support output.
+- Dense workspaces separate execution from interpretation with focused tabs: assessment vs ranking, prioritisation vs decision support, resolution mapping vs coverage, workplan vs execution pulse, and risk assessment vs risk pulse vs Bowtie analysis.
 - Sidebar content is intentionally structured around study context, workflow navigation, frequent Save/New actions and progressive disclosure for session settings, export and account controls.
 
 ## Design principles
