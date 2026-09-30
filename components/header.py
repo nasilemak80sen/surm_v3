@@ -86,13 +86,13 @@ def render_header(
             <div class="surm-header-left">
 
                 <div class="surm-logo">
-                    🛢️
+                    <span class="surm-logo-core">◈</span>
                 </div>
 
                 <div class="surm-header-brand">
 
                     <div class="surm-eyebrow">
-                        {organisation_html}
+                        {organisation_html} <span class="surm-header-pulse">● SYSTEM ONLINE</span>
                     </div>
 
                     <div class="surm-title">
@@ -107,48 +107,26 @@ def render_header(
 
             </div>
 
-
             <div class="surm-header-meta">
 
                 <div class="surm-meta-item">
-
-                    <div class="surm-meta-label">
-                        Field
-                    </div>
-
-                    <div class="surm-meta-value">
-                        {field_html}
-                    </div>
-
+                    <div class="surm-meta-label">Field</div>
+                    <div class="surm-meta-value">{field_html}</div>
                 </div>
-
 
                 <div class="surm-meta-item">
-
-                    <div class="surm-meta-label">
-                        Project
-                    </div>
-
-                    <div class="surm-meta-value">
-                        {project_html}
-                    </div>
-
+                    <div class="surm-meta-label">Project</div>
+                    <div class="surm-meta-value">{project_html}</div>
                 </div>
-
 
                 <div class="surm-meta-item">
-
-                    <div class="surm-meta-label">
-                        Phase
-                    </div>
-
-                    <div class="surm-meta-value">
-                        {phase_html}
-                    </div>
-
+                    <div class="surm-meta-label">Phase</div>
+                    <div class="surm-meta-value">{phase_html}</div>
                 </div>
 
-                {save_status}
+                <div class="surm-meta-status">
+                    {save_status}
+                </div>
 
             </div>
 
