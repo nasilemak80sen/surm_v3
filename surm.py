@@ -16,15 +16,6 @@ from pathlib import Path
 from typing import Any, cast
 import streamlit as st
 
-from components.header import render_header as render_shared_header
-from components.workflow import render_page_frame, render_workflow_list
-from utils.analytics import build_study_analytics
-from utils.assurance import study_is_editable
-from utils.auth import auth_required, can_delete_study, can_edit_study, current_user_label, resolve_identity
-from utils.styles import load_css
-from utils.workflow import current_stage, stage_results, validate_stage
-
-
 # ============================================================================
 # APPLICATION CONFIGURATION
 # ============================================================================
@@ -50,15 +41,34 @@ st.set_page_config(
 
 
 # ============================================================================
-# IMPORT APPLICATION SERVICES
+# IMPORT APPLICATION COMPONENTS
+# ============================================================================
+# All application-local imports intentionally happen after set_page_config so
+# no imported module can accidentally issue a Streamlit command first.
+
+from components.header import render_header as render_shared_header
+from components.workflow import render_page_frame, render_workflow_list
+from utils.analytics import build_study_analytics
+from utils.assurance import study_is_editable
+from utils.auth import (
+    auth_required,
+    can_delete_study,
+    can_edit_study,
+    current_user_label,
+    resolve_identity,
+)
+from utils.styles import load_css
+from utils.workflow import current_stage, stage_results, validate_stage
+
+
+# ============================================================================
+# CSS
+# ============================================================================
+# ============================================================================
+# APPLICATION SERVICES + PAGE MODULES
 # ============================================================================
 
 from utils.session import create_new_study, init_session
-
-
-# ============================================================================
-# IMPORT PAGE MODULES
-# ============================================================================
 
 from modules.tab_frontpage import render as render_frontpage
 from modules.tab_documentation import render as render_documentation
@@ -77,10 +87,6 @@ from modules.tab_barrier_management import render as render_barrier_management
 from modules.tab_assurance import render as render_assurance
 from modules.tab_revision_history import render as render_revision_history
 
-
-# ============================================================================
-# CSS
-# ============================================================================
 
 # ============================================================================
 # THEME
