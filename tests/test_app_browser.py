@@ -48,10 +48,15 @@ def _wait_for_idle(page, timeout: int = 10_000) -> None:
     ).to_have_count(1, timeout=timeout)
 
 
-def _assert_core_ui(page) -> None:
-    """Assert the application contract using user-visible UI, not Streamlit internals."""
+def _assert_shell(page) -> None:
+    """Assert the persistent application shell using user-visible UI."""
     expect(page.get_by_text("SURM Toolkit", exact=True).first).to_be_visible(timeout=10_000)
     expect(page.get_by_text("CURRENT STUDY", exact=True).first).to_be_visible(timeout=10_000)
+
+
+def _assert_overview_ui(page) -> None:
+    """Assert the Overview page contract."""
+    _assert_shell(page)
     expect(page.get_by_text("AT A GLANCE", exact=True)).to_be_visible(timeout=10_000)
     expect(page.get_by_text("Study setup", exact=True)).to_be_visible(timeout=10_000)
     expect(page.get_by_text("Workflow progress", exact=True)).to_be_visible(timeout=10_000)
@@ -140,7 +145,7 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             )
 
             _wait_for_idle(page)
-            _assert_core_ui(page)
+            _assert_overview_ui(page)
 
             # Detect the user's flash-then-blank failure rather than only
             # verifying the first successful paint.
@@ -148,7 +153,7 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             for delay_ms in (1_000, 2_000, 3_000, 5_000):
                 page.wait_for_timeout(delay_ms - last_delay)
                 _wait_for_idle(page)
-                _assert_core_ui(page)
+                _assert_overview_ui(page)
                 last_delay = delay_ms
 
             # Exercise a real widget-driven rerun. Project Name uses an
@@ -160,23 +165,24 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             expect(project_input).to_have_value("Browser Stability Test", timeout=10_000)
             page.wait_for_timeout(2_000)
             _wait_for_idle(page)
-            _assert_core_ui(page)
+            _assert_overview_ui(page)
             expect(project_input).to_have_value("Browser Stability Test", timeout=10_000)
 
             sidebar = page.locator('[data-testid="stSidebar"]')
             sidebar.get_by_role("button", name="• Team").click()
             _wait_for_idle(page)
+            _assert_shell(page)
             expect(page.get_by_text("Team", exact=True).first).to_be_visible(timeout=10_000)
-            _assert_core_ui(page)
 
             sidebar.get_by_role("button", name="• Uncertainties").click()
             _wait_for_idle(page)
+            _assert_shell(page)
             expect(page.get_by_text("Uncertainties", exact=True).first).to_be_visible(timeout=10_000)
             expect(page.get_by_text("Selection Summary", exact=True)).to_be_visible(timeout=10_000)
 
             sidebar.get_by_role("button", name="• Overview").click()
             _wait_for_idle(page)
-            _assert_core_ui(page)
+            _assert_overview_ui(page)
 
             diagnostics = _browser_diagnostics(page)
             assert diagnostics["app"] is not None, diagnostics
