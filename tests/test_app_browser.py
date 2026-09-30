@@ -128,7 +128,10 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
         _wait_for_server(port, process)
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
-            page = browser.new_page()
+            # Use a deterministic desktop canvas so sidebar navigation is tested
+            # as a normal user-facing surface rather than against Playwright's
+            # small default viewport.
+            page = browser.new_page(viewport={"width": 1600, "height": 1200})
             page_errors: list[str] = []
             console_errors: list[str] = []
             request_failures: list[str] = []
@@ -175,7 +178,36 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             expect(project_input).to_have_value("Browser Stability Test", timeout=10_000)
 
             sidebar = page.locator('[data-testid="stSidebar"]')
-            sidebar.get_by_role("button", name="• Team").click()
+            team_button = sidebar.get_by_role("button", name="• Team")
+            expect(team_button).to_have_count(1)
+            team_button.scroll_into_view_if_needed()
+            print(
+                "Sidebar geometry:",
+                page.evaluate(
+                    """button => {
+                        const sidebar = document.querySelector('[data-testid="stSidebar"]');
+                        const rect = button.getBoundingClientRect();
+                        const hit = document.elementFromPoint(
+                            rect.left + rect.width / 2,
+                            rect.top + rect.height / 2
+                        );
+                        return {
+                            viewport: {width: window.innerWidth, height: window.innerHeight},
+                            button: {
+                                x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+                            },
+                            sidebar: sidebar ? (() => {
+                                const r = sidebar.getBoundingClientRect();
+                                return {x: r.x, y: r.y, width: r.width, height: r.height};
+                            })() : null,
+                            hitTestTag: hit ? hit.tagName : null,
+                            hitTestText: hit ? (hit.innerText || "").slice(0, 80) : null,
+                        };
+                    }""",
+                    team_button.element_handle(),
+                ),
+            )
+            team_button.click()
             _wait_for_idle(page)
             _assert_shell(page)
             expect(page.get_by_text("Team", exact=True).first).to_be_visible(timeout=10_000)
