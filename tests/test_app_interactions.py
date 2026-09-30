@@ -60,6 +60,24 @@ def test_entrypoint_and_page_shell_compile():
         __import__(module)
 
 
+def test_view_only_router_renders_without_missing_function():
+    def app():
+        import streamlit as st
+        import surm
+        from utils.session import init_session
+
+        init_session()
+        st.session_state["current_page"] = "👥 Team"
+        st.session_state["study_access_mode"] = "view"
+        surm.render_navigation()
+
+    at = _run_app(app)
+
+    assert not at.exception, f"view-only navigation failed: {at.exception}"
+    assert any("Read-only view" in info.value for info in at.info)
+    assert at.markdown or at.dataframe
+
+
 def test_project_identity_survives_overview_to_team_save_rerun():
     def app():
         import streamlit as st
