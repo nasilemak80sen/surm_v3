@@ -148,6 +148,7 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                 ),
             )
 
+            try:
             page.goto(
                 f"http://127.0.0.1:{port}",
                 wait_until="domcontentloaded",
@@ -234,28 +235,29 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             assert not console_errors, console_errors
             assert not request_failures, request_failures
 
-            browser.close()
-    except Exception:
-        artifact_dir = project_root / "test-artifacts"
-        artifact_dir.mkdir(parents=True, exist_ok=True)
-
-        if page is not None:
-            try:
-                page.screenshot(
-                    path=str(artifact_dir / "surm-browser-failure.png"),
-                    full_page=True,
-                )
             except Exception:
-                pass
+                artifact_dir = project_root / "test-artifacts"
+                artifact_dir.mkdir(parents=True, exist_ok=True)
 
-            try:
-                (artifact_dir / "surm-browser-diagnostics.json").write_text(
-                    json.dumps(_browser_diagnostics(page), indent=2),
-                    encoding="utf-8",
-                )
-            except Exception:
-                pass
-        raise
+                try:
+                    page.screenshot(
+                        path=str(artifact_dir / "surm-browser-failure.png"),
+                        full_page=True,
+                    )
+                except Exception:
+                    pass
+
+                try:
+                    (artifact_dir / "surm-browser-diagnostics.json").write_text(
+                        json.dumps(_browser_diagnostics(page), indent=2),
+                        encoding="utf-8",
+                    )
+                except Exception:
+                    pass
+
+                raise
+            finally:
+                browser.close()
     finally:
         process.terminate()
         try:
