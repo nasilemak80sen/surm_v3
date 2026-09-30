@@ -117,7 +117,7 @@ def render():
     # Global controls
     # ------------------------------------------------------------------
     st.markdown(
-        '<div class="surm-section-header">🎛️ Global Controls</div>',
+        '<div class="surm-section-header">Selection controls</div>',
         unsafe_allow_html=True,
     )
 
@@ -270,15 +270,13 @@ def render():
         mark_stage_changed(st.session_state, "uncertainties")
 
     with st.expander("Add custom uncertainty", expanded=False):
-        # ------------------------------------------------------------------
-        st.divider()
         st.markdown(
-            '<div class="surm-section-header">➕ Add Custom Uncertainty</div>',
+            '<div class="surm-section-header">Custom uncertainty</div>',
             unsafe_allow_html=True,
         )
         st.caption(
-            "Custom uncertainties are supported end-to-end, but they must have at least "
-            "one associated risk so the risk register can trace them later."
+            "Add a study-specific uncertainty when the master list does not capture it. "
+            "At least one linked risk is required for downstream traceability."
         )
 
         with st.form("custom_unc_form", clear_on_submit=True, enter_to_submit=False):
