@@ -41,6 +41,29 @@ TARGET_FORM_FILES = [
 ]
 
 
+def test_durable_study_signature_tracks_real_edits_only():
+    from utils.session import study_has_unsaved_changes, study_state_signature
+
+    state = {
+        "project_name": "Study A",
+        "field_name": "Field A",
+        "study_access_mode": "edit",
+        "study_mode": "new",
+        "ui_primary_color": "#1F6B3A",
+        "_auto_save_enabled": True,
+    }
+
+    state["_saved_signature"] = study_state_signature(state)
+    assert not study_has_unsaved_changes(state)
+
+    state["study_access_mode"] = "view"
+    state["ui_primary_color"] = "#000000"
+    assert not study_has_unsaved_changes(state)
+
+    state["field_name"] = "Field B"
+    assert study_has_unsaved_changes(state)
+
+
 def test_entrypoint_and_page_shell_compile():
     project_root = Path(__file__).resolve().parents[1]
     entrypoint = (project_root / "surm.py").read_text(encoding="utf-8")
