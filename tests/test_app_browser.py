@@ -124,11 +124,11 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
 
             # Detect the user's flash-then-blank failure rather than only
             # verifying the first successful paint.
+            last_delay = 0
             for delay_ms in (1_000, 2_000, 3_000, 5_000):
-                page.wait_for_timeout(
-                    max(0, delay_ms - (1_000 if delay_ms == 1_000 else delay_ms - 1_000))
-                )
+                page.wait_for_timeout(delay_ms - last_delay)
                 _assert_core_ui(page)
+                last_delay = delay_ms
 
             # Exercise a real widget-driven rerun. Project Name uses an
             # on_change callback, so blur triggers the same rerun path a user
