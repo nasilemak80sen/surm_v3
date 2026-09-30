@@ -135,12 +135,13 @@ def save_session(auto: bool = False) -> bool:
         st.session_state["study_revision"] = revision
         st.session_state["study_id"] = document.study_id
         st.session_state["study_owner"] = document.study_owner
-        st.session_state["_saved_signature"] = study_state_signature(st.session_state)
         verified = db.load(project, field)
         saved_document = StudyDocument.from_record(verified) if verified else None
         if not saved_document or saved_document.to_dict() != document.to_dict():
             st.warning("The study was saved but could not be verified. Please retry.")
             return False
+
+        st.session_state["_saved_signature"] = study_state_signature(st.session_state)
     return ok
 
 
