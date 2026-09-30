@@ -500,3 +500,43 @@ def test_entrypoint_boots_as_a_streamlit_app():
     assert at.markdown or at.title or at.header
     assert at.button
 
+
+def test_streamlit_local_runtime_config_is_stable_for_synced_worktrees():
+    project_root = Path(__file__).resolve().parents[1]
+    import tomllib
+
+    config = tomllib.loads(
+        (project_root / ".streamlit" / "config.toml").read_text(encoding="utf-8")
+    )
+    server = config["server"]
+
+    # Local file changes must not trigger a second script execution while the
+    # browser is still hydrating, which can produce a flash-then-blank canvas.
+    assert server["runOnSave"] is False
+    assert server["fileWatcherType"] in {"auto", "watchdog", "poll", "none"}
+    blacklist = set(server.get("folderWatchBlacklist", []))
+    assert {".git", ".venv", "__pycache__", ".pytest_cache"} <= blacklist
+
+
+def test_all_first_party_python_sources_compile():
+    project_root = Path(__file__).resolve().parents[1]
+    for path in sorted(project_root.rglob("*.py")):
+        if any(part in {".venv", ".git", "__pycache__", ".pytest_cache"} for part in path.parts):
+            continue
+        source = path.read_text(encoding="utf-8")
+        compile(source, str(path), "exec")
+
+
+def test_markdown_adapter_remains_idempotent_across_module_reload():
+    import importlib
+    import streamlit as st
+    import utils.ui as ui
+
+    importlib.reload(ui)
+    original = st._surm_original_markdown
+    wrapped_once = st.markdown
+
+    importlib.reload(ui)
+    assert st._surm_original_markdown is original
+    assert st.markdown is not wrapped_once
+    assert getattr(st._surm_original_markdown, "__name__", "") == "markdown"
