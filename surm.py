@@ -479,8 +479,26 @@ def render_sidebar() -> None:
             if ss.get("_resume_message"):
                 st.success(ss["_resume_message"])
 
-            try:
-                excel_data = build_excel_export()
+            # Excel generation is intentionally explicit. The full workbook
+            # contains many styled sheets and should never block initial app
+            # rendering just because this expander is collapsed.
+            if st.button(
+                "⚙ Prepare Excel export",
+                key="prepare_excel_export",
+                use_container_width=True,
+                type="secondary",
+                help="Build the current study workbook when you are ready to export it.",
+            ):
+                try:
+                    with st.spinner("Preparing Excel workbook..."):
+                        ss["_excel_export_data"] = build_excel_export()
+                    st.success("Excel workbook prepared.")
+                except Exception as exc:
+                    ss.pop("_excel_export_data", None)
+                    st.error(f"Excel export unavailable: {exc}")
+
+            excel_data = ss.get("_excel_export_data")
+            if excel_data:
                 filename = (
                     f"SURM_{field.replace(' ', '_')}.xlsx"
                     if field
@@ -496,8 +514,6 @@ def render_sidebar() -> None:
                     ),
                     use_container_width=True,
                 )
-            except Exception as exc:
-                st.warning(f"Excel export unavailable: {exc}")
 
         with st.expander("Account & access", expanded=False):
             st.caption(f"Active user: {current_user_label()}")
