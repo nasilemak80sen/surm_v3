@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import socket
 import subprocess
 import sys
@@ -109,6 +110,9 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
         text=True,
     )
 
+    page = None
+    browser = None
+
     try:
         _wait_for_server(port, process)
         with sync_playwright() as playwright:
@@ -187,6 +191,27 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             assert not request_failures, request_failures
 
             browser.close()
+    except Exception:
+        artifact_dir = project_root / "test-artifacts"
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+
+        if page is not None:
+            try:
+                page.screenshot(
+                    path=str(artifact_dir / "surm-browser-failure.png"),
+                    full_page=True,
+                )
+            except Exception:
+                pass
+
+            try:
+                (artifact_dir / "surm-browser-diagnostics.json").write_text(
+                    json.dumps(_browser_diagnostics(page), indent=2),
+                    encoding="utf-8",
+                )
+            except Exception:
+                pass
+        raise
     finally:
         process.terminate()
         try:
@@ -194,3 +219,12 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
+
+        output = process.stdout.read() if process.stdout else ""
+        if output:
+            artifact_dir = project_root / "test-artifacts"
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            (artifact_dir / "surm-streamlit-server.log").write_text(
+                output,
+                encoding="utf-8",
+            )
