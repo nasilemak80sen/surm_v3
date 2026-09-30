@@ -40,6 +40,25 @@ TARGET_FORM_FILES = [
 ]
 
 
+def test_entrypoint_and_page_shell_compile():
+    project_root = Path(__file__).resolve().parents[1]
+    entrypoint = (project_root / "surm.py").read_text(encoding="utf-8")
+    compile(entrypoint, str(project_root / "surm.py"), "exec")
+
+    for module in (
+        "modules.tab_frontpage",
+        "modules.tab_study_repository",
+        "modules.tab1_uncertainties",
+        "modules.tab2_key_decisions",
+        "modules.tab3_impact_assessment",
+        "modules.tab4_key_uncertainties",
+        "modules.tab5_resolution_list",
+        "modules.tab6_resolution_planner",
+        "modules.tab7_risk_register",
+    ):
+        __import__(module)
+
+
 def test_project_identity_survives_overview_to_team_save_rerun():
     def app():
         import streamlit as st
