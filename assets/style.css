@@ -2372,3 +2372,61 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
         margin-top: 0.55rem;
     }
 }
+
+
+/* ==========================================================================
+   SURM UX 2.0 — workspace tabs
+   ========================================================================== */
+
+.stApp [data-baseweb="tab-list"] {
+    gap: 0.2rem;
+    margin: 0.15rem 0 0.9rem;
+    padding: 0.2rem;
+    border-bottom: 1px solid var(--surm-border);
+}
+
+.stApp [data-baseweb="tab"] {
+    min-height: 2.2rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 8px 8px 0 0;
+    color: var(--surm-text-muted);
+    font-size: 0.73rem;
+    font-weight: 650;
+}
+
+.stApp [data-baseweb="tab"]:hover {
+    color: var(--surm-primary);
+    background: var(--surm-primary-soft);
+}
+
+.stApp [aria-selected="true"][data-baseweb="tab"] {
+    color: var(--surm-primary-dark);
+    background: var(--surm-primary-soft);
+    font-weight: 800;
+}
+
+.stApp [data-baseweb="tab-highlight"] {
+    background: var(--surm-primary) !important;
+    height: 3px;
+}
+
+/* Dense editors should read as deliberate work surfaces, not page furniture. */
+.stApp [data-testid="stDataEditor"] {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* Keep section headers from becoming visual dividers every few lines. */
+.surm-section-header {
+    margin-top: 1.2rem;
+    margin-bottom: 0.55rem;
+}
+
+/* Responsive tab labels should remain compact rather than wrapping vertically. */
+@media (max-width: 700px) {
+    .stApp [data-baseweb="tab"] {
+        padding-left: 0.55rem;
+        padding-right: 0.55rem;
+        font-size: 0.68rem;
+    }
+}
