@@ -2430,3 +2430,482 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
         font-size: 0.68rem;
     }
 }
+
+
+/* ==========================================================================
+   SURM UX 3.0 — NEO-INDUSTRIAL ENGINEERING CONSOLE
+   Purpose: turn the interface from "digital paperwork" into an engineering
+   command surface while preserving SURM's restrained corporate character.
+   ========================================================================== */
+
+:root {
+    --surm-console: #0B1E16;
+    --surm-console-2: #0F2B20;
+    --surm-console-line: rgba(115, 239, 170, 0.15);
+    --surm-console-glow: #65E3A2;
+    --surm-console-glow-soft: rgba(101, 227, 162, 0.12);
+    --surm-telemetry: #95B9A6;
+}
+
+.stApp {
+    background:
+        radial-gradient(circle at 82% 8%, rgba(74, 196, 130, 0.09), transparent 28%),
+        radial-gradient(circle at 10% 65%, rgba(33, 113, 77, 0.06), transparent 26%),
+        linear-gradient(180deg, #F8FBF9 0%, #F1F6F3 100%);
+    position: relative;
+}
+
+.stApp::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+    background-image:
+        linear-gradient(rgba(23, 107, 58, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(23, 107, 58, 0.025) 1px, transparent 1px);
+    background-size: 26px 26px;
+}
+
+.block-container {
+    position: relative;
+    z-index: 1;
+    max-width: 1420px;
+}
+
+.surm-header {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 85% 50%, rgba(101, 227, 162, 0.13), transparent 22%),
+        linear-gradient(135deg, var(--surm-console) 0%, var(--surm-console-2) 100%);
+    border: 1px solid rgba(101, 227, 162, 0.18);
+    box-shadow:
+        0 16px 38px rgba(6, 32, 20, 0.12),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.surm-header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.28;
+    background:
+        linear-gradient(90deg, transparent 0%, rgba(101, 227, 162, 0.08) 50%, transparent 100%),
+        repeating-linear-gradient(
+            0deg,
+            transparent 0,
+            transparent 7px,
+            rgba(255,255,255,0.025) 8px
+        );
+}
+
+.surm-logo {
+    position: relative;
+    background: rgba(101, 227, 162, 0.10);
+    border: 1px solid rgba(101, 227, 162, 0.28);
+    box-shadow: 0 0 22px rgba(101, 227, 162, 0.08);
+}
+
+.surm-logo-core {
+    color: var(--surm-console-glow);
+    font-size: 1.45rem;
+    text-shadow: 0 0 14px rgba(101, 227, 162, 0.35);
+}
+
+.surm-eyebrow {
+    color: var(--surm-console-glow);
+}
+
+.surm-header-pulse {
+    margin-left: 0.45rem;
+    color: rgba(217, 255, 232, 0.72);
+    font-size: 0.54rem;
+    letter-spacing: 0.08em;
+}
+
+.surm-header-pulse::first-letter {
+    color: var(--surm-console-glow);
+}
+
+.surm-title,
+.surm-subtitle {
+    color: #FFFFFF;
+}
+
+.surm-subtitle {
+    color: rgba(225, 241, 233, 0.62);
+}
+
+.surm-meta-item {
+    background: rgba(255,255,255,0.055);
+    border-color: rgba(255,255,255,0.10);
+    backdrop-filter: blur(8px);
+}
+
+.surm-meta-label {
+    color: rgba(217, 255, 232, 0.48);
+}
+
+.surm-meta-value {
+    color: rgba(255,255,255,0.92);
+}
+
+.surm-meta-status {
+    display: flex;
+    align-items: center;
+}
+
+.surm-meta-status .surm-status-badge {
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: inset 0 0 18px rgba(101, 227, 162, 0.05);
+}
+
+.surm-sidebar-study-card {
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045));
+    border-color: rgba(101, 227, 162, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.surm-sidebar-study-card::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--surm-console-glow);
+    box-shadow: 0 0 14px rgba(101, 227, 162, 0.40);
+}
+
+section[data-testid="stSidebar"] {
+    background:
+        radial-gradient(circle at 90% 12%, rgba(101, 227, 162, 0.10), transparent 28%),
+        linear-gradient(180deg, #071A12 0%, #0E2B1E 58%, #0B2419 100%);
+    box-shadow: 10px 0 28px rgba(6, 24, 15, 0.06);
+}
+
+section[data-testid="stSidebar"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.22;
+    background-image:
+        linear-gradient(rgba(101, 227, 162, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(101, 227, 162, 0.045) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+.surm-form-header {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 0.85rem;
+    padding: 1.05rem 1.15rem;
+    border: 1px solid rgba(23, 107, 58, 0.16);
+    border-radius: 15px;
+    background:
+        radial-gradient(circle at 92% 40%, rgba(101, 227, 162, 0.14), transparent 18%),
+        linear-gradient(135deg, #0C2118 0%, #14382A 100%);
+    box-shadow:
+        0 10px 28px rgba(11, 50, 31, 0.11),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.surm-form-header::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.18;
+    background:
+        linear-gradient(90deg, transparent, rgba(101, 227, 162, 0.11), transparent),
+        repeating-linear-gradient(
+            0deg,
+            transparent 0,
+            transparent 8px,
+            rgba(255,255,255,0.022) 9px
+        );
+}
+
+.surm-form-header-main,
+.surm-form-next-wrap {
+    position: relative;
+    z-index: 1;
+}
+
+.surm-form-step {
+    color: var(--surm-console-glow);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.11em;
+}
+
+.surm-form-step-dot {
+    display: inline-block;
+    width: 0.42rem;
+    height: 0.42rem;
+    margin-right: 0.4rem;
+    border-radius: 50%;
+    vertical-align: 0.05em;
+    background: var(--surm-console-glow);
+    box-shadow: 0 0 10px rgba(101, 227, 162, 0.65);
+}
+
+.surm-form-title {
+    color: #FFFFFF;
+    font-size: clamp(1.2rem, 2vw, 1.7rem);
+    letter-spacing: -0.02em;
+}
+
+.surm-form-purpose {
+    max-width: 840px;
+    color: rgba(226, 240, 232, 0.68);
+}
+
+.surm-form-next-wrap {
+    align-self: center;
+    min-width: 120px;
+    padding-left: 1rem;
+    border-left: 1px solid rgba(101, 227, 162, 0.16);
+}
+
+.surm-form-next-label {
+    margin-bottom: 0.15rem;
+    color: rgba(149, 185, 166, 0.60);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.surm-form-next {
+    color: #DFF9E9;
+}
+
+.surm-stage-status {
+    margin: 0 0 0.7rem;
+    padding: 0.48rem 0.7rem;
+    border: 1px solid var(--surm-border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.72);
+    box-shadow: 0 4px 14px rgba(13, 54, 34, 0.035);
+}
+
+[data-testid="stMetric"] {
+    position: relative;
+    overflow: hidden;
+    min-height: 88px;
+    padding: 0.72rem 0.8rem;
+    border: 1px solid rgba(23, 107, 58, 0.14);
+    border-radius: 13px;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,0.94), rgba(241,248,244,0.92));
+    box-shadow:
+        0 8px 20px rgba(17, 77, 46, 0.06),
+        inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+[data-testid="stMetric"]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--surm-primary);
+    box-shadow: 0 0 12px rgba(23, 107, 58, 0.22);
+}
+
+[data-testid="stMetricLabel"] {
+    color: var(--surm-text-muted) !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.60rem !important;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+[data-testid="stMetricValue"] {
+    color: var(--surm-text) !important;
+    letter-spacing: -0.035em;
+}
+
+.stApp [data-baseweb="tab-list"] {
+    margin: 0.15rem 0 0.95rem;
+    padding: 0.28rem;
+    gap: 0.24rem;
+    border: 1px solid rgba(23, 107, 58, 0.13);
+    border-radius: 11px;
+    background: rgba(10, 35, 24, 0.055);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+}
+
+.stApp [data-baseweb="tab"] {
+    min-height: 2.25rem;
+    padding: 0.45rem 0.82rem;
+    border-radius: 8px;
+    color: var(--surm-text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.stApp [data-baseweb="tab"]:hover {
+    color: var(--surm-primary-dark);
+    background: rgba(101, 227, 162, 0.10);
+}
+
+.stApp [aria-selected="true"][data-baseweb="tab"] {
+    color: #EAFEF2;
+    background: linear-gradient(135deg, #123D2A, #176B3A);
+    box-shadow:
+        0 5px 14px rgba(23, 107, 58, 0.16),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.stApp [data-baseweb="tab-highlight"] {
+    background: transparent !important;
+    height: 0 !important;
+}
+
+.stApp [data-testid="stDataEditor"] {
+    border: 1px solid rgba(23, 107, 58, 0.14);
+    border-radius: 13px;
+    box-shadow:
+        0 10px 24px rgba(11, 55, 33, 0.055),
+        inset 0 1px 0 rgba(255,255,255,0.78);
+    overflow: hidden;
+}
+
+.stApp [data-testid="stDataFrame"] {
+    border: 1px solid rgba(23, 107, 58, 0.14);
+    border-radius: 13px;
+    overflow: hidden;
+}
+
+.stApp .stButton > button,
+.stApp .stDownloadButton > button,
+.stApp [data-testid="stFormSubmitButton"] > button {
+    min-height: 2.3rem;
+    border-radius: 9px;
+    transition:
+        transform 120ms ease,
+        box-shadow 120ms ease,
+        border-color 120ms ease,
+        background 120ms ease;
+}
+
+.stApp .stButton > button:hover,
+.stApp .stDownloadButton > button:hover,
+.stApp [data-testid="stFormSubmitButton"] > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 7px 16px rgba(17, 77, 46, 0.10);
+}
+
+.stApp [data-testid="stFormSubmitButton"] > button[kind="primary"],
+.stApp .stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #176B3A, #229455) !important;
+    border-color: rgba(23, 107, 58, 0.85) !important;
+    box-shadow:
+        0 7px 18px rgba(23, 107, 58, 0.18),
+        inset 0 1px 0 rgba(255,255,255,0.14);
+}
+
+.overview-cover {
+    position: relative;
+    overflow: hidden;
+    padding: 1.35rem 1.4rem;
+    border-radius: 16px;
+    border: 1px solid rgba(23, 107, 58, 0.16);
+    background:
+        radial-gradient(circle at 90% 50%, rgba(101, 227, 162, 0.12), transparent 24%),
+        linear-gradient(135deg, #0C2118, #16402E);
+    box-shadow:
+        0 14px 34px rgba(8, 45, 26, 0.12),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.overview-cover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.16;
+    background:
+        linear-gradient(90deg, transparent, rgba(101, 227, 162, 0.11), transparent),
+        repeating-linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 54px,
+            rgba(255,255,255,0.018) 55px
+        );
+}
+
+.overview-cover-kicker {
+    position: relative;
+    z-index: 1;
+    color: var(--surm-console-glow);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.12em;
+}
+
+.overview-cover-title {
+    position: relative;
+    z-index: 1;
+    color: #FFFFFF;
+    font-size: clamp(1.55rem, 3vw, 2.25rem);
+    letter-spacing: -0.04em;
+}
+
+.overview-cover-meta {
+    position: relative;
+    z-index: 1;
+    color: rgba(225, 243, 233, 0.68);
+}
+
+.surm-sidebar-nav-group-title,
+.surm-sidebar-nav-label {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.surm-sidebar-nav-current {
+    background:
+        linear-gradient(90deg, rgba(101, 227, 162, 0.15), rgba(101, 227, 162, 0.05));
+    border: 1px solid rgba(101, 227, 162, 0.14);
+    box-shadow:
+        inset 3px 0 0 var(--surm-console-glow),
+        0 0 18px rgba(101, 227, 162, 0.04);
+}
+
+.surm-sidebar-nav-item {
+    transition: background 120ms ease, transform 120ms ease, border-color 120ms ease;
+}
+
+.surm-sidebar-nav-item:hover {
+    background: rgba(101, 227, 162, 0.07);
+}
+
+.surm-save-hint {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (max-width: 900px) {
+    .surm-form-header {
+        grid-template-columns: 1fr;
+    }
+
+    .surm-form-next-wrap {
+        padding: 0.65rem 0 0;
+        border-left: 0;
+        border-top: 1px solid rgba(101, 227, 162, 0.16);
+    }
+
+    .surm-header-meta {
+        justify-content: flex-start;
+    }
+}
