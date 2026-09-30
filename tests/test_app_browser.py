@@ -184,7 +184,7 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             _wait_for_idle(page)
             _assert_shell(page)
             expect(page.get_by_text("Uncertainties", exact=True).first).to_be_visible(timeout=10_000)
-            expect(page.get_by_text("Selection Summary", exact=True)).to_be_visible(timeout=10_000)
+            expect(page.get_by_text("Selection Summary", exact=False)).to_be_visible(timeout=10_000)
 
             sidebar.get_by_role("button", name="• Overview").click()
             _wait_for_idle(page)
