@@ -21,12 +21,16 @@ def render_form_header(
     st.markdown(
         f"""
         <div class="surm-form-header">
-            <div>
-                <div class="surm-form-step">{html.escape(step)}</div>
+            <div class="surm-form-header-glow"></div>
+            <div class="surm-form-header-main">
+                <div class="surm-form-step"><span class="surm-form-step-dot"></span>{html.escape(step)}</div>
                 <div class="surm-form-title">{html.escape(title)}</div>
                 <div class="surm-form-purpose">{html.escape(purpose)}</div>
             </div>
-            {next_hint}
+            <div class="surm-form-next-wrap">
+                <div class="surm-form-next-label">FLOW</div>
+                {next_hint}
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
