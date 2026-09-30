@@ -95,109 +95,115 @@ def render():
             tone="success",
         )
 
-    st.markdown('<div class="surm-section-header">Resolution Matrix</div>', unsafe_allow_html=True)
-    render_save_hint(
-        "Resolution mappings are a session draft until you click Save selections. "
-        "Bulk actions apply the draft but do not persist it."
-    )
+    mapping_tab, coverage_tab = st.tabs(["1 · Resolution mapping", "2 · Coverage"])
 
-    with st.form("res_list_form", enter_to_submit=False):
-        button_cols = st.columns([1, 1, 2.2, 3.6])
-        with button_cols[0]:
-            select_all = st.form_submit_button("Y for all", key="res_select_all")
-        with button_cols[1]:
-            clear_all = st.form_submit_button("Clear all", key="res_clear_all")
-        with button_cols[2]:
-            save_clicked = st.form_submit_button(
-                "Save selections",
-                key="save_resolution_list",
-                type="primary",
-            )
-        with button_cols[3]:
-            st.caption("Use Y only when the engineering action genuinely addresses the selected uncertainty.")
-
-        column_config = {
-            "uncertainty_id": st.column_config.TextColumn("ID", width="small", disabled=True),
-            "Uncertainty": st.column_config.TextColumn("Uncertainty", width="large", disabled=True),
-            "Rating": st.column_config.TextColumn("Rating", width="small", disabled=True),
-        }
-        for option in options:
-            column_config[option] = st.column_config.SelectboxColumn(
-                option,
-                options=["", "Y"],
-                width="small",
-                help=f"Select Y when '{option}' will address this uncertainty.",
-            )
-
-        edited = st.data_editor(
-            pd.DataFrame(rows),
-            column_config=column_config,
-            hide_index=True,
-            use_container_width=True,
-            num_rows="fixed",
-            height=min(720, max(280, len(rows) * 58 + 90)),
-            key=f"res_list_editor_{st.session_state.get('study_id', 'new')}",
+    with mapping_tab:
+        st.markdown('<div class="surm-section-header">Resolution Matrix</div>', unsafe_allow_html=True)
+        render_save_hint(
+            "Resolution mappings are a session draft until you click Save selections. "
+            "Bulk actions apply the draft but do not persist it."
         )
 
-    if select_all or clear_all or save_clicked:
-        data = edited.to_dict("records")
-        if select_all:
-            for row in data:
-                for option in options:
-                    row[option] = "Y"
-        elif clear_all:
-            for row in data:
-                for option in options:
-                    row[option] = ""
+        with st.form("res_list_form", enter_to_submit=False):
+            button_cols = st.columns([1, 1, 2.2, 3.6])
+            with button_cols[0]:
+                select_all = st.form_submit_button("Y for all", key="res_select_all")
+            with button_cols[1]:
+                clear_all = st.form_submit_button("Clear all", key="res_clear_all")
+            with button_cols[2]:
+                save_clicked = st.form_submit_button(
+                    "Save selections",
+                    key="save_resolution_list",
+                    type="primary",
+                )
+            with button_cols[3]:
+                st.caption("Use Y only when the engineering action genuinely addresses the selected uncertainty.")
 
-        resolution_dict = {
-            row["Uncertainty"]: {option: row.get(option, "") for option in options}
-            for row in data
-        }
-        previous = st.session_state.get("resolution_list", {})
-        st.session_state["resolution_list"] = resolution_dict
+            column_config = {
+                "uncertainty_id": st.column_config.TextColumn("ID", width="small", disabled=True),
+                "Uncertainty": st.column_config.TextColumn("Uncertainty", width="large", disabled=True),
+                "Rating": st.column_config.TextColumn("Rating", width="small", disabled=True),
+            }
+            for option in options:
+                column_config[option] = st.column_config.SelectboxColumn(
+                    option,
+                    options=["", "Y"],
+                    width="small",
+                    help=f"Select Y when '{option}' will address this uncertainty.",
+                )
 
-        if previous != resolution_dict:
-            mark_stage_changed(st.session_state, "resolution_list")
-
-        if save_clicked:
-            if not st.session_state.get("project_name", "").strip():
-                st.warning("Enter a Project Name on Overview before saving the resolution mapping.")
-                return
-            ok = save_session(auto=False)
-            if not ok:
-                st.error("Resolution mapping could not be saved.")
-                return
-            st.success("✅ Resolution selections saved.")
-        else:
-            st.info("Draft updated. Click **Save selections** to persist the resolution mapping.")
-        st.rerun()
-
-    # The chart and diagnostics live below the matrix rather than squeezing
-    # the engineering editor into a narrow side column.
-    if total:
-        action_counts = [
-            (option, sum(1 for row in persisted_rows if row.get(option) == "Y"))
-            for option in options
-        ]
-        action_counts = [(name, count) for name, count in action_counts if count]
-        action_counts.sort(key=lambda item: item[1], reverse=True)
-
-        if action_counts:
-            st.markdown('<div class="surm-section-header">Resolution Coverage by Action</div>', unsafe_allow_html=True)
-            chart_df = pd.DataFrame(
-                {"Uncertainties covered": [count for _, count in action_counts]},
-                index=[name for name, _ in action_counts],
-            )
-            st.bar_chart(
-                chart_df,
+            edited = st.data_editor(
+                pd.DataFrame(rows),
+                column_config=column_config,
+                hide_index=True,
                 use_container_width=True,
-                height=300,
+                num_rows="fixed",
+                height=min(720, max(280, len(rows) * 58 + 90)),
+                key=f"res_list_editor_{st.session_state.get('study_id', 'new')}",
             )
 
-        if uncovered:
-            st.caption(
-                "Still uncovered: "
-                + ", ".join(uncovered[:6])
-                + ("…" if len(uncovered) > 6 else "")
-            )
+        if select_all or clear_all or save_clicked:
+            data = edited.to_dict("records")
+            if select_all:
+                for row in data:
+                    for option in options:
+                        row[option] = "Y"
+            elif clear_all:
+                for row in data:
+                    for option in options:
+                        row[option] = ""
+
+            resolution_dict = {
+                row["Uncertainty"]: {option: row.get(option, "") for option in options}
+                for row in data
+            }
+            previous = st.session_state.get("resolution_list", {})
+            st.session_state["resolution_list"] = resolution_dict
+
+            if previous != resolution_dict:
+                mark_stage_changed(st.session_state, "resolution_list")
+
+            if save_clicked:
+                if not st.session_state.get("project_name", "").strip():
+                    st.warning("Enter a Project Name on Overview before saving the resolution mapping.")
+                    return
+                ok = save_session(auto=False)
+                if not ok:
+                    st.error("Resolution mapping could not be saved.")
+                    return
+                st.success("✅ Resolution selections saved.")
+            else:
+                st.info("Draft updated. Click **Save selections** to persist the resolution mapping.")
+            st.rerun()
+
+
+    with coverage_tab:
+            # The chart and diagnostics live below the matrix rather than squeezing
+            # The chart and diagnostics live below the matrix rather than squeezing
+            # the engineering editor into a narrow side column.
+            if total:
+                action_counts = [
+                    (option, sum(1 for row in persisted_rows if row.get(option) == "Y"))
+                    for option in options
+                ]
+                action_counts = [(name, count) for name, count in action_counts if count]
+                action_counts.sort(key=lambda item: item[1], reverse=True)
+
+                if action_counts:
+                    st.markdown('<div class="surm-section-header">Resolution Coverage by Action</div>', unsafe_allow_html=True)
+                    chart_df = pd.DataFrame(
+                        {"Uncertainties covered": [count for _, count in action_counts]},
+                        index=[name for name, _ in action_counts],
+                    )
+                    st.bar_chart(
+                        chart_df,
+                        use_container_width=True,
+                        height=300,
+                    )
+
+                if uncovered:
+                    st.caption(
+                        "Still uncovered: "
+                        + ", ".join(uncovered[:6])
+                        + ("…" if len(uncovered) > 6 else "")
+                    )
