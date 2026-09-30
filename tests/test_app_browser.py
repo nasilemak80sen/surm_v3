@@ -37,6 +37,16 @@ def _wait_for_server(port: int, process: subprocess.Popen[str], timeout: float =
     raise AssertionError("Streamlit server did not become reachable within 25 seconds.")
 
 
+def _wait_for_idle(page, timeout: int = 10_000) -> None:
+    """Wait until Streamlit is connected and the current script run is idle."""
+    expect(
+        page.locator('[data-testid="stApp"][data-test-connection-state="CONNECTED"]')
+    ).to_be_visible(timeout=timeout)
+    expect(
+        page.locator('[data-testid="stApp"][data-test-script-state="notRunning"]')
+    ).to_have_count(1, timeout=timeout)
+
+
 def _assert_core_ui(page) -> None:
     """Assert the application contract using user-visible UI, not Streamlit internals."""
     expect(page.get_by_text("SURM Toolkit", exact=True).first).to_be_visible(timeout=10_000)
@@ -51,10 +61,15 @@ def _browser_diagnostics(page) -> dict:
     """Collect enough runtime state to make a white-screen failure actionable."""
     return page.evaluate(
         """() => {
+            const app = document.querySelector('[data-testid="stApp"]');
             const root = document.querySelector('[data-testid="stAppViewContainer"]');
             const main = document.querySelector('[data-testid="stMainBlockContainer"]');
             const rect = main ? main.getBoundingClientRect() : null;
             return {
+                app: app ? {
+                    connection: app.getAttribute('data-test-connection-state'),
+                    script: app.getAttribute('data-test-script-state'),
+                } : null,
                 root: root ? {
                     display: getComputedStyle(root).display,
                     visibility: getComputedStyle(root).visibility,
@@ -120,6 +135,7 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                 wait_until="domcontentloaded",
             )
 
+            _wait_for_idle(page)
             _assert_core_ui(page)
 
             # Detect the user's flash-then-blank failure rather than only
@@ -127,6 +143,7 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             last_delay = 0
             for delay_ms in (1_000, 2_000, 3_000, 5_000):
                 page.wait_for_timeout(delay_ms - last_delay)
+                _wait_for_idle(page)
                 _assert_core_ui(page)
                 last_delay = delay_ms
 
@@ -138,10 +155,14 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             project_input.press("Tab")
             expect(project_input).to_have_value("Browser Stability Test", timeout=10_000)
             page.wait_for_timeout(2_000)
+            _wait_for_idle(page)
             _assert_core_ui(page)
             expect(project_input).to_have_value("Browser Stability Test", timeout=10_000)
 
             diagnostics = _browser_diagnostics(page)
+            assert diagnostics["app"] is not None, diagnostics
+            assert diagnostics["app"]["connection"] == "CONNECTED", diagnostics
+            assert diagnostics["app"]["script"] == "notRunning", diagnostics
             assert diagnostics["main"] is not None, diagnostics
             assert diagnostics["main"]["width"] > 0, diagnostics
             assert diagnostics["main"]["height"] > 0, diagnostics
