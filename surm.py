@@ -63,7 +63,7 @@ from utils.workflow import current_stage, stage_results, validate_stage
 # APPLICATION SERVICES + PAGE MODULES
 # ============================================================================
 
-from utils.session import create_new_study, init_session
+from utils.session import create_new_study, init_session, study_has_unsaved_changes
 
 from modules.tab_frontpage import render as render_frontpage
 from modules.tab_documentation import render as render_documentation
@@ -103,7 +103,7 @@ def render_header() -> None:
         workspace=str(ss.get("current_page", "Workspace")).split(" ", 1)[-1],
         app_name=APP_NAME,
         subtitle=APP_SUBTITLE,
-        saved=bool(ss.get("_last_saved")),
+        saved=bool(ss.get("_last_saved")) and not study_has_unsaved_changes(ss),
     )
 
 
