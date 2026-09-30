@@ -2927,3 +2927,52 @@ section[data-testid="stSidebar"]::before {
         display: none;
     }
 }
+
+
+/* Instrument-style inputs: crisp edges, focused glow, no paper-like heavy boxes. */
+.stApp [data-baseweb="input"],
+.stApp [data-baseweb="textarea"],
+.stApp [data-baseweb="select"] > div {
+    background: rgba(252, 255, 253, 0.92) !important;
+    border-color: rgba(23, 107, 58, 0.16) !important;
+    border-radius: 8px !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.82);
+}
+
+.stApp [data-baseweb="input"]:focus-within,
+.stApp [data-baseweb="textarea"]:focus-within,
+.stApp [data-baseweb="select"] > div:focus-within {
+    border-color: rgba(45, 174, 99, 0.55) !important;
+    box-shadow:
+        0 0 0 2px rgba(101, 227, 162, 0.10),
+        0 5px 16px rgba(17, 77, 46, 0.07) !important;
+}
+
+.stApp [data-testid="stTextInput"] label,
+.stApp [data-testid="stTextArea"] label,
+.stApp [data-testid="stSelectbox"] label,
+.stApp [data-testid="stMultiSelect"] label {
+    color: var(--surm-text-secondary) !important;
+    font-size: 0.68rem !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.025em;
+}
+
+.stApp [data-testid="stExpander"] {
+    border-color: rgba(23, 107, 58, 0.13);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.60);
+}
+
+.stApp [data-testid="stExpander"] summary:hover {
+    background: rgba(101, 227, 162, 0.07);
+}
+
+/* Selection and workspace controls should feel like modules, not paper buttons. */
+.stApp [data-baseweb="tag"] {
+    border-radius: 999px;
+}
+
+.stApp [role="progressbar"] {
+    accent-color: var(--surm-console-glow);
+}
