@@ -39,13 +39,19 @@ def _wait_for_server(port: int, process: subprocess.Popen[str], timeout: float =
 
 
 def _wait_for_idle(page, timeout: int = 10_000) -> None:
-    """Wait until Streamlit is connected and the current script run is idle."""
-    expect(
-        page.locator('[data-testid="stApp"][data-test-connection-state="CONNECTED"]')
-    ).to_be_visible(timeout=timeout)
-    expect(
-        page.locator('[data-testid="stApp"][data-test-script-state="notRunning"]')
-    ).to_have_count(1, timeout=timeout)
+    """Wait until Streamlit reports a connected, idle script session."""
+    app = page.locator('[data-testid="stApp"]')
+    expect(app).to_have_count(1, timeout=timeout)
+    expect(app).to_have_attribute(
+        "data-test-connection-state",
+        "CONNECTED",
+        timeout=timeout,
+    )
+    expect(app).to_have_attribute(
+        "data-test-script-state",
+        "notRunning",
+        timeout=timeout,
+    )
 
 
 def _assert_shell(page) -> None:
