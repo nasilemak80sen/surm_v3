@@ -77,7 +77,8 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             page.wait_for_timeout(3_000)
             expect(page.get_by_text("SURM Toolkit", exact=True).first).to_be_visible()
             expect(page.get_by_text("CURRENT STUDY", exact=True).first).to_be_visible()
-            expect(page.locator('[data-testid="stSidebar"]')).to_be_visible()
+            expect(page.get_by_text("Study setup", exact=True).first).to_be_visible()
+            expect(page.locator('[data-testid="stAppViewContainer"]')).to_be_visible()
             assert not page_errors, page_errors
 
             browser.close()
