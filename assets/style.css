@@ -2909,3 +2909,21 @@ section[data-testid="stSidebar"]::before {
         justify-content: flex-start;
     }
 }
+
+
+.surm-meta-workspace {
+    min-width: 130px;
+    background:
+        linear-gradient(135deg, rgba(101, 227, 162, 0.12), rgba(255,255,255,0.035));
+    border-color: rgba(101, 227, 162, 0.18);
+}
+
+.surm-meta-workspace .surm-meta-value {
+    color: #E3FFF0;
+}
+
+@media (max-width: 1100px) {
+    .surm-meta-workspace {
+        display: none;
+    }
+}
