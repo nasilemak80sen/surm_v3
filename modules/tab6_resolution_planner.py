@@ -121,8 +121,6 @@ def render():
         next_step="Risk Register",
     )
 
-    workplan_tab, execution_tab = st.tabs(["1 · Workplan", "2 · Execution pulse"])
-
     planner_data = st.session_state.get("resolution_planner", [])
     workplan_rows = [row for row in planner_data if row.get("Part of Workplan")]
     workplan_count, missing_owner = _planner_quality(planner_data)
@@ -199,6 +197,8 @@ def render():
         st.rerun()
 
     planner_data = st.session_state.get("resolution_planner", [])
+
+    workplan_tab, execution_tab = st.tabs(["1 · Workplan", "2 · Execution pulse"])
 
     with workplan_tab:
         if not planner_data:
@@ -303,29 +303,28 @@ def render():
                     st.info("Draft updated. Click **Save planner** to persist the planner.")
                 st.rerun()
 
-
     with execution_tab:
-            # Detailed reporting is intentionally below the editor.
-            # Detailed reporting is intentionally below the editor.
-            planner_data = st.session_state.get("resolution_planner", [])
-            workplan_rows = [row for row in planner_data if row.get("Part of Workplan")]
+    # Detailed reporting is intentionally below the editor.
+        planner_data = st.session_state.get("resolution_planner", [])
+        workplan_rows = [row for row in planner_data if row.get("Part of Workplan")]
 
-            if workplan_rows:
-                st.markdown('<div class="surm-section-header">Execution Status Mix</div>', unsafe_allow_html=True)
-                st.bar_chart(
-                    _planner_status_counts(planner_data),
-                    use_container_width=True,
-                    height=300,
-                )
+        if workplan_rows:
+            st.markdown('<div class="surm-section-header">Execution Status Mix</div>', unsafe_allow_html=True)
+            st.bar_chart(
+                _planner_status_counts(planner_data),
+                use_container_width=True,
+                height=300,
+            )
 
-                st.markdown('<div class="surm-section-header">Execution Pulse</div>', unsafe_allow_html=True)
-                pulse_cols = st.columns(2)
-                for index, row in enumerate(workplan_rows[:8]):
-                    progress = int(safe_float(row.get("Progress (0-1)", 0), default=0.0) * 100)
-                    owner = _display_owner(row) or "Unassigned"
-                    action = str(row.get("Resolution Action", "Unnamed"))[:42]
-                    with pulse_cols[index % 2]:
-                        st.markdown(
-                            f'<div class="surm-guide-row"><strong>{action}</strong><span>{progress}% · {owner}</span></div>',
-                            unsafe_allow_html=True,
-                        )
+            st.markdown('<div class="surm-section-header">Execution Pulse</div>', unsafe_allow_html=True)
+            pulse_cols = st.columns(2)
+            for index, row in enumerate(workplan_rows[:8]):
+                progress = int(safe_float(row.get("Progress (0-1)", 0), default=0.0) * 100)
+                owner = _display_owner(row) or "Unassigned"
+                action = str(row.get("Resolution Action", "Unnamed"))[:42]
+                with pulse_cols[index % 2]:
+                    st.markdown(
+                        f'<div class="surm-guide-row"><strong>{action}</strong><span>{progress}% · {owner}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+
