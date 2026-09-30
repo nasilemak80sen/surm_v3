@@ -117,7 +117,7 @@ def render():
     # Global controls
     # ------------------------------------------------------------------
     st.markdown(
-        '<div class="surm-section-header">Selection controls</div>',
+        '<div class="surm-section-header">🎛️ Global Controls</div>',
         unsafe_allow_html=True,
     )
 
@@ -171,99 +171,96 @@ def render():
         )
         total = len(items)
 
-        with st.expander(
-            f"{icon} {discipline} · {ticked}/{total}",
-            expanded=ticked > 0,
-        ):
-                    header_col, select_col, deselect_col = st.columns([7, 1, 1])
+        with st.expander(f"{icon} {discipline} · {ticked}/{total}", expanded=ticked > 0):
+            header_col, select_col, deselect_col = st.columns([7, 1, 1])
 
-                    with header_col:
+            with header_col:
+                st.markdown(
+                    f"""
+                    <div class="surm-section-header" style="margin-bottom:4px;">
+                        {icon} {discipline}
+                        <span style="margin-left:auto;background:rgba(255,255,255,0.25);
+                        padding:1px 8px;border-radius:10px;font-size:11px;font-weight:400;">
+                            {ticked}/{total}
+                        </span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            with select_col:
+                if st.button(
+                    "✅ All",
+                    key=f"sel_{discipline}",
+                    help=f"Select all {discipline} uncertainties.",
+                ):
+                    for uncertainty in items:
+                        uncertainty["selected"] = True
+                    mark_stage_changed(st.session_state, "uncertainties")
+                    st.rerun()
+
+            with deselect_col:
+                if st.button(
+                    "☐ None",
+                    key=f"desel_{discipline}",
+                    help=f"Deselect all {discipline} uncertainties.",
+                ):
+                    for uncertainty in items:
+                        uncertainty["selected"] = False
+                    mark_stage_changed(st.session_state, "uncertainties")
+                    st.rerun()
+
+            for uncertainty in items:
+                checkbox_col, name_col, risks_col = st.columns([0.4, 4, 5])
+
+                with checkbox_col:
+                    uncertainty["selected"] = st.checkbox(
+                        uncertainty["name"],
+                        value=uncertainty.get("selected", False),
+                        key=f"unc_{uncertainty['id']}",
+                        label_visibility="collapsed",
+                    )
+
+                with name_col:
+                    weight = (
+                        "font-weight:700;color:#1F6B3A;"
+                        if uncertainty.get("selected")
+                        else "color:#333;"
+                    )
+                    st.markdown(
+                        f'<div style="{weight}font-size:13px;padding:2px 0;">'
+                        f'{uncertainty["name"]}'
+                        "</div>",
+                        unsafe_allow_html=True,
+                    )
+
+                with risks_col:
+                    if uncertainty.get("selected"):
+                        badges = "".join(
+                            (
+                                '<span style="display:inline-block;background:#E8F5E9;'
+                                'color:#1B5E20;padding:1px 7px;border-radius:10px;'
+                                'font-size:10px;margin:1px 2px;border:1px solid #C8E6C9;">'
+                                f"{risk}</span>"
+                            )
+                            for risk in uncertainty.get("risks", [])[:3]
+                        )
+                        more = (
+                            f'<span style="font-size:10px;color:#888;">'
+                            f'+{len(uncertainty.get("risks", [])) - 3} more</span>'
+                            if len(uncertainty.get("risks", [])) > 3
+                            else ""
+                        )
                         st.markdown(
-                            f"""
-                            <div class="surm-section-header" style="margin-bottom:4px;">
-                                {icon} {discipline}
-                                <span style="margin-left:auto;background:rgba(255,255,255,0.25);
-                                padding:1px 8px;border-radius:10px;font-size:11px;font-weight:400;">
-                                    {ticked}/{total}
-                                </span>
-                            </div>
-                            """,
+                            badges + more,
                             unsafe_allow_html=True,
                         )
-
-                    with select_col:
-                        if st.button(
-                            "✅ All",
-                            key=f"sel_{discipline}",
-                            help=f"Select all {discipline} uncertainties.",
-                        ):
-                            for uncertainty in items:
-                                uncertainty["selected"] = True
-                            mark_stage_changed(st.session_state, "uncertainties")
-                            st.rerun()
-
-                    with deselect_col:
-                        if st.button(
-                            "☐ None",
-                            key=f"desel_{discipline}",
-                            help=f"Deselect all {discipline} uncertainties.",
-                        ):
-                            for uncertainty in items:
-                                uncertainty["selected"] = False
-                            mark_stage_changed(st.session_state, "uncertainties")
-                            st.rerun()
-
-                    for uncertainty in items:
-                        checkbox_col, name_col, risks_col = st.columns([0.4, 4, 5])
-
-                        with checkbox_col:
-                            uncertainty["selected"] = st.checkbox(
-                                uncertainty["name"],
-                                value=uncertainty.get("selected", False),
-                                key=f"unc_{uncertainty['id']}",
-                                label_visibility="collapsed",
-                            )
-
-                        with name_col:
-                            weight = (
-                                "font-weight:700;color:#1F6B3A;"
-                                if uncertainty.get("selected")
-                                else "color:#333;"
-                            )
-                            st.markdown(
-                                f'<div style="{weight}font-size:13px;padding:2px 0;">'
-                                f'{uncertainty["name"]}'
-                                "</div>",
-                                unsafe_allow_html=True,
-                            )
-
-                        with risks_col:
-                            if uncertainty.get("selected"):
-                                badges = "".join(
-                                    (
-                                        '<span style="display:inline-block;background:#E8F5E9;'
-                                        'color:#1B5E20;padding:1px 7px;border-radius:10px;'
-                                        'font-size:10px;margin:1px 2px;border:1px solid #C8E6C9;">'
-                                        f"{risk}</span>"
-                                    )
-                                    for risk in uncertainty.get("risks", [])[:3]
-                                )
-                                more = (
-                                    f'<span style="font-size:10px;color:#888;">'
-                                    f'+{len(uncertainty.get("risks", [])) - 3} more</span>'
-                                    if len(uncertainty.get("risks", [])) > 3
-                                    else ""
-                                )
-                                st.markdown(
-                                    badges + more,
-                                    unsafe_allow_html=True,
-                                )
-                            else:
-                                st.markdown(
-                                    '<span style="font-size:11px;color:#CCC;font-style:italic;">'
-                                    "—</span>",
-                                    unsafe_allow_html=True,
-                                )
+                    else:
+                        st.markdown(
+                            '<span style="font-size:11px;color:#CCC;font-style:italic;">'
+                            "—</span>",
+                            unsafe_allow_html=True,
+                        )
 
     after_selection = tuple(
         (str(item.get("uncertainty_id") or item.get("id") or ""), bool(item.get("selected")))
@@ -274,94 +271,94 @@ def render():
 
     with st.expander("Add custom uncertainty", expanded=False):
         # ------------------------------------------------------------------
-            st.divider()
-            st.markdown(
-                '<div class="surm-section-header">➕ Add Custom Uncertainty</div>',
-                unsafe_allow_html=True,
-            )
-            st.caption(
-                "Custom uncertainties are supported end-to-end, but they must have at least "
-                "one associated risk so the risk register can trace them later."
-            )
+        st.divider()
+        st.markdown(
+            '<div class="surm-section-header">➕ Add Custom Uncertainty</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "Custom uncertainties are supported end-to-end, but they must have at least "
+            "one associated risk so the risk register can trace them later."
+        )
 
-            with st.form("custom_unc_form", clear_on_submit=True, enter_to_submit=False):
-                discipline_col, name_col, risk_col = st.columns([2, 4, 2])
+        with st.form("custom_unc_form", clear_on_submit=True, enter_to_submit=False):
+            discipline_col, name_col, risk_col = st.columns([2, 4, 2])
 
-                with discipline_col:
-                    custom_discipline = st.selectbox(
-                        "Discipline",
-                        disciplines,
-                        key="custom_uncertainty_discipline",
-                    )
-
-                with name_col:
-                    custom_name = st.text_input(
-                        "Description",
-                        placeholder=(
-                            "Be specific — e.g. 'Fault seal integrity in eastern block'"
-                        ),
-                        key="custom_uncertainty_description",
-                    )
-
-                with risk_col:
-                    custom_risks = st.multiselect(
-                        "Associated Risks",
-                        all_risks,
-                        key="custom_uncertainty_risks",
-                        help="At least one risk is required for downstream tracing.",
-                    )
-
-                add_custom = st.form_submit_button(
-                    "➕ Add Uncertainty",
-                    type="primary",
+            with discipline_col:
+                custom_discipline = st.selectbox(
+                    "Discipline",
+                    disciplines,
+                    key="custom_uncertainty_discipline",
                 )
 
-            if add_custom:
-                if not custom_name.strip():
-                    st.warning("Give the custom uncertainty a clear description.")
-                elif not custom_risks:
+            with name_col:
+                custom_name = st.text_input(
+                    "Description",
+                    placeholder=(
+                        "Be specific — e.g. 'Fault seal integrity in eastern block'"
+                    ),
+                    key="custom_uncertainty_description",
+                )
+
+            with risk_col:
+                custom_risks = st.multiselect(
+                    "Associated Risks",
+                    all_risks,
+                    key="custom_uncertainty_risks",
+                    help="At least one risk is required for downstream tracing.",
+                )
+
+            add_custom = st.form_submit_button(
+                "➕ Add Uncertainty",
+                type="primary",
+            )
+
+        if add_custom:
+            if not custom_name.strip():
+                st.warning("Give the custom uncertainty a clear description.")
+            elif not custom_risks:
+                st.warning(
+                    "Select at least one associated risk so this custom uncertainty "
+                    "can flow into the Risk Register."
+                )
+            else:
+                proposed_name = custom_name.strip()
+                existing_names = {
+                    str(item.get("name", "") or "").strip().casefold()
+                    for item in st.session_state["uncertainties"]
+                    if isinstance(item, dict) and str(item.get("name", "") or "").strip()
+                }
+                if proposed_name.casefold() in existing_names:
                     st.warning(
-                        "Select at least one associated risk so this custom uncertainty "
-                        "can flow into the Risk Register."
+                        f"The uncertainty **{proposed_name}** already exists. "
+                        "Use the existing row instead of creating a duplicate."
                     )
                 else:
-                    proposed_name = custom_name.strip()
-                    existing_names = {
-                        str(item.get("name", "") or "").strip().casefold()
-                        for item in st.session_state["uncertainties"]
-                        if isinstance(item, dict) and str(item.get("name", "") or "").strip()
-                    }
-                    if proposed_name.casefold() in existing_names:
-                        st.warning(
-                            f"The uncertainty **{proposed_name}** already exists. "
-                            "Use the existing row instead of creating a duplicate."
-                        )
-                    else:
-                        new_numeric_id = max(
-                            (
-                                int(item.get("id", 0))
-                                for item in st.session_state["uncertainties"]
-                                if str(item.get("id", "")).isdigit()
-                            ),
-                            default=0,
-                        ) + 1
+                    new_numeric_id = max(
+                        (
+                            int(item.get("id", 0))
+                            for item in st.session_state["uncertainties"]
+                            if str(item.get("id", "")).isdigit()
+                        ),
+                        default=0,
+                    ) + 1
 
-                        st.session_state["uncertainties"].append({
-                            "id": new_numeric_id,
-                            "uncertainty_id": f"UNC-CUSTOM-{uuid4().hex[:8].upper()}",
-                            "discipline": custom_discipline,
-                            "name": proposed_name,
-                            "selected": True,
-                            "custom": True,
-                            "risks": custom_risks,
-                        })
+                    st.session_state["uncertainties"].append({
+                        "id": new_numeric_id,
+                        "uncertainty_id": f"UNC-CUSTOM-{uuid4().hex[:8].upper()}",
+                        "discipline": custom_discipline,
+                        "name": proposed_name,
+                        "selected": True,
+                        "custom": True,
+                        "risks": custom_risks,
+                    })
 
-                        mark_stage_changed(st.session_state, "uncertainties")
-                        st.success(
-                            f"✅ Added: **{proposed_name}** to the session draft. "
-                            "Save the stage to persist it."
-                        )
-                        st.rerun()
+                    mark_stage_changed(st.session_state, "uncertainties")
+                    st.success(
+                        f"✅ Added: **{proposed_name}** to the session draft. "
+                        "Save the stage to persist it."
+                    )
+                    st.rerun()
 
     save_col, _, _ = st.columns([1.6, 0.5, 5])
     with save_col:
