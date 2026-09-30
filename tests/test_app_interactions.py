@@ -438,12 +438,7 @@ def test_next_wave_modules_import(module_name):
     __import__(module_name)
 
 def test_markdown_adapter_is_reload_safe():
-    project_root = Path(__file__).resolve().parents[1]
-    source = (project_root / "utils/ui.py").read_text(encoding="utf-8")
-
-    ast.parse(source)
-    assert "_install_markdown_adapter" in source
-    assert "_surm_original_markdown" in source
+    from utils.ui import _install_markdown_adapter
 
     class FakeStreamlit:
         def __init__(self):
@@ -455,13 +450,27 @@ def test_markdown_adapter_is_reload_safe():
 
     fake = FakeStreamlit()
 
-    namespace = {}
-    exec(compile(source, str(project_root / "utils/ui.py"), "exec"), namespace)
-    namespace["_install_markdown_adapter"](fake)
+    _install_markdown_adapter(fake)
     first_adapter = fake.markdown
-    namespace["_install_markdown_adapter"](fake)
+    _install_markdown_adapter(fake)
     second_adapter = fake.markdown
 
     assert first_adapter is not second_adapter
     assert fake.markdown("hello", unsafe_allow_html=True) == "ok"
     assert fake.calls == [("hello", True, {})]
+
+
+def test_entrypoint_boots_as_a_streamlit_app():
+    project_root = Path(__file__).resolve().parents[1]
+
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file(
+        project_root / "surm.py",
+        default_timeout=20,
+    ).run()
+
+    assert not at.exception
+    assert at.markdown or at.title or at.header
+    assert at.button
+
