@@ -176,34 +176,33 @@ def render():
                 st.info("Draft updated. Click **Save selections** to persist the resolution mapping.")
             st.rerun()
 
-
     with coverage_tab:
-            # The chart and diagnostics live below the matrix rather than squeezing
-            # The chart and diagnostics live below the matrix rather than squeezing
-            # the engineering editor into a narrow side column.
-            if total:
-                action_counts = [
-                    (option, sum(1 for row in persisted_rows if row.get(option) == "Y"))
-                    for option in options
-                ]
-                action_counts = [(name, count) for name, count in action_counts if count]
-                action_counts.sort(key=lambda item: item[1], reverse=True)
+    # The chart and diagnostics live below the matrix rather than squeezing
+        # the engineering editor into a narrow side column.
+        if total:
+            action_counts = [
+                (option, sum(1 for row in persisted_rows if row.get(option) == "Y"))
+                for option in options
+            ]
+            action_counts = [(name, count) for name, count in action_counts if count]
+            action_counts.sort(key=lambda item: item[1], reverse=True)
 
-                if action_counts:
-                    st.markdown('<div class="surm-section-header">Resolution Coverage by Action</div>', unsafe_allow_html=True)
-                    chart_df = pd.DataFrame(
-                        {"Uncertainties covered": [count for _, count in action_counts]},
-                        index=[name for name, _ in action_counts],
-                    )
-                    st.bar_chart(
-                        chart_df,
-                        use_container_width=True,
-                        height=300,
-                    )
+            if action_counts:
+                st.markdown('<div class="surm-section-header">Resolution Coverage by Action</div>', unsafe_allow_html=True)
+                chart_df = pd.DataFrame(
+                    {"Uncertainties covered": [count for _, count in action_counts]},
+                    index=[name for name, _ in action_counts],
+                )
+                st.bar_chart(
+                    chart_df,
+                    use_container_width=True,
+                    height=300,
+                )
 
-                if uncovered:
-                    st.caption(
-                        "Still uncovered: "
-                        + ", ".join(uncovered[:6])
-                        + ("…" if len(uncovered) > 6 else "")
-                    )
+            if uncovered:
+                st.caption(
+                    "Still uncovered: "
+                    + ", ".join(uncovered[:6])
+                    + ("…" if len(uncovered) > 6 else "")
+                )
+
