@@ -104,282 +104,288 @@ def render():
             tone="warning",
         )
 
-    st.markdown(
-        '<div class="surm-section-header">Prioritisation Matrix</div>',
-        unsafe_allow_html=True,
-    )
-    st.caption(
-        "Calculated fields are locked. Edit only the two planning checkboxes."
-    )
-    render_save_hint(
-        "Include/Resolved changes are a session draft until you click Save selection. "
-        "Bulk Include/Exclude applies a draft change without persisting the saved study."
-    )
+    prioritise_tab, support_tab = st.tabs(["1 · Prioritise", "2 · Decision support"])
 
-    with st.form("ku_form", enter_to_submit=False):
-        button_cols = st.columns([1, 1, 2.2, 3.6])
-        with button_cols[0]:
-            include_all = st.form_submit_button("Include all", key="ku_include_all")
-        with button_cols[1]:
-            exclude_all = st.form_submit_button("Exclude all", key="ku_exclude_all")
-        with button_cols[2]:
-            apply_selection = st.form_submit_button(
-                "Save selection",
-                key="save_key_uncertainties",
-                type="primary",
-            )
-        with button_cols[3]:
-            st.caption(
-                "Use **Plan** to carry an uncertainty into resolution planning; "
-                "**Resolved** is tracking metadata."
-            )
-
-        edited = st.data_editor(
-            key_uncertainties[
-                [
-                    "uncertainty_id",
-                    "Uncertainty",
-                    "Degree of Uncertainty",
-                    "Impact (Weighted)",
-                    "Impact Bin",
-                    "Combined Rating",
-                    "Rank",
-                    "Include in Plan",
-                    "Resolution Achieved",
-                ]
-            ],
-            column_config={
-                "uncertainty_id": st.column_config.TextColumn(
-                    "ID", width="small", disabled=True
-                ),
-                "Uncertainty": st.column_config.TextColumn(
-                    "Uncertainty", width="large", disabled=True
-                ),
-                "Degree of Uncertainty": st.column_config.TextColumn(
-                    "Degree", width="small", disabled=True
-                ),
-                "Impact (Weighted)": st.column_config.NumberColumn(
-                    "Score", format="%.3f", disabled=True, width="small"
-                ),
-                "Impact Bin": st.column_config.TextColumn(
-                    "Impact", width="small", disabled=True
-                ),
-                "Combined Rating": st.column_config.TextColumn(
-                    "Rating", width="small", disabled=True
-                ),
-                "Rank": st.column_config.NumberColumn(
-                    "Rank", width="small", disabled=True
-                ),
-                "Include in Plan": st.column_config.CheckboxColumn(
-                    "Plan",
-                    help="Carry this uncertainty into resolution planning.",
-                ),
-                "Resolution Achieved": st.column_config.CheckboxColumn(
-                    "Resolved",
-                    help="Track whether the uncertainty has been resolved.",
-                ),
-            },
-            hide_index=True,
-            use_container_width=True,
-            num_rows="fixed",
-            height=min(720, max(320, len(key_uncertainties) * 60 + 100)),
-            key=f"ku_editor_{st.session_state.get('study_id', 'new')}",
-        )
-
-    if include_all or exclude_all or apply_selection:
-        full = key_uncertainties.copy()
-        full["Include in Plan"] = edited["Include in Plan"].values
-        full["Resolution Achieved"] = edited["Resolution Achieved"].values
-        if include_all:
-            full["Include in Plan"] = True
-        elif exclude_all:
-            full["Include in Plan"] = False
-
-        previous_rows = st.session_state.get("key_uncertainties", [])
-        previous_include = {
-            str(row.get("Uncertainty", "")).strip(): bool(row.get("Include in Plan"))
-            for row in previous_rows
-            if isinstance(row, dict)
-        }
-        next_rows = full.to_dict("records")
-        next_include = {
-            str(row.get("Uncertainty", "")).strip(): bool(row.get("Include in Plan"))
-            for row in next_rows
-        }
-
-        st.session_state["key_uncertainties"] = next_rows
-
-        # Resolution Achieved is tracking metadata. It does not invalidate
-        # the resolution matrix or later risk/PRA work.
-        if previous_include != next_include:
-            mark_stage_changed(st.session_state, "key_uncertainties")
-
-        if apply_selection:
-            if not st.session_state.get("project_name", "").strip():
-                st.warning(
-                    "Enter a Project Name on Overview before saving the key uncertainty selection."
-                )
-                return
-            ok = save_session(auto=False)
-            if not ok:
-                st.error("Key uncertainty selection could not be saved.")
-                return
-            st.success("✅ Key uncertainty selection saved.")
-        else:
-            st.info(
-                "Draft updated. Click **Save selection** to persist the key uncertainty selection."
-            )
-        st.rerun()
-
-    # ------------------------------------------------------------------
-    # Reporting area: full width, below the engineering editor.
-    # ------------------------------------------------------------------
-    saved = st.session_state.get("key_uncertainties", [])
-    saved_df = pd.DataFrame(saved) if saved else key_uncertainties.copy()
-    if "Include in Plan" not in saved_df.columns:
-        saved_df["Include in Plan"] = True
-    active = saved_df[saved_df["Include in Plan"]].copy()
-
-    if active.empty:
-        st.caption("No uncertainties are currently included in the resolution plan.")
-
-    if not active.empty:
-        from utils.charts import build_tornado_chart, build_uncertainty_matrix
-        from utils.export_png import fig_to_png_bytes
-
+    with prioritise_tab:
         st.markdown(
-            '<div class="surm-section-header">Uncertainty Matrix</div>',
+            '<div class="surm-section-header">Prioritisation Matrix</div>',
             unsafe_allow_html=True,
         )
         st.caption(
-            "Degree of uncertainty is plotted against decision impact. Each point represents an uncertainty selected for the plan."
+            "Calculated fields are locked. Edit only the two planning checkboxes."
+        )
+        render_save_hint(
+            "Include/Resolved changes are a session draft until you click Save selection. "
+            "Bulk Include/Exclude applies a draft change without persisting the saved study."
         )
 
-        matrix_display = active.reset_index(drop=True).copy()
-        matrix_display.insert(0, "Matrix #", range(1, len(matrix_display) + 1))
+        with st.form("ku_form", enter_to_submit=False):
+            button_cols = st.columns([1, 1, 2.2, 3.6])
+            with button_cols[0]:
+                include_all = st.form_submit_button("Include all", key="ku_include_all")
+            with button_cols[1]:
+                exclude_all = st.form_submit_button("Exclude all", key="ku_exclude_all")
+            with button_cols[2]:
+                apply_selection = st.form_submit_button(
+                    "Save selection",
+                    key="save_key_uncertainties",
+                    type="primary",
+                )
+            with button_cols[3]:
+                st.caption(
+                    "Use **Plan** to carry an uncertainty into resolution planning; "
+                    "**Resolved** is tracking metadata."
+                )
 
-        matrix_figure = build_uncertainty_matrix(matrix_display)
-
-        matrix_col, matrix_detail_col = st.columns([3, 2], gap="large")
-        with matrix_col:
-            st.plotly_chart(
-                matrix_figure,
-                use_container_width=True,
-                config={"displayModeBar": False, "responsive": True},
-            )
-        with matrix_detail_col:
-            st.markdown("### Matrix details")
-            st.caption("The numbered dots map directly to the full uncertainty names and ranking below.")
-            st.dataframe(
-                matrix_display[
+            edited = st.data_editor(
+                key_uncertainties[
                     [
-                        "Matrix #",
+                        "uncertainty_id",
                         "Uncertainty",
                         "Degree of Uncertainty",
+                        "Impact (Weighted)",
                         "Impact Bin",
                         "Combined Rating",
-                        "Impact (Weighted)",
                         "Rank",
+                        "Include in Plan",
+                        "Resolution Achieved",
                     ]
-                ].rename(
-                    columns={
-                        "Degree of Uncertainty": "Degree",
-                        "Impact Bin": "Impact",
-                        "Combined Rating": "Rating",
-                        "Impact (Weighted)": "Weighted Score",
-                    }
-                ),
+                ],
+                column_config={
+                    "uncertainty_id": st.column_config.TextColumn(
+                        "ID", width="small", disabled=True
+                    ),
+                    "Uncertainty": st.column_config.TextColumn(
+                        "Uncertainty", width="large", disabled=True
+                    ),
+                    "Degree of Uncertainty": st.column_config.TextColumn(
+                        "Degree", width="small", disabled=True
+                    ),
+                    "Impact (Weighted)": st.column_config.NumberColumn(
+                        "Score", format="%.3f", disabled=True, width="small"
+                    ),
+                    "Impact Bin": st.column_config.TextColumn(
+                        "Impact", width="small", disabled=True
+                    ),
+                    "Combined Rating": st.column_config.TextColumn(
+                        "Rating", width="small", disabled=True
+                    ),
+                    "Rank": st.column_config.NumberColumn(
+                        "Rank", width="small", disabled=True
+                    ),
+                    "Include in Plan": st.column_config.CheckboxColumn(
+                        "Plan",
+                        help="Carry this uncertainty into resolution planning.",
+                    ),
+                    "Resolution Achieved": st.column_config.CheckboxColumn(
+                        "Resolved",
+                        help="Track whether the uncertainty has been resolved.",
+                    ),
+                },
                 hide_index=True,
                 use_container_width=True,
-                height=min(520, max(260, len(matrix_display) * 48 + 48)),
+                num_rows="fixed",
+                height=min(720, max(320, len(key_uncertainties) * 60 + 100)),
+                key=f"ku_editor_{st.session_state.get('study_id', 'new')}",
             )
 
-        st.caption("The interactive matrix stays intentionally compact; the PNG export includes the full uncertainty names.")
-        try:
-            matrix_export = build_uncertainty_matrix(matrix_display, show_full_names=True)
-            st.download_button(
-                "Download matrix",
-                data=fig_to_png_bytes(
-                    matrix_export,
-                    width=1900,
-                    height=max(760, 560 + ((len(matrix_display) + 1) // 2) * 30),
-                ),
-                file_name="SURM_Uncertainty_Matrix.png",
-                mime="image/png",
-                use_container_width=True,
-                key="ku_matrix_download",
-            )
-        except Exception:
-            pass
+        if include_all or exclude_all or apply_selection:
+            full = key_uncertainties.copy()
+            full["Include in Plan"] = edited["Include in Plan"].values
+            full["Resolution Achieved"] = edited["Resolution Achieved"].values
+            if include_all:
+                full["Include in Plan"] = True
+            elif exclude_all:
+                full["Include in Plan"] = False
 
-        st.markdown(
-            '<div class="surm-section-header">Priority Ranking — Weighted Impact</div>',
-            unsafe_allow_html=True,
-        )
-        tornado_display = (
-            active[
-                [
-                    "Rank",
-                    "Uncertainty",
-                    "Impact (Weighted)",
-                    "Combined Rating",
-                    "Degree of Uncertainty",
-                    "Impact Bin",
-                ]
-            ]
-            .sort_values(["Rank", "Impact (Weighted)"], ascending=[True, False])
-            .rename(
-                columns={
-                    "Impact (Weighted)": "Weighted Score",
-                    "Combined Rating": "Rating",
-                    "Degree of Uncertainty": "Degree",
-                    "Impact Bin": "Impact",
-                }
-            )
-        )
+            previous_rows = st.session_state.get("key_uncertainties", [])
+            previous_include = {
+                str(row.get("Uncertainty", "")).strip(): bool(row.get("Include in Plan"))
+                for row in previous_rows
+                if isinstance(row, dict)
+            }
+            next_rows = full.to_dict("records")
+            next_include = {
+                str(row.get("Uncertainty", "")).strip(): bool(row.get("Include in Plan"))
+                for row in next_rows
+            }
 
-        tornado_figure = build_tornado_chart(active)
-        tornado_col, tornado_detail_col = st.columns([3, 2], gap="large")
-        with tornado_col:
-            st.plotly_chart(
-                tornado_figure,
-                use_container_width=True,
-                config={"displayModeBar": False, "responsive": True},
-            )
-        with tornado_detail_col:
-            st.markdown("### Ranking details")
-            st.caption("Full uncertainty names, ranking and weighted impact are shown alongside the chart.")
-            st.dataframe(
-                tornado_display,
-                hide_index=True,
-                use_container_width=True,
-                height=min(520, max(260, len(tornado_display) * 48 + 48)),
-            )
+            st.session_state["key_uncertainties"] = next_rows
 
-        try:
-            tornado_export = build_tornado_chart(active, full_labels=True)
-            st.download_button(
-                "Download tornado",
-                data=fig_to_png_bytes(
-                    tornado_export,
-                    width=1900,
-                    height=max(620, len(active) * 58 + 160),
-                ),
-                file_name="SURM_Tornado_Chart.png",
-                mime="image/png",
-                use_container_width=True,
-                key="ku_tornado_download",
-            )
-        except Exception:
-            pass
+            # Resolution Achieved is tracking metadata. It does not invalidate
+            # the resolution matrix or later risk/PRA work.
+            if previous_include != next_include:
+                mark_stage_changed(st.session_state, "key_uncertainties")
 
-    legend = "".join(
-        f'<span style="margin:2px;display:inline-block;">{_badge(r)}</span>'
-        for r in ["HH", "HM", "HL", "MH", "MM", "ML", "LH", "LM", "LL"]
-    )
-    st.markdown(
-        '<div style="margin-top:0.6rem;color:#66736B;font-size:10px;">Degree × Impact → '
-        + legend
-        + "</div>",
-        unsafe_allow_html=True,
-    )
+            if apply_selection:
+                if not st.session_state.get("project_name", "").strip():
+                    st.warning(
+                        "Enter a Project Name on Overview before saving the key uncertainty selection."
+                    )
+                    return
+                ok = save_session(auto=False)
+                if not ok:
+                    st.error("Key uncertainty selection could not be saved.")
+                    return
+                st.success("✅ Key uncertainty selection saved.")
+            else:
+                st.info(
+                    "Draft updated. Click **Save selection** to persist the key uncertainty selection."
+                )
+            st.rerun()
+
+
+    # ------------------------------------------------------------------
+    with support_tab:
+            # ------------------------------------------------------------------
+            # Reporting area: full width, below the engineering editor.
+            # ------------------------------------------------------------------
+            saved = st.session_state.get("key_uncertainties", [])
+            saved_df = pd.DataFrame(saved) if saved else key_uncertainties.copy()
+            if "Include in Plan" not in saved_df.columns:
+                saved_df["Include in Plan"] = True
+            active = saved_df[saved_df["Include in Plan"]].copy()
+
+            if active.empty:
+                st.caption("No uncertainties are currently included in the resolution plan.")
+
+            if not active.empty:
+                from utils.charts import build_tornado_chart, build_uncertainty_matrix
+                from utils.export_png import fig_to_png_bytes
+
+                st.markdown(
+                    '<div class="surm-section-header">Uncertainty Matrix</div>',
+                    unsafe_allow_html=True,
+                )
+                st.caption(
+                    "Degree of uncertainty is plotted against decision impact. Each point represents an uncertainty selected for the plan."
+                )
+
+                matrix_display = active.reset_index(drop=True).copy()
+                matrix_display.insert(0, "Matrix #", range(1, len(matrix_display) + 1))
+
+                matrix_figure = build_uncertainty_matrix(matrix_display)
+
+                matrix_col, matrix_detail_col = st.columns([3, 2], gap="large")
+                with matrix_col:
+                    st.plotly_chart(
+                        matrix_figure,
+                        use_container_width=True,
+                        config={"displayModeBar": False, "responsive": True},
+                    )
+                with matrix_detail_col:
+                    st.markdown("### Matrix details")
+                    st.caption("The numbered dots map directly to the full uncertainty names and ranking below.")
+                    st.dataframe(
+                        matrix_display[
+                            [
+                                "Matrix #",
+                                "Uncertainty",
+                                "Degree of Uncertainty",
+                                "Impact Bin",
+                                "Combined Rating",
+                                "Impact (Weighted)",
+                                "Rank",
+                            ]
+                        ].rename(
+                            columns={
+                                "Degree of Uncertainty": "Degree",
+                                "Impact Bin": "Impact",
+                                "Combined Rating": "Rating",
+                                "Impact (Weighted)": "Weighted Score",
+                            }
+                        ),
+                        hide_index=True,
+                        use_container_width=True,
+                        height=min(520, max(260, len(matrix_display) * 48 + 48)),
+                    )
+
+                st.caption("The interactive matrix stays intentionally compact; the PNG export includes the full uncertainty names.")
+                try:
+                    matrix_export = build_uncertainty_matrix(matrix_display, show_full_names=True)
+                    st.download_button(
+                        "Download matrix",
+                        data=fig_to_png_bytes(
+                            matrix_export,
+                            width=1900,
+                            height=max(760, 560 + ((len(matrix_display) + 1) // 2) * 30),
+                        ),
+                        file_name="SURM_Uncertainty_Matrix.png",
+                        mime="image/png",
+                        use_container_width=True,
+                        key="ku_matrix_download",
+                    )
+                except Exception:
+                    pass
+
+                st.markdown(
+                    '<div class="surm-section-header">Priority Ranking — Weighted Impact</div>',
+                    unsafe_allow_html=True,
+                )
+                tornado_display = (
+                    active[
+                        [
+                            "Rank",
+                            "Uncertainty",
+                            "Impact (Weighted)",
+                            "Combined Rating",
+                            "Degree of Uncertainty",
+                            "Impact Bin",
+                        ]
+                    ]
+                    .sort_values(["Rank", "Impact (Weighted)"], ascending=[True, False])
+                    .rename(
+                        columns={
+                            "Impact (Weighted)": "Weighted Score",
+                            "Combined Rating": "Rating",
+                            "Degree of Uncertainty": "Degree",
+                            "Impact Bin": "Impact",
+                        }
+                    )
+                )
+
+                tornado_figure = build_tornado_chart(active)
+                tornado_col, tornado_detail_col = st.columns([3, 2], gap="large")
+                with tornado_col:
+                    st.plotly_chart(
+                        tornado_figure,
+                        use_container_width=True,
+                        config={"displayModeBar": False, "responsive": True},
+                    )
+                with tornado_detail_col:
+                    st.markdown("### Ranking details")
+                    st.caption("Full uncertainty names, ranking and weighted impact are shown alongside the chart.")
+                    st.dataframe(
+                        tornado_display,
+                        hide_index=True,
+                        use_container_width=True,
+                        height=min(520, max(260, len(tornado_display) * 48 + 48)),
+                    )
+
+                try:
+                    tornado_export = build_tornado_chart(active, full_labels=True)
+                    st.download_button(
+                        "Download tornado",
+                        data=fig_to_png_bytes(
+                            tornado_export,
+                            width=1900,
+                            height=max(620, len(active) * 58 + 160),
+                        ),
+                        file_name="SURM_Tornado_Chart.png",
+                        mime="image/png",
+                        use_container_width=True,
+                        key="ku_tornado_download",
+                    )
+                except Exception:
+                    pass
+
+            legend = "".join(
+                f'<span style="margin:2px;display:inline-block;">{_badge(r)}</span>'
+                for r in ["HH", "HM", "HL", "MH", "MM", "ML", "LH", "LM", "LL"]
+            )
+            st.markdown(
+                '<div style="margin-top:0.6rem;color:#66736B;font-size:10px;">Degree × Impact → '
+                + legend
+                + "</div>",
+                unsafe_allow_html=True,
+            )
