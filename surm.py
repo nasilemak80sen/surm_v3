@@ -620,16 +620,12 @@ def main() -> None:
 
     # Saved studies are loaded explicitly from the sidebar.
 
-
-    # Reserve the header's visual position so page edits can refresh the
-    # context shown in the global header and sidebar.
-    header_slot = st.empty()
-    render_navigation()
-
-    with header_slot.container():
-        render_header()
-
+    # Keep the Streamlit element tree stable across reruns: render the
+    # persistent header directly before the page content instead of creating
+    # an empty placeholder and filling it after the page has rendered.
+    render_header()
     render_sidebar()
+    render_navigation()
 
     # ------------------------------------------------------------------------
     # 8. Footer
