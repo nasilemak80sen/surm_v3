@@ -24,25 +24,41 @@ def normalize_markup(value: str) -> str:
     return "\n".join(line.lstrip() for line in value.splitlines())
 
 
-_streamlit_markdown = st.markdown
+
+def _install_markdown_adapter(streamlit_module):
+    """Install the SURM markdown adapter without wrapping it again on reload.
+
+    Streamlit's development file watcher can reload Python modules in-process.
+    Storing the original implementation on the Streamlit module itself keeps
+    repeated imports/reloads anchored to the real st.markdown function
+    rather than to a previously wrapped adapter.
+    """
+
+    original = getattr(streamlit_module, "_surm_original_markdown", None)
+    if original is None:
+        original = streamlit_module.markdown
+        setattr(streamlit_module, "_surm_original_markdown", original)
+
+    def _safe_markdown(body, unsafe_allow_html=False, **kwargs):
+        """Normalize legacy unsafe HTML calls before delegating to Streamlit."""
+
+        if unsafe_allow_html:
+            body = normalize_markup(body)
+
+        return original(
+            body,
+            unsafe_allow_html=unsafe_allow_html,
+            **kwargs,
+        )
+
+    streamlit_module.markdown = _safe_markdown
+    return original
 
 
-def _safe_markdown(body, unsafe_allow_html=False, **kwargs):
-    """Normalize legacy unsafe HTML calls before delegating to Streamlit."""
+# Existing page modules still use st.markdown directly. Keep this adapter
+# compatible with Streamlit's development reload cycle.
+_install_markdown_adapter(st)
 
-    if unsafe_allow_html:
-        body = normalize_markup(body)
-
-    return _streamlit_markdown(
-        body,
-        unsafe_allow_html=unsafe_allow_html,
-        **kwargs,
-    )
-
-
-# Existing page modules still use st.markdown directly. Install the boundary
-# adapter once so those legacy calls cannot regress into visible code blocks.
-st.markdown = _safe_markdown
 
 
 def render_html(
