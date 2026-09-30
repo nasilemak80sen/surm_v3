@@ -87,36 +87,17 @@ from modules.tab_revision_history import render as render_revision_history
 # ============================================================================
 
 def apply_theme() -> None:
-    """
-    Apply theme variables from session state.
-
-    Phase 1 intentionally keeps this simple.
-    Full theme customisation will be addressed in Phase 2.
-    """
-
-    primary = st.session_state.get(
-        "ui_primary_color",
-        "#176B3A",
-    )
-
-    background = st.session_state.get(
-        "ui_background_color",
-        "#F5F7F6",
-    )
+    """Preserve the global console theme while allowing an accent override."""
+    primary = st.session_state.get("ui_primary_color")
+    if not primary:
+        return
 
     st.markdown(
         f"""
         <style>
-
         :root {{
             --surm-primary: {primary};
-            --surm-background: {background};
         }}
-
-        .stApp {{
-            background: var(--surm-background);
-        }}
-
         </style>
         """,
         unsafe_allow_html=True,
