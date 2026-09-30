@@ -48,7 +48,6 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             "run",
             str(project_root / "surm.py"),
             "--server.headless=true",
-            "--server.fileWatcherType=none",
             f"--server.port={port}",
             "--browser.gatherUsageStats=false",
         ],
@@ -69,6 +68,16 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
             page.goto(f"http://127.0.0.1:{port}", wait_until="domcontentloaded")
             expect(page.locator("body")).to_contain_text("SURM Toolkit", timeout=20_000)
             expect(page.locator("body")).to_contain_text("CURRENT STUDY", timeout=20_000)
+            expect(page.get_by_text("SURM Toolkit", exact=True).first).to_be_visible(timeout=20_000)
+            expect(page.get_by_text("CURRENT STUDY", exact=True).first).to_be_visible(timeout=20_000)
+
+            # The local failure presents after the initial paint, so keep the
+            # session alive and verify the hydrated Streamlit UI remains
+            # visible instead of only checking that its initial DOM arrived.
+            page.wait_for_timeout(3_000)
+            expect(page.get_by_text("SURM Toolkit", exact=True).first).to_be_visible()
+            expect(page.get_by_text("CURRENT STUDY", exact=True).first).to_be_visible()
+            expect(page.locator('[data-testid="stSidebar"]')).to_be_visible()
             assert not page_errors, page_errors
 
             browser.close()
