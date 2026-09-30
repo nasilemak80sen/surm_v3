@@ -81,6 +81,25 @@ def test_multi_action_forms_disable_accidental_enter_submission():
         assert "enter_to_submit=False" in source, relative_path
 
 
+
+
+def test_dense_workspaces_expose_work_and_result_surfaces():
+    project_root = Path(__file__).resolve().parents[1]
+    expected_tabs = {
+        "modules/tab3_impact_assessment.py": ["1 · Assessment", "2 · Current ranking"],
+        "modules/tab4_key_uncertainties.py": ["1 · Prioritise", "2 · Decision support"],
+        "modules/tab5_resolution_list.py": ["1 · Resolution mapping", "2 · Coverage"],
+        "modules/tab6_resolution_planner.py": ["1 · Workplan", "2 · Execution pulse"],
+        "modules/tab7_risk_register.py": ["1 · Risk assessment", "2 · Risk pulse", "3 · Bowtie analysis"],
+    }
+
+    for relative_path, labels in expected_tabs.items():
+        source = (project_root / relative_path).read_text(encoding="utf-8")
+        ast.parse(source)
+        for label in labels:
+            assert label in source, f"{relative_path}: missing workspace label {label!r}"
+
+
 def _run_app(script):
     from streamlit.testing.v1 import AppTest
 
