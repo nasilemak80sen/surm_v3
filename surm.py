@@ -118,6 +118,7 @@ def render_header() -> None:
         field=ss.get("field_name"),
         project=ss.get("project_name"),
         phase=ss.get("project_phase"),
+        workspace=str(ss.get("current_page", "Workspace")).split(" ", 1)[-1],
         app_name=APP_NAME,
         subtitle=APP_SUBTITLE,
         saved=bool(ss.get("_last_saved")),
