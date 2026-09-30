@@ -460,6 +460,32 @@ def test_markdown_adapter_is_reload_safe():
     assert fake.calls == [("hello", True, {})]
 
 
+def test_excel_export_is_deferred_until_requested():
+    from unittest.mock import patch
+
+    project_root = Path(__file__).resolve().parents[1]
+    import utils.export_excel as export_excel
+
+    calls = []
+
+    def fake_build_excel_export():
+        calls.append(True)
+        return b"fake-xlsx"
+
+    with patch.object(export_excel, "build_excel_export", fake_build_excel_export):
+        at = __import__("streamlit.testing.v1", fromlist=["AppTest"]).AppTest.from_file(
+            project_root / "surm.py",
+            default_timeout=20,
+        ).run()
+
+        assert not at.exception
+        assert calls == []
+
+        at.button(key="prepare_excel_export").click().run()
+        assert not at.exception
+        assert calls == [True]
+        assert at.download_button
+
 def test_entrypoint_boots_as_a_streamlit_app():
     project_root = Path(__file__).resolve().parents[1]
 
