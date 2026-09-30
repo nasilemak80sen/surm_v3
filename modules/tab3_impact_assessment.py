@@ -306,68 +306,67 @@ def render():
 
             st.rerun()
 
-
-    # ------------------------------------------------------------------
     with ranking_tab:
+    # ------------------------------------------------------------------
+        # Saved score preview
+        # ------------------------------------------------------------------
+        saved_impact = st.session_state.get("impact_assessment", [])
 
-            # Saved score preview
-            # ------------------------------------------------------------------
-            saved_impact = st.session_state.get("impact_assessment", [])
+        if saved_impact:
+            st.markdown(
+                '<div class="surm-section-header">🏆 Current Rankings</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                "These scores reflect the last saved assessment. Changing upstream "
+                "inputs will invalidate downstream ranking and resolution stages."
+            )
 
-            if saved_impact:
-                st.markdown(
-                    '<div class="surm-section-header">🏆 Current Rankings</div>',
-                    unsafe_allow_html=True,
-                )
-                st.caption(
-                    "These scores reflect the last saved assessment. Changing upstream "
-                    "inputs will invalidate downstream ranking and resolution stages."
-                )
+            preview_rows = [
+                {
+                    "Uncertainty": row["Uncertainty"],
+                    "Degree": row.get("Degree of Uncertainty", "—"),
+                    "Score": row.get("Impact (Weighted)", "—"),
+                    "Impact": row.get("Impact Bin", "—"),
+                    "Rating": row.get("Combined Rating", "—"),
+                }
+                for row in saved_impact
+            ]
 
-                preview_rows = [
-                    {
-                        "Uncertainty": row["Uncertainty"],
-                        "Degree": row.get("Degree of Uncertainty", "—"),
-                        "Score": row.get("Impact (Weighted)", "—"),
-                        "Impact": row.get("Impact Bin", "—"),
-                        "Rating": row.get("Combined Rating", "—"),
-                    }
-                    for row in saved_impact
-                ]
+            preview_df = pd.DataFrame(preview_rows).sort_values(
+                "Score",
+                ascending=False,
+            )
 
-                preview_df = pd.DataFrame(preview_rows).sort_values(
-                    "Score",
-                    ascending=False,
-                )
+            def style_rating(value):
+                colors = {
+                    "HH": "background:#C00000;color:white",
+                    "HM": "background:#FF4500;color:white",
+                    "HL": "background:#FFA500",
+                    "MH": "background:#FF8C00;color:white",
+                    "MM": "background:#FFD700",
+                    "ML": "background:#A5D6A7",
+                    "LH": "background:#FFC107",
+                    "LM": "background:#C8E6C9",
+                    "LL": "background:#00B050;color:white",
+                }
+                return colors.get(value, "")
 
-                def style_rating(value):
-                    colors = {
-                        "HH": "background:#C00000;color:white",
-                        "HM": "background:#FF4500;color:white",
-                        "HL": "background:#FFA500",
-                        "MH": "background:#FF8C00;color:white",
-                        "MM": "background:#FFD700",
-                        "ML": "background:#A5D6A7",
-                        "LH": "background:#FFC107",
-                        "LM": "background:#C8E6C9",
-                        "LL": "background:#00B050;color:white",
-                    }
-                    return colors.get(value, "")
+            st.dataframe(
+                preview_df.style.map(
+                    style_rating,
+                    subset=["Rating"],
+                ),
+                    use_container_width=True,
+                hide_index=True,
+            )
 
-                st.dataframe(
-                    preview_df.style.map(
-                        style_rating,
-                        subset=["Rating"],
-                    ),
-                        use_container_width=True,
-                    hide_index=True,
-                )
+            st.success(
+                f"✅ {len(saved_impact)} rows saved. "
+                "Proceed to **Tab 4 → Key Uncertainties**."
+            )
+        else:
+            st.info(
+                "Complete the matrix and click **Save Assessment** to calculate rankings."
+            )
 
-                st.success(
-                    f"✅ {len(saved_impact)} rows saved. "
-                    "Proceed to **Tab 4 → Key Uncertainties**."
-                )
-            else:
-                st.info(
-                    "Complete the matrix and click **Save Assessment** to calculate rankings."
-                )
