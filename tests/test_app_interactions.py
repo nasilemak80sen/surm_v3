@@ -444,6 +444,39 @@ def test_risk_register_dropdowns_source_team_and_planner_and_normalize_others():
     assert "Custom Consequence" not in normalized[0]
 
 
+def test_repository_resume_target_uses_durable_saved_page():
+    from modules.tab_study_repository import _resume_page
+
+    assert _resume_page({
+        "resume_page": "6️⃣ Resolution Planner",
+    }) == "6️⃣ Resolution Planner"
+
+    assert _resume_page({
+        "resume_page": "🗂️ Study Repository",
+    }) == "📋 Overview"
+
+
+def test_repository_source_routes_resume_from_loaded_session_state():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "modules/tab_study_repository.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "_load_saved_study" in source
+    assert 'st.session_state.get("last_saved_page"' in source
+    assert 'st.session_state["_pending_navigation_page"] = target' in source
+
+
+def test_persistence_exposes_last_saved_page_as_resume_metadata():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "utils/persistence.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert '"last_saved_page": document.last_saved_page' in source
+    assert 'st.session_state["_pending_navigation_page"]' in source
+
+
 def test_planner_status_counts_handles_workplan_rows():
     from modules import tab6_resolution_planner as page
 
