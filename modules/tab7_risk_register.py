@@ -105,14 +105,25 @@ def _normalize_risk_rows(rows: list[dict], owner_options: list[str]) -> list[dic
         previous_source = str(
             previous.get("Action Owner Source", "") or ""
         ).strip()
+        incoming_source = str(
+            next_row.get("Action Owner Source", "") or ""
+        ).strip()
 
         next_row["Action Owner"] = owner
-        if owner != previous_owner:
-            next_row["Action Owner Source"] = "manual"
+        if previous:
+            # Existing rows become manual only when the user actually changes
+            # the inherited value.
+            if owner != previous_owner:
+                next_row["Action Owner Source"] = "manual"
+            else:
+                next_row["Action Owner Source"] = (
+                    previous_source or incoming_source or "manual"
+                )
         else:
-            next_row["Action Owner Source"] = (
-                previous_source or "manual"
-            )
+            # A newly populated risk may arrive already tagged as the planner
+            # default. Preserve that lineage so future planner refreshes can
+            # continue updating it until the user overrides the owner.
+            next_row["Action Owner Source"] = incoming_source or "manual"
 
         contingency = str(next_row.get("Contingency Plan", "") or "").strip()
         if contingency == _OTHER_OPTION:
