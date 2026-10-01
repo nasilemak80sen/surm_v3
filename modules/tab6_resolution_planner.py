@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 from utils.coercion import safe_float
@@ -13,6 +14,7 @@ from utils.workflow import mark_stage_changed
 
 
 _STATUS_OPTIONS = ["Open", "Under Assessment", "Resolution Planned", "In Progress", "Resolved", "Closed"]
+_MONTH_OPTIONS = list(range(13))
 _OTHER_OWNER_OPTION = "Others"
 
 
@@ -91,6 +93,216 @@ def _planner_quality(rows: list[dict]) -> tuple[int, int]:
         if not _display_owner(row)
     )
     return len(workplan), missing_owner
+
+
+def _parse_planner_date(value: object):
+    """Parse planner dates while accepting the UI's DD/MM/YYYY format."""
+    text = str(value or "").strip()
+    if not text:
+        return pd.NaT
+    return pd.to_datetime(text, dayfirst=True, errors="coerce")
+
+
+def _prepare_planner_draft(rows: list[dict]) -> pd.DataFrame:
+    """Build the user-facing draft table without changing canonical storage."""
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+
+    if "Other Owner Name" not in df.columns:
+        df["Other Owner Name"] = ""
+
+    df["Duration (months)"] = (
+        pd.to_numeric(df.get("Duration (months)", 0), errors="coerce")
+        .fillna(0)
+        .round()
+        .clip(0, 12)
+        .astype(int)
+    )
+    df["Progress (%)"] = (
+        pd.to_numeric(df.get("Progress (0-1)", 0), errors="coerce")
+        .fillna(0)
+        .clip(0, 1)
+        .mul(100)
+        .round()
+        .astype(int)
+    )
+    return df
+
+
+def _normalize_planner_draft(rows: list[dict]) -> list[dict]:
+    """Convert UI-friendly Months/Progress back to canonical study storage."""
+    normalized = []
+    for row in rows:
+        next_row = dict(row)
+        months = safe_float(next_row.get("Duration (months)", 0), default=0)
+        progress_pct = safe_float(next_row.get("Progress (%)", 0), default=0)
+
+        next_row["Duration (months)"] = max(0, min(12, int(round(months))))
+        next_row["Progress (0-1)"] = max(0.0, min(1.0, progress_pct / 100.0))
+        next_row.pop("Progress (%)", None)
+        normalized.append(next_row)
+
+    return normalized
+
+
+def _build_live_gantt(rows: list[dict]):
+    """Build a reactive Gantt figure from the current unsaved planner draft."""
+    workplan = [
+        row for row in rows
+        if isinstance(row, dict) and row.get("Part of Workplan")
+    ]
+    if not workplan:
+        return None, 0, []
+
+    today = pd.Timestamp.today().normalize()
+    figure = go.Figure()
+    timeline_rows = []
+    missing_dates = []
+
+    for index, row in enumerate(workplan):
+        action = str(row.get("Resolution Action", "") or "Unnamed action").strip()
+        start = _parse_planner_date(row.get("Start Date"))
+        months = max(0, min(12, int(safe_float(row.get("Duration (months)", 0), default=0))))
+        progress = max(0.0, min(1.0, safe_float(row.get("Progress (0-1)", 0), default=0.0)))
+        owner = str(row.get("Action Owner", "") or "").strip() or "Unassigned"
+        status = str(row.get("Status", "") or "Open").strip() or "Open"
+        deadline = _parse_planner_date(row.get("Required Completion"))
+
+        if pd.isna(start):
+            missing_dates.append(action)
+            continue
+
+        end = start + pd.DateOffset(months=months)
+        if end <= start:
+            # A 0-month action is represented as a milestone instead of a
+            # zero-width rectangle that would be invisible on the chart.
+            figure.add_trace(
+                go.Scatter(
+                    x=[start],
+                    y=[action],
+                    mode="markers",
+                    marker={"symbol": "diamond", "size": 12},
+                    customdata=[[
+                        owner,
+                        status,
+                        "0 months",
+                        f"{progress * 100:.0f}%",
+                    ]],
+                    hovertemplate=(
+                        "<b>%{y}</b><br>"
+                        "Milestone: %{x|%d %b %Y}<br>"
+                        "Owner: %{customdata[0]}<br>"
+                        "Status: %{customdata[1]}<br>"
+                        "Progress: %{customdata[3]}<extra></extra>"
+                    ),
+                    showlegend=False,
+                )
+            )
+        else:
+            completed_end = start + (end - start) * progress
+
+            # Planned duration.
+            figure.add_shape(
+                type="rect",
+                x0=start,
+                x1=end,
+                y0=index - 0.30,
+                y1=index + 0.30,
+                line={"width": 0},
+                fillcolor="rgba(127, 127, 127, 0.18)",
+            )
+            # Completed portion driven directly by the user's current draft
+            # progress value.
+            if progress > 0:
+                figure.add_shape(
+                    type="rect",
+                    x0=start,
+                    x1=completed_end,
+                    y0=index - 0.30,
+                    y1=index + 0.30,
+                    line={"width": 0},
+                    fillcolor="rgba(31, 107, 58, 0.80)",
+                )
+
+            figure.add_trace(
+                go.Scatter(
+                    x=[start + (end - start) / 2],
+                    y=[action],
+                    mode="markers",
+                    marker={"size": 18, "opacity": 0.01},
+                    customdata=[[
+                        owner,
+                        status,
+                        f"{months} month" + ("" if months == 1 else "s"),
+                        f"{progress * 100:.0f}%",
+                        deadline.strftime("%d %b %Y") if not pd.isna(deadline) else "Not set",
+                    ]],
+                    hovertemplate=(
+                        "<b>%{y}</b><br>"
+                        "Planned: %{customdata[2]}<br>"
+                        "Progress: %{customdata[3]}<br>"
+                        "Owner: %{customdata[0]}<br>"
+                        "Status: %{customdata[1]}<br>"
+                        "Deadline: %{customdata[4]}<extra></extra>"
+                    ),
+                    showlegend=False,
+                )
+            )
+
+        if not pd.isna(deadline):
+            figure.add_trace(
+                go.Scatter(
+                    x=[deadline],
+                    y=[action],
+                    mode="markers",
+                    marker={"symbol": "line-ns", "size": 15},
+                    hovertemplate="Deadline: %{x|%d %b %Y}<extra></extra>",
+                    showlegend=False,
+                )
+            )
+
+        timeline_rows.append((action, start, end, progress, deadline))
+
+    if not timeline_rows and missing_dates:
+        return None, 0, missing_dates
+
+    figure.add_shape(
+        type="line",
+        x0=today,
+        x1=today,
+        y0=-0.6,
+        y1=max(len(timeline_rows) - 0.4, 0.6),
+        line={"dash": "dash", "width": 2},
+    )
+    figure.add_annotation(
+        x=today,
+        y=1.03,
+        xref="x",
+        yref="paper",
+        text="Today",
+        showarrow=False,
+    )
+
+    figure.update_yaxes(
+        categoryorder="array",
+        categoryarray=[item[0] for item in reversed(timeline_rows)],
+        autorange="reversed",
+        title=None,
+    )
+    figure.update_xaxes(
+        title=None,
+        showgrid=True,
+        tickformat="%b\n%Y",
+    )
+    figure.update_layout(
+        height=max(300, len(timeline_rows) * 58 + 110),
+        margin={"l": 15, "r": 20, "t": 35, "b": 20},
+        hovermode="closest",
+        showlegend=False,
+        dragmode=False,
+    )
+    return figure, len(timeline_rows), missing_dates
 
 
 def _planner_status_counts(rows: list[dict]) -> pd.DataFrame:
@@ -208,100 +420,168 @@ def render():
                 tone="info",
             )
         else:
-            df_in = pd.DataFrame(planner_data)
-            if "Other Owner Name" not in df_in.columns:
-                df_in["Other Owner Name"] = ""
+            # Unlike the old form-based editor, this table is intentionally
+            # outside st.form so every edit reruns the app and refreshes the
+            # Gantt immediately. The draft remains session-only until Save.
+            draft_seed = st.session_state.get("_planner_draft_rows")
+            if not isinstance(draft_seed, list):
+                draft_seed = planner_data
+
+            df_in = _prepare_planner_draft(draft_seed)
             owner_options = build_owner_options(st.session_state)
+
             render_save_hint(
-                "Planner edits are a session draft until you click Save planner. "
-                "Execution fields such as owner, dates, progress and remarks do not invalidate the risk register."
+                "Edits are a live session draft, so the Gantt updates immediately. "
+                "Nothing is persisted until you click Save planner."
             )
 
-            with st.form("planner_form", enter_to_submit=False):
-                button_cols = st.columns([1, 1, 2.2, 3.6])
-                with button_cols[0]:
-                    add_all = st.form_submit_button("Add all", key="planner_add_all")
-                with button_cols[1]:
-                    remove_all = st.form_submit_button("Remove all", key="planner_remove_all")
-                with button_cols[2]:
-                    save_clicked = st.form_submit_button(
-                        "Save planner",
-                        key="save_resolution_planner",
-                        type="primary",
-                    )
-                with button_cols[3]:
-                    st.caption("Choose an Owner from the Team roster. Select **Others** and fill **Other owner name** for an external contributor.")
+            edited = st.data_editor(
+                df_in,
+                column_config={
+                    "resolution_id": st.column_config.TextColumn("ID", width="small", disabled=True),
+                    "#": st.column_config.NumberColumn("#", width="small", disabled=True),
+                    "Resolution Action": st.column_config.TextColumn("Resolution Action", width="medium", disabled=True),
+                    "Associated Uncertainties": st.column_config.TextColumn("Addresses", width="large", disabled=True),
+                    "Ratings": st.column_config.TextColumn("Ratings", width="small", disabled=True),
+                    "Description": st.column_config.TextColumn("Description of Work", width="large"),
+                    "Duration (months)": st.column_config.SelectboxColumn(
+                        "Months",
+                        options=_MONTH_OPTIONS,
+                        width="small",
+                        help="Select the planned duration from 0 to 12 months. 0 months is treated as a milestone.",
+                    ),
+                    "Resources": st.column_config.TextColumn("Resources"),
+                    "Constraints": st.column_config.TextColumn("Constraints"),
+                    "Start Date": st.column_config.TextColumn(
+                        "Start Date",
+                        help="DD/MM/YYYY",
+                        width="small",
+                    ),
+                    "Required Completion": st.column_config.TextColumn(
+                        "Completion",
+                        help="DD/MM/YYYY",
+                        width="small",
+                    ),
+                    "Progress (%)": st.column_config.NumberColumn(
+                        "Progress",
+                        min_value=0,
+                        max_value=100,
+                        step=1,
+                        format="%d%%",
+                        width="medium",
+                        help="Set execution progress from 0% to 100%. The live Gantt updates after each edit.",
+                    ),
+                    "Progress (0-1)": None,
+                    "Status": st.column_config.SelectboxColumn(
+                        "Status",
+                        options=_STATUS_OPTIONS,
+                    ),
+                    "Action Owner": st.column_config.SelectboxColumn(
+                        "Owner",
+                        options=owner_options,
+                        help="Choose a Team member. Select Others and enter a name in Other owner name for someone outside the Team roster.",
+                    ),
+                    "Other Owner Name": st.column_config.TextColumn(
+                        "Other owner name",
+                        help="Used only when Owner is Others.",
+                        width="medium",
+                    ),
+                    "Part of Workplan": st.column_config.CheckboxColumn("In Workplan?"),
+                    "Remarks": st.column_config.TextColumn("Remarks", width="large"),
+                },
+                hide_index=True,
+                use_container_width=True,
+                num_rows="fixed",
+                height=min(760, max(330, len(planner_data) * 72 + 90)),
+                key=f"planner_editor_{st.session_state.get('study_id', 'new')}",
+            )
 
-                edited = st.data_editor(
-                    df_in,
-                    column_config={
-                        "resolution_id": st.column_config.TextColumn("ID", width="small", disabled=True),
-                        "#": st.column_config.NumberColumn("#", width="small", disabled=True),
-                        "Resolution Action": st.column_config.TextColumn("Resolution Action", width="medium", disabled=True),
-                        "Associated Uncertainties": st.column_config.TextColumn("Addresses", width="large", disabled=True),
-                        "Ratings": st.column_config.TextColumn("Ratings", width="small", disabled=True),
-                        "Description": st.column_config.TextColumn("Description of Work", width="large"),
-                        "Duration (months)": st.column_config.NumberColumn("Months", min_value=0, max_value=60, step=1),
-                        "Resources": st.column_config.TextColumn("Resources"),
-                        "Constraints": st.column_config.TextColumn("Constraints"),
-                        "Start Date": st.column_config.TextColumn("Start Date", help="DD/MM/YYYY", width="small"),
-                        "Required Completion": st.column_config.TextColumn("Completion", help="DD/MM/YYYY", width="small"),
-                        "Progress (0-1)": st.column_config.NumberColumn(
-                            "Progress",
-                            min_value=0.0,
-                            max_value=1.0,
-                            step=0.05,
-                        ),
-                        "Status": st.column_config.SelectboxColumn("Status", options=_STATUS_OPTIONS),
-                        "Action Owner": st.column_config.SelectboxColumn(
-                            "Owner",
-                            options=owner_options,
-                            help="Choose a Team member. Select Others and enter a name in Other owner name for someone outside the Team roster.",
-                        ),
-                        "Other Owner Name": st.column_config.TextColumn(
-                            "Other owner name",
-                            help="Used only when Owner is Others.",
-                            width="medium",
-                        ),
-                        "Part of Workplan": st.column_config.CheckboxColumn("In Workplan?"),
-                        "Remarks": st.column_config.TextColumn("Remarks", width="large"),
-                    },
-                    hide_index=True,
+            draft_rows = edited.to_dict("records")
+            st.session_state["_planner_draft_rows"] = draft_rows
+
+            action_cols = st.columns([1, 1, 1.6, 3.4])
+            with action_cols[0]:
+                add_all = st.button(
+                    "Add all",
+                    key="planner_add_all",
                     use_container_width=True,
-                    num_rows="fixed",
-                    height=min(760, max(330, len(planner_data) * 72 + 90)),
-                    key=f"planner_editor_{st.session_state.get('study_id', 'new')}",
+                )
+            with action_cols[1]:
+                remove_all = st.button(
+                    "Remove all",
+                    key="planner_remove_all",
+                    use_container_width=True,
+                )
+            with action_cols[2]:
+                save_clicked = st.button(
+                    "Save planner",
+                    key="save_resolution_planner",
+                    type="primary",
+                    use_container_width=True,
+                )
+            with action_cols[3]:
+                st.caption(
+                    "Live draft — the Gantt below responds to Start Date, Months, "
+                    "Progress, Status and Workplan changes. Save persists the current draft."
                 )
 
-            if add_all or remove_all or save_clicked:
-                data = edited.to_dict("records")
-                if add_all:
-                    for row in data:
-                        row["Part of Workplan"] = True
-                elif remove_all:
-                    for row in data:
-                        row["Part of Workplan"] = False
+            if add_all or remove_all:
+                updated_draft = [dict(row) for row in draft_rows]
+                target = add_all
+                for row in updated_draft:
+                    row["Part of Workplan"] = target
+                st.session_state["_planner_draft_rows"] = updated_draft
+                st.rerun()
 
-                if save_clicked:
-                    data = _normalize_owner_rows(data)
-
-                st.session_state["resolution_planner"] = data
+            if save_clicked:
+                data = _normalize_planner_draft(draft_rows)
+                data = _normalize_owner_rows(data)
 
                 # Planner execution metadata does not alter the generated risk
                 # structure, so do not clear Risk Register/PRA for owner,
                 # progress, description, status or workplan-flag edits.
-                if save_clicked:
-                    if not st.session_state.get("project_name", "").strip():
-                        st.warning("Enter a Project Name on Overview before saving the planner.")
-                        return
-                    ok = save_session(auto=False)
-                    if not ok:
-                        st.error("Planner could not be saved.")
-                        return
-                    st.success("✅ Resolution planner saved.")
-                else:
-                    st.info("Draft updated. Click **Save planner** to persist the planner.")
+                st.session_state["resolution_planner"] = data
+
+                if not st.session_state.get("project_name", "").strip():
+                    st.warning("Enter a Project Name on Overview before saving the planner.")
+                    return
+
+                ok = save_session(auto=False)
+                if not ok:
+                    st.error("Planner could not be saved.")
+                    return
+
+                st.session_state.pop("_planner_draft_rows", None)
+                st.success("✅ Resolution planner saved.")
                 st.rerun()
+
+            gantt_title = '<div class="surm-section-header">Live Workplan Gantt</div>'
+            st.markdown(gantt_title, unsafe_allow_html=True)
+            gantt_figure, gantt_count, missing_dates = _build_live_gantt(draft_rows)
+
+            if gantt_figure is None:
+                if missing_dates:
+                    st.warning(
+                        "Add a valid Start Date (DD/MM/YYYY) to at least one workplan action "
+                        "to render its timeline."
+                    )
+                else:
+                    st.info("Mark an action as **In Workplan?** to populate the live Gantt.")
+            else:
+                st.caption(
+                    "Live preview of the current unsaved draft. "
+                    "Completed portions are calculated directly from Progress (%)."
+                )
+                st.plotly_chart(
+                    gantt_figure,
+                    use_container_width=True,
+                    config={"displayModeBar": False},
+                )
+                if missing_dates:
+                    st.caption(
+                        f"{len(missing_dates)} workplan action(s) are missing a valid Start Date "
+                        "and are excluded from the timeline until a date is entered."
+                    )
 
     with execution_tab:
     # Detailed reporting is intentionally below the editor.
