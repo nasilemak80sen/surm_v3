@@ -443,6 +443,24 @@ def test_risk_register_dropdowns_source_team_and_planner_and_normalize_others():
     assert "Custom Consequence" not in normalized[0]
 
 
+def test_planner_status_counts_handles_workplan_rows():
+    from modules import tab6_resolution_planner as page
+
+    rows = [
+        {"Part of Workplan": True, "Status": "In Progress"},
+        {"Part of Workplan": True, "Status": "Resolved"},
+        {"Part of Workplan": False, "Status": "Closed"},
+        {"Part of Workplan": True, "Status": ""},
+    ]
+
+    counts = page._planner_status_counts(rows)
+
+    assert int(counts.loc["In Progress", "Workplan actions"]) == 1
+    assert int(counts.loc["Resolved", "Workplan actions"]) == 1
+    assert int(counts.loc["Open", "Workplan actions"]) == 1
+    assert int(counts["Workplan actions"].sum()) == 3
+
+
 def test_live_gantt_builds_from_unsaved_workplan_draft():
     from modules import tab6_resolution_planner as page
 
