@@ -557,7 +557,9 @@ def test_study_repository_resume_opens_last_saved_page():
             st.session_state["_pending_navigation_page"] = summary["last_saved_page"]
             return True
 
-        with patch.object(page, "list_sessions", lambda: summaries),              patch.object(page, "load_session_record", load_record):
+        with patch.object(page, "list_sessions", lambda: summaries), \
+             patch.object(page, "load_session_record", load_record), \
+             patch.object(page.st, "rerun", lambda: None):
             page.render()
 
     at = _run_app(app)
