@@ -74,6 +74,55 @@ def test_bowtie_document_seeds_stable_risk_topology():
     assert "PREVENTIVE-PLACEMENT-2" in cause_line["stops"]
 
 
+def test_bowtie_only_creates_preventive_barriers_from_risk_register_resolution_plan():
+    row = _risk()
+    row["Resolution Plan"] = "- Fault Seal Analysis"
+
+    document = build_bowtie_document(
+        row,
+        uncertainties=[
+            {"uncertainty_id": "UNC-003", "name": "Reservoir continuity", "risks": ["Poor reservoir connectivity"]},
+        ],
+        resolution_list={
+            "Reservoir continuity": {
+                "Fault Seal Analysis": "Y",
+                "Integrated Reservoir Connectivity Studies": "Y",
+                "Another option": "Y",
+            }
+        },
+        resolution_planner=[
+            {"resolution_id": "RES-001", "Resolution Action": "Fault Seal Analysis"},
+            {"resolution_id": "RES-002", "Resolution Action": "Integrated Reservoir Connectivity Studies"},
+            {"resolution_id": "RES-003", "Resolution Action": "Another option"},
+        ],
+    )
+
+    names = [
+        node["name"]
+        for node in document["library"]["preventativeBarrier"]
+    ]
+    assert names == ["Fault Seal Analysis"]
+
+
+def test_bowtie_auto_layout_contract_does_not_create_objects():
+    from pathlib import Path
+
+    project_root = Path(__file__).resolve().parents[1]
+    source = (
+        project_root / "components/bowtie_editor/frontend/bowtie_v2.js"
+    ).read_text(encoding="utf-8")
+
+    auto_start = source.index("function autoArrange()")
+    auto_end = source.index("  function textWrap(", auto_start)
+    auto_layout = source[auto_start:auto_end]
+
+    assert "addObject(" not in auto_layout
+    assert "doc.preventativeBarriers.push" not in auto_layout
+    assert "doc.mitigativeBarriers.push" not in auto_layout
+    assert "doc.causes.push" not in auto_layout
+    assert "doc.outcomes.push" not in auto_layout
+
+
 def test_unchanged_risk_source_does_not_recreate_removed_generated_barrier():
     row = _risk()
     current = ensure_bowtie_register(
