@@ -49,9 +49,14 @@ def _load_saved_study(session_meta: dict, *, edit: bool) -> None:
     # persistence.load_session() has already resolved the canonical durable
     # last_saved_page. Read it back from session state rather than trusting
     # the repository summary/card that triggered the load.
-    target = _resume_page({
-        "resume_page": st.session_state.get("last_saved_page", "📋 Overview")
-    })
+    # New records expose last_saved_page directly. Older records only have
+    # resume_page in their repository summary, so retain that safe fallback.
+    persisted_page = st.session_state.get("last_saved_page")
+    target = _resume_page(
+        {"resume_page": persisted_page}
+        if persisted_page
+        else session_meta
+    )
     st.session_state["current_page"] = target
     st.session_state["_pending_navigation_page"] = target
     st.session_state["study_access_mode"] = "edit" if edit else "view"
