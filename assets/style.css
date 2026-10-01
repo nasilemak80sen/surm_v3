@@ -4458,3 +4458,335 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button {
     padding-top: 0.55rem;
     border-top: 1px solid #1F3A2E;
 }
+
+
+/* ==========================================================================
+   SURM UX 5.3 — PRODUCTION WORKSPACE RHYTHM
+   ========================================================================== */
+
+section[data-testid="stSidebar"] {
+    min-width: 18.75rem !important;
+    max-width: 20.5rem !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
+    padding: 0.85rem 0.72rem 1rem !important;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand {
+    margin: 0 0 0.72rem !important;
+    padding: 0 0.12rem !important;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand-icon {
+    width: 2.15rem !important;
+    height: 2.15rem !important;
+    border-radius: 8px !important;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand-title {
+    font-size: 0.88rem !important;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand-subtitle {
+    font-size: 0.5rem !important;
+}
+
+.st-key-sidebar-study-context {
+    margin: 0 0 0.72rem !important;
+    padding: 0.82rem 0.82rem 0.76rem !important;
+    border: 1px solid #2A4A3B !important;
+    border-radius: 10px !important;
+    background: #10251C !important;
+}
+
+.sidebar-context-kicker {
+    color: #83B99A !important;
+    font-size: 0.5rem !important;
+    letter-spacing: 0.13em !important;
+}
+
+.sidebar-context-title {
+    margin-top: 0.2rem !important;
+    font-size: 0.9rem !important;
+    line-height: 1.25 !important;
+}
+
+.sidebar-context-meta {
+    margin-top: 0.18rem !important;
+    font-size: 0.63rem !important;
+    color: #B4CBBE !important;
+}
+
+.sidebar-context-status {
+    margin-top: 0.52rem !important;
+}
+
+.sidebar-context-status span {
+    min-height: 1.34rem !important;
+    padding: 0.13rem 0.42rem !important;
+    background: #173328 !important;
+    border-color: #315444 !important;
+    color: #C7DDCF !important;
+    font-size: 0.5rem !important;
+}
+
+.st-key-sidebar-study-context .stProgress {
+    margin-top: 0.52rem !important;
+}
+
+/* Workspace selector: every state must be readable before hover. */
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] {
+    width: 100% !important;
+    margin: 0 0 0.68rem !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] > div {
+    width: 100% !important;
+    display: flex !important;
+    gap: 0.16rem !important;
+    padding: 0.2rem !important;
+    border: 1px solid #2A4B3C !important;
+    border-radius: 9px !important;
+    background: #0C1F17 !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button {
+    min-height: 1.95rem !important;
+    flex: 1 1 0 !important;
+    padding: 0.25rem 0.3rem !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    background: #142C22 !important;
+    color: #AFC8BA !important;
+    font-size: 0.57rem !important;
+    font-weight: 740 !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button > div {
+    background: transparent !important;
+    color: inherit !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button:hover {
+    background: #1B392C !important;
+    border-color: #3A614E !important;
+    color: #F4FBF7 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button[aria-checked="true"],
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button[aria-selected="true"] {
+    background: #2A5B44 !important;
+    border-color: #71BE91 !important;
+    color: #FFFFFF !important;
+    box-shadow: inset 0 0 0 1px rgba(142, 219, 170, 0.18) !important;
+}
+
+/* Navigation container: one coherent rail. */
+.st-key-sidebar-navigation {
+    margin-top: 0 !important;
+    padding: 0.78rem 0.62rem 0.58rem !important;
+    border: 1px solid #274638 !important;
+    border-radius: 10px !important;
+    background: #10251C !important;
+}
+
+.sidebar-journey-header {
+    margin: 0 0 0.58rem !important;
+}
+
+.sidebar-section-title {
+    margin: 0 !important;
+    color: #78B591 !important;
+    font-size: 0.5rem !important;
+    letter-spacing: 0.13em !important;
+}
+
+.sidebar-journey-title {
+    margin-top: 0.13rem !important;
+    color: #E7F2EB !important;
+    font-size: 0.76rem !important;
+    font-weight: 760 !important;
+}
+
+/* Workflow summary is a compact orientation cue, not another KPI card. */
+.sidebar-workflow-summary {
+    margin: 0 0 0.5rem !important;
+    padding: 0.46rem 0.55rem !important;
+    border: 1px solid #294A3B !important;
+    border-radius: 7px !important;
+    background: #132B21 !important;
+}
+
+/* Direct navigation buttons: dark at rest, green only when selected. */
+.st-key-sidebar-navigation .stButton {
+    margin: 0 0 0.3rem !important;
+}
+
+.st-key-sidebar-navigation .stButton > button,
+.st-key-sidebar-navigation .stButton > button[kind="secondary"],
+.st-key-sidebar-navigation [data-testid="stBaseButton-secondary"] {
+    width: 100% !important;
+    min-height: 2.28rem !important;
+    padding: 0.42rem 0.62rem !important;
+    border: 1px solid #2B4B3D !important;
+    border-radius: 7px !important;
+    background: #173328 !important;
+    color: #D8E8DE !important;
+    font-size: 0.63rem !important;
+    font-weight: 690 !important;
+    line-height: 1.15 !important;
+    text-align: left !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.st-key-sidebar-navigation .stButton > button:hover:not(:disabled),
+.st-key-sidebar-navigation [data-testid="stBaseButton-secondary"]:hover {
+    background: #1E4434 !important;
+    border-color: #4A7D63 !important;
+    color: #FFFFFF !important;
+}
+
+.st-key-sidebar-navigation .stButton > button[kind="primary"],
+.st-key-sidebar-navigation [data-testid="stBaseButton-primary"] {
+    background: #2A5B44 !important;
+    border-color: #77C799 !important;
+    color: #FFFFFF !important;
+    box-shadow: inset 3px 0 0 #92D9AD !important;
+}
+
+.st-key-sidebar-navigation .stButton > button:disabled,
+.st-key-sidebar-navigation [data-testid="stBaseButton-secondary"]:disabled {
+    opacity: 0.48 !important;
+    background: #10241B !important;
+    border-color: #21392D !important;
+    color: #8FA59A !important;
+}
+
+.st-key-sidebar-navigation .stCaptionContainer {
+    display: none !important;
+}
+
+.st-key-sidebar-navigation > div:last-child {
+    margin-top: 0.42rem !important;
+}
+
+.st-key-sidebar-navigation > div:last-child p {
+    margin: 0 !important;
+    color: #789087 !important;
+    font-size: 0.53rem !important;
+    line-height: 1.35 !important;
+}
+
+/* Continue action sits outside the page list visually. */
+.st-key-sidebar_continue_next_stage {
+    margin: 0 0 0.62rem !important;
+}
+
+section[data-testid="stSidebar"] .st-key-sidebar_continue_next_stage .stButton > button {
+    min-height: 2.42rem !important;
+    border: 1px solid #82CDA0 !important;
+    border-radius: 8px !important;
+    background: #E8F6ED !important;
+    color: #16402D !important;
+    font-size: 0.65rem !important;
+    font-weight: 820 !important;
+}
+
+section[data-testid="stSidebar"] .st-key-sidebar_continue_next_stage .stButton > button:hover {
+    background: #F5FBF7 !important;
+    border-color: #A3DDB8 !important;
+}
+
+/* Save/New: separate action zone with enough breathing room. */
+.st-key-sidebar-actions {
+    margin-top: 0.7rem !important;
+    padding-top: 0.62rem !important;
+    border-top: 1px solid #223F31 !important;
+}
+
+.st-key-sidebar-actions .stButton > button {
+    min-height: 2.22rem !important;
+    border-radius: 7px !important;
+    font-size: 0.64rem !important;
+}
+
+.st-key-sidebar-actions .stButton > button[kind="primary"],
+.st-key-sidebar-actions [data-testid="stBaseButton-primary"] {
+    background: #EAF7EF !important;
+    border-color: #EAF7EF !important;
+    color: #173D2B !important;
+}
+
+.st-key-sidebar-actions .stButton > button:not([kind="primary"]),
+.st-key-sidebar-actions [data-testid="stBaseButton-secondary"] {
+    background: #173328 !important;
+    border-color: #2C4E40 !important;
+    color: #D8E8DE !important;
+}
+
+section[data-testid="stSidebar"] .stExpander {
+    margin-top: 0.62rem !important;
+    border-color: #223D31 !important;
+    border-radius: 8px !important;
+    background: #0E231A !important;
+}
+
+section[data-testid="stSidebar"] .stExpander summary {
+    padding: 0.56rem 0.66rem !important;
+    color: #C9DDD2 !important;
+    font-size: 0.63rem !important;
+}
+
+section[data-testid="stSidebar"] .stExpander summary:hover {
+    background: #142C21 !important;
+}
+
+section[data-testid="stSidebar"] > div:last-child {
+    padding-bottom: 0.6rem !important;
+}
+
+/* Main workspace rhythm. */
+.stApp [data-testid="stMainBlockContainer"] {
+    padding-top: 1.25rem !important;
+    padding-bottom: 2.4rem !important;
+}
+
+.stApp [data-testid="stVerticalBlock"] > [data-testid="element-container"] {
+    margin-bottom: 0.08rem;
+}
+
+.stApp [data-testid="stDataEditor"] {
+    margin-top: 0.55rem !important;
+    margin-bottom: 0.75rem !important;
+    border: 1px solid #D4DFD8 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 9px rgba(18, 46, 32, 0.035) !important;
+}
+
+.stApp [data-testid="stForm"] {
+    margin-top: 0.35rem;
+}
+
+.stApp .st-key-overview-study-setup,
+.stApp .st-key-overview-workflow,
+.stApp .st-key-overview-governance {
+    margin-bottom: 0.85rem !important;
+}
+
+@media (max-width: 900px) {
+    section[data-testid="stSidebar"] {
+        min-width: 17rem !important;
+    }
+
+    section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button {
+        font-size: 0.53rem !important;
+    }
+
+    .stApp [data-testid="stMainBlockContainer"] {
+        padding-top: 0.9rem !important;
+    }
+}
