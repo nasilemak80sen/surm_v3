@@ -312,7 +312,6 @@ def render_sidebar() -> None:
             default=active_area,
             key="sidebar_area_selector",
             label_visibility="collapsed",
-            width="stretch",
         )
 
         if area and area != active_area:
@@ -449,12 +448,8 @@ def render_sidebar() -> None:
                     type="primary" if selected else "secondary",
                     on_click=_go_to,
                     args=(page,),
+                    help=subtitle[:180] if subtitle else None,
                 )
-
-                # Keep the supporting description visible without adding
-                # another interactive surface.
-                if selected or (stage is not None and stage.available and not stage.complete):
-                    st.caption(subtitle[:105])
 
             if area_title == "Workflow":
                 st.caption(
