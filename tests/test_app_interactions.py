@@ -463,10 +463,9 @@ def test_planner_status_counts_handles_workplan_rows():
 
 
 def test_study_repository_resume_opens_last_saved_page():
-    from unittest.mock import patch
-
     def app():
         import streamlit as st
+        from unittest.mock import patch
         from modules import tab_study_repository as page
         from utils.session import init_session
 
