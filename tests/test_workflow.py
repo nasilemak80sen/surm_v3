@@ -130,10 +130,10 @@ def test_assessed_risk_without_governance_fields_does_not_unlock_pra():
     pra_stage = next(s for s in stages if s.key == "pra_output")
 
     assert risk_stage.complete is False
-    assert "PRA readiness still needs" in risk_stage.reason
-    assert "owner" in risk_stage.reason
-    assert "contingency" in risk_stage.reason
-    assert "consequence" in risk_stage.reason
+    assert "PRA readiness still needs" in risk_stage.guidance
+    assert "owner" in risk_stage.guidance
+    assert "contingency" in risk_stage.guidance
+    assert "consequence" in risk_stage.guidance
     assert pra_stage.available is False
 
 
