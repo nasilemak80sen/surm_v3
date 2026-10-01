@@ -4258,37 +4258,55 @@ section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] {
     margin: 0 0 0.62rem !important;
 }
 
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] > div {
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] [role="radiogroup"] {
     width: 100% !important;
     display: flex !important;
+    flex-wrap: nowrap !important;
     gap: 0.12rem !important;
     padding: 0.18rem !important;
     border: 1px solid #2A4B3C !important;
     border-radius: 8px !important;
     background: #0C1F17 !important;
+    overflow: hidden !important;
 }
 
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button {
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"]
+[data-testid="stBaseButton-segmented_control"],
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"]
+[data-testid="stBaseButton-segmented_controlActive"] {
+    min-width: 0 !important;
     min-height: 1.86rem !important;
     flex: 1 1 0 !important;
-    padding: 0.22rem 0.25rem !important;
+    padding: 0.22rem 0.22rem !important;
     border: 1px solid transparent !important;
     border-radius: 6px !important;
     background: #142C22 !important;
     color: #AFC8BA !important;
     font-size: 0.56rem !important;
     font-weight: 740 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
     box-shadow: none !important;
 }
 
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button:hover {
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"]
+[data-testid="stBaseButton-segmented_control"] p,
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"]
+[data-testid="stBaseButton-segmented_controlActive"] p {
+    color: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"]
+[data-testid="stBaseButton-segmented_control"]:hover {
     background: #1B392C !important;
     border-color: #3A614E !important;
     color: #F4FBF7 !important;
 }
 
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button[aria-checked="true"],
-section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button[aria-selected="true"] {
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"]
+[data-testid="stBaseButton-segmented_controlActive"] {
     background: #2A5B44 !important;
     border-color: #71BE91 !important;
     color: #FFFFFF !important;
