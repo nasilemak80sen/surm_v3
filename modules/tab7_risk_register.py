@@ -27,6 +27,92 @@ _RATING_OPTIONS = ["", "H", "M", "L"]
 _STATUS_OPTIONS = ["Open", "In Progress", "Closed", "On Hold"]
 _RATING_ORDER = ["Extreme", "High", "Medium", "Low", "Not Assessed"]
 
+_OTHER_OPTION = "Others"
+_CONTINGENCY_OPTIONS = [
+    "",
+    "Reassess subsurface uncertainty and update the model",
+    "Run additional simulation / sensitivity cases",
+    "Acquire additional data / surveillance",
+    "Revise development or injection strategy",
+    "Activate monitoring and surveillance trigger",
+    "Escalate to technical review / decision gate",
+    _OTHER_OPTION,
+]
+_CONSEQUENCE_OPTIONS = [
+    "",
+    "Production / recovery shortfall",
+    "Injection performance / VRR deviation",
+    "Reservoir pressure / performance deviation",
+    "Well / facility integrity exposure",
+    "Schedule / decision delay",
+    "CAPEX / OPEX impact",
+    "Reserves / value uncertainty",
+    _OTHER_OPTION,
+]
+
+
+def _risk_owner_options(session: dict | None = None) -> list[str]:
+    """Return Team + Resolution Planner owners, preserving existing custom values."""
+    source = session if session is not None else st.session_state
+    names: list[str] = []
+    for member in source.get("team_members", []) or []:
+        if not isinstance(member, dict):
+            continue
+        name = str(member.get("Name", "") or "").strip()
+        if name and name not in names:
+            names.append(name)
+    for row in source.get("resolution_planner", []) or []:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("Action Owner", "") or "").strip()
+        if name and name not in names:
+            names.append(name)
+    for row in source.get("risk_register", []) or []:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("Action Owner", "") or "").strip()
+        if name and name not in names:
+            names.append(name)
+    return [""] + names
+
+
+def _editor_choice(value: object, options: list[str]) -> str:
+    current = str(value or "").strip()
+    return current if current in options else (_OTHER_OPTION if current else "")
+
+
+def _custom_value(value: object, options: list[str]) -> str:
+    current = str(value or "").strip()
+    return "" if current in options or current == _OTHER_OPTION else current
+
+
+def _normalize_risk_rows(rows: list[dict], owner_options: list[str]) -> list[dict]:
+    """Resolve controlled Others choices into canonical saved risk text."""
+    normalized: list[dict] = []
+    for row in rows:
+        next_row = dict(row)
+        owner = str(next_row.get("Action Owner", "") or "").strip()
+        if owner == _OTHER_OPTION:
+            owner = str(next_row.get("Custom Owner", "") or "").strip()
+        next_row["Action Owner"] = owner
+
+        contingency = str(next_row.get("Contingency Plan", "") or "").strip()
+        if contingency == _OTHER_OPTION:
+            contingency = str(next_row.get("Custom Contingency", "") or "").strip()
+        next_row["Contingency Plan"] = contingency
+
+        consequence = str(next_row.get("Impact/Consequence", "") or "").strip()
+        if consequence == _OTHER_OPTION:
+            consequence = str(next_row.get("Custom Consequence", "") or "").strip()
+        next_row["Impact/Consequence"] = consequence
+
+        next_row.pop("Custom Owner", None)
+        next_row.pop("Custom Contingency", None)
+        next_row.pop("Custom Consequence", None)
+        normalized.append(next_row)
+    return normalized
+
+
 
 def _risk_distribution(df: pd.DataFrame) -> dict[str, int]:
     distribution = {key: 0 for key in _RATING_ORDER}
@@ -80,16 +166,33 @@ def render():
         )
     elif not_assessed:
         render_stage_status(
-            label="PRA",
+            label="Risk assessment",
             value=f"{not_assessed} risk(s) still need likelihood and impact.",
             tone="warning",
         )
     else:
-        render_stage_status(
-            label="PRA",
-            value="All risks are explicitly assessed.",
-            tone="success",
+        missing_governance = sum(
+            1
+            for row in risk_data
+            if not str(row.get("Action Owner", "") or "").strip()
+            or not str(row.get("Contingency Plan", "") or "").strip()
+            or not str(row.get("Impact/Consequence", "") or "").strip()
         )
+        if missing_governance:
+            render_stage_status(
+                label="PRA readiness",
+                value=(
+                    f"Assessment complete. {missing_governance} risk(s) still need "
+                    "Owner, Consequence and/or Contingency details."
+                ),
+                tone="warning",
+            )
+        else:
+            render_stage_status(
+                label="PRA readiness",
+                value="✓ Risk assessment and governance details are complete. Ready for PRA Output.",
+                tone="success",
+            )
 
     populate = st.button(
         "Populate from current plan",
@@ -139,6 +242,37 @@ def render():
 
     with risk_tab:
         risk_df = pd.DataFrame(risk_data)
+        owner_options = _risk_owner_options(st.session_state)
+
+        # "Others" is a controlled escape hatch: select it, then enter the
+        # study-specific wording in the adjacent Custom column.
+        for index, row in risk_df.iterrows():
+            risk_df.at[index, "Action Owner"] = _editor_choice(
+                row.get("Action Owner", ""), owner_options
+            )
+            risk_df.at[index, "Custom Owner"] = _custom_value(
+                row.get("Action Owner", ""), owner_options
+            )
+            risk_df.at[index, "Contingency Plan"] = _editor_choice(
+                row.get("Contingency Plan", ""), _CONTINGENCY_OPTIONS
+            )
+            risk_df.at[index, "Custom Contingency"] = _custom_value(
+                row.get("Contingency Plan", ""), _CONTINGENCY_OPTIONS
+            )
+            risk_df.at[index, "Impact/Consequence"] = _editor_choice(
+                row.get("Impact/Consequence", ""), _CONSEQUENCE_OPTIONS
+            )
+            risk_df.at[index, "Custom Consequence"] = _custom_value(
+                row.get("Impact/Consequence", ""), _CONSEQUENCE_OPTIONS
+            )
+
+        st.caption(
+            "Owner is sourced from Team + Resolution Planner. For Contingency and "
+            "Consequence, choose a study-relevant template or **Others**. "
+            "**Others** is the muted/custom path: enter the specific wording in "
+            "the adjacent Custom column before saving."
+        )
+
         with st.container():
             st.markdown('<div class="surm-section-header">Risk Register</div>', unsafe_allow_html=True)
             render_save_hint(
@@ -159,9 +293,39 @@ def render():
                         "Risk": st.column_config.TextColumn("Risk", width="large", disabled=True),
                         "Uncertainty/Causes": st.column_config.TextColumn("Causes / Uncertainties", width="large", disabled=True),
                         "Resolution Plan": st.column_config.TextColumn("Resolution Plan", width="large", disabled=True),
-                        "Action Owner": st.column_config.TextColumn("Owner"),
-                        "Contingency Plan": st.column_config.TextColumn("Contingency", width="large"),
-                        "Impact/Consequence": st.column_config.TextColumn("Consequence", width="large"),
+                        "Action Owner": st.column_config.SelectboxColumn(
+                            "Owner",
+                            options=owner_options,
+                            width="medium",
+                            help="Team members plus owners already assigned in the Resolution Planner.",
+                        ),
+                        "Custom Owner": st.column_config.TextColumn(
+                            "Custom Owner",
+                            width="medium",
+                            help="Only needed for a legacy/custom owner not present in Team or Resolution Planner.",
+                        ),
+                        "Contingency Plan": st.column_config.SelectboxColumn(
+                            "Contingency",
+                            options=_CONTINGENCY_OPTIONS,
+                            width="large",
+                            help="Choose a common subsurface contingency or Others for study-specific wording.",
+                        ),
+                        "Custom Contingency": st.column_config.TextColumn(
+                            "Custom Contingency",
+                            width="large",
+                            help="Required when Contingency is Others.",
+                        ),
+                        "Impact/Consequence": st.column_config.SelectboxColumn(
+                            "Consequence",
+                            options=_CONSEQUENCE_OPTIONS,
+                            width="large",
+                            help="Choose a common study consequence or Others for study-specific wording.",
+                        ),
+                        "Custom Consequence": st.column_config.TextColumn(
+                            "Custom Consequence",
+                            width="large",
+                            help="Required when Consequence is Others.",
+                        ),
                         "Likelihood (H/M/L)": st.column_config.SelectboxColumn(
                             "Likelihood",
                             options=_RATING_OPTIONS,
@@ -194,7 +358,10 @@ def render():
                 ),
                 axis=1,
             )
-            saved_rows = edited.to_dict("records")
+            saved_rows = _normalize_risk_rows(
+                edited.to_dict("records"),
+                owner_options,
+            )
             st.session_state["risk_register"] = saved_rows
             st.session_state["bowtie_register"] = ensure_bowtie_register(
                 saved_rows,
@@ -205,9 +372,16 @@ def render():
             )
             sync_barrier_register(st.session_state)
             mark_stage_changed(st.session_state, "risk_register")
+            risk_ready = all(
+                is_risk_assessed(row)
+                and str(row.get("Action Owner", "") or "").strip()
+                and str(row.get("Contingency Plan", "") or "").strip()
+                and str(row.get("Impact/Consequence", "") or "").strip()
+                for row in saved_rows
+            )
             st.session_state["pra_output"] = (
-                build_pra_output(edited).to_dict("records")
-                if all(is_risk_assessed(row) for row in saved_rows)
+                build_pra_output(pd.DataFrame(saved_rows)).to_dict("records")
+                if risk_ready
                 else []
             )
             if not st.session_state.get("project_name", "").strip():
