@@ -160,11 +160,20 @@ def _build_live_gantt(rows: list[dict]):
     timeline_rows = []
     missing_dates = []
 
-    for index, row in enumerate(workplan):
+    for row in workplan:
         action = str(row.get("Resolution Action", "") or "Unnamed action").strip()
         start = _parse_planner_date(row.get("Start Date"))
-        months = max(0, min(12, int(safe_float(row.get("Duration (months)", 0), default=0))))
-        progress = max(0.0, min(1.0, safe_float(row.get("Progress (0-1)", 0), default=0.0)))
+        months = max(
+            0,
+            min(
+                12,
+                int(safe_float(row.get("Duration (months)", 0), default=0)),
+            ),
+        )
+        progress = max(
+            0.0,
+            min(1.0, safe_float(row.get("Progress (0-1)", 0), default=0.0)),
+        )
         owner = str(row.get("Action Owner", "") or "").strip() or "Unassigned"
         status = str(row.get("Status", "") or "Open").strip() or "Open"
         deadline = _parse_planner_date(row.get("Required Completion"))
@@ -174,15 +183,16 @@ def _build_live_gantt(rows: list[dict]):
             continue
 
         end = start + pd.DateOffset(months=months)
+        timeline_rows.append((action, start, end, progress, deadline))
+
         if end <= start:
-            # A 0-month action is represented as a milestone instead of a
-            # zero-width rectangle that would be invisible on the chart.
+            # A 0-month action is shown as a milestone so it remains visible.
             figure.add_trace(
                 go.Scatter(
                     x=[start],
                     y=[action],
                     mode="markers",
-                    marker={"symbol": "diamond", "size": 12},
+                    marker={"symbol": "diamond", "size": 13},
                     customdata=[[
                         owner,
                         status,
@@ -200,44 +210,21 @@ def _build_live_gantt(rows: list[dict]):
                 )
             )
         else:
-            completed_end = start + (end - start) * progress
-
-            # Planned duration.
-            figure.add_shape(
-                type="rect",
-                x0=start,
-                x1=end,
-                y0=index - 0.30,
-                y1=index + 0.30,
-                line={"width": 0},
-                fillcolor="rgba(127, 127, 127, 0.18)",
-            )
-            # Completed portion driven directly by the user's current draft
-            # progress value.
-            if progress > 0:
-                figure.add_shape(
-                    type="rect",
-                    x0=start,
-                    x1=completed_end,
-                    y0=index - 0.30,
-                    y1=index + 0.30,
-                    line={"width": 0},
-                    fillcolor="rgba(31, 107, 58, 0.80)",
-                )
-
+            # A thick line is used instead of bar coordinates so the chart
+            # remains stable on Plotly's categorical task axis.
             figure.add_trace(
                 go.Scatter(
-                    x=[start + (end - start) / 2],
-                    y=[action],
-                    mode="markers",
-                    marker={"size": 18, "opacity": 0.01},
+                    x=[start, end],
+                    y=[action, action],
+                    mode="lines",
+                    line={"width": 22},
                     customdata=[[
                         owner,
                         status,
                         f"{months} month" + ("" if months == 1 else "s"),
                         f"{progress * 100:.0f}%",
                         deadline.strftime("%d %b %Y") if not pd.isna(deadline) else "Not set",
-                    ]],
+                    ]] * 2,
                     hovertemplate=(
                         "<b>%{y}</b><br>"
                         "Planned: %{customdata[2]}<br>"
@@ -250,34 +237,42 @@ def _build_live_gantt(rows: list[dict]):
                 )
             )
 
+            if progress > 0:
+                completed_end = start + (end - start) * progress
+                figure.add_trace(
+                    go.Scatter(
+                        x=[start, completed_end],
+                        y=[action, action],
+                        mode="lines",
+                        line={"width": 14},
+                        hoverinfo="skip",
+                        showlegend=False,
+                    )
+                )
+
         if not pd.isna(deadline):
             figure.add_trace(
                 go.Scatter(
                     x=[deadline],
                     y=[action],
                     mode="markers",
-                    marker={"symbol": "line-ns", "size": 15},
+                    marker={"symbol": "line-ns", "size": 16},
                     hovertemplate="Deadline: %{x|%d %b %Y}<extra></extra>",
                     showlegend=False,
                 )
             )
 
-        timeline_rows.append((action, start, end, progress, deadline))
-
-    if not timeline_rows and missing_dates:
+    if not timeline_rows:
         return None, 0, missing_dates
 
-    figure.add_shape(
-        type="line",
-        x0=today,
-        x1=today,
-        y0=-0.6,
-        y1=max(len(timeline_rows) - 0.4, 0.6),
-        line={"dash": "dash", "width": 2},
+    figure.add_vline(
+        x=today,
+        line_dash="dash",
+        line_width=2,
     )
     figure.add_annotation(
         x=today,
-        y=1.03,
+        y=1.02,
         xref="x",
         yref="paper",
         text="Today",
@@ -287,7 +282,6 @@ def _build_live_gantt(rows: list[dict]):
     figure.update_yaxes(
         categoryorder="array",
         categoryarray=[item[0] for item in reversed(timeline_rows)],
-        autorange="reversed",
         title=None,
     )
     figure.update_xaxes(
@@ -303,17 +297,6 @@ def _build_live_gantt(rows: list[dict]):
         dragmode=False,
     )
     return figure, len(timeline_rows), missing_dates
-
-
-def _planner_status_counts(rows: list[dict]) -> pd.DataFrame:
-    counts = {status: 0 for status in _STATUS_OPTIONS}
-    for row in rows:
-        if not row.get("Part of Workplan"):
-            continue
-        status = str(row.get("Status", "Open") or "Open")
-        counts[status] = counts.get(status, 0) + 1
-    return pd.DataFrame({"Workplan actions": list(counts.values())}, index=list(counts.keys()))
-
 
 def render():
     resolution_list = st.session_state.get("resolution_list", {})
@@ -334,10 +317,23 @@ def render():
     )
 
     planner_data = st.session_state.get("resolution_planner", [])
-    workplan_rows = [row for row in planner_data if row.get("Part of Workplan")]
-    workplan_count, missing_owner = _planner_quality(planner_data)
+    live_planner_data = st.session_state.get("_planner_draft_rows")
+    active_planner_data = (
+        live_planner_data
+        if isinstance(live_planner_data, list)
+        else planner_data
+    )
+
+    workplan_rows = [
+        row for row in active_planner_data
+        if isinstance(row, dict) and row.get("Part of Workplan")
+    ]
+    workplan_count, missing_owner = _planner_quality(active_planner_data)
     overall = (
-        sum(safe_float(row.get("Progress (0-1)", 0), default=0.0) for row in workplan_rows)
+        sum(
+            safe_float(row.get("Progress (0-1)", 0), default=0.0)
+            for row in workplan_rows
+        )
         / max(len(workplan_rows), 1)
     )
     progress_pct = int(overall * 100) if workplan_rows else 0
@@ -347,8 +343,6 @@ def render():
         if str(row.get("Status", "")).strip() in {"Resolved", "Closed"}
     )
 
-    # Keep the KPI cards in a single row. They are the executive signal; the
-    # detailed workplan and status chart get the full page width below them.
     metric_cols = st.columns(4)
     metric_cols[0].metric("Workplan", workplan_count)
     metric_cols[1].metric("Missing owners", missing_owner)
@@ -383,14 +377,23 @@ def render():
             use_container_width=True,
         )
     with hint_col:
-        st.caption("Refresh only when Tab 5 changed. Existing planner fields are preserved for matching actions.")
+        st.caption(
+            "Refresh only when Tab 5 changed. Existing planner fields are "
+            "preserved for matching actions."
+        )
 
     if refresh_planner:
         if not key_uncertainties:
-            st.warning("No key uncertainties are currently included in the plan. Return to Tab 4.")
+            st.warning(
+                "No key uncertainties are currently included in the plan. "
+                "Return to Tab 4."
+            )
             return
 
-        resolution_df = _build_resolution_dataframe(key_uncertainties, resolution_list)
+        resolution_df = _build_resolution_dataframe(
+            key_uncertainties,
+            resolution_list,
+        )
         planner_df = build_resolution_planner(resolution_df)
         if planner_df.empty:
             st.warning("No resolution actions were selected in Tab 5.")
@@ -399,21 +402,25 @@ def render():
         previous = st.session_state.get("resolution_planner", [])
         updated = planner_df.to_dict("records")
         st.session_state["resolution_planner"] = updated
+        st.session_state.pop("_planner_draft_rows", None)
 
-        # Only a structural refresh should invalidate the generated risk
-        # register. Owner/progress/remarks edits are execution metadata.
         if _planner_structure_signature(previous) != _planner_structure_signature(updated):
             mark_stage_changed(st.session_state, "resolution_planner")
 
-        st.info("Planner draft updated from Tab 5. Review it, then click **Save planner** to persist.")
+        st.info(
+            "Planner draft updated from Tab 5. Review it, then click **Save planner** "
+            "to persist."
+        )
         st.rerun()
 
     planner_data = st.session_state.get("resolution_planner", [])
 
-    workplan_tab, execution_tab = st.tabs(["1 · Workplan", "2 · Execution pulse"])
+    workplan_tab, execution_tab = st.tabs(
+        ["1 · Workplan", "2 · Execution pulse"]
+    )
 
     with workplan_tab:
-        if not planner_data:
+        if not planner_data and not st.session_state.get("_planner_draft_rows"):
             render_stage_status(
                 label="Planner",
                 value="No actions loaded yet. Update from Tab 5 to begin.",
@@ -536,14 +543,12 @@ def render():
             if save_clicked:
                 data = _normalize_planner_draft(draft_rows)
                 data = _normalize_owner_rows(data)
-
-                # Planner execution metadata does not alter the generated risk
-                # structure, so do not clear Risk Register/PRA for owner,
-                # progress, description, status or workplan-flag edits.
                 st.session_state["resolution_planner"] = data
 
                 if not st.session_state.get("project_name", "").strip():
-                    st.warning("Enter a Project Name on Overview before saving the planner.")
+                    st.warning(
+                        "Enter a Project Name on Overview before saving the planner."
+                    )
                     return
 
                 ok = save_session(auto=False)
@@ -562,11 +567,13 @@ def render():
             if gantt_figure is None:
                 if missing_dates:
                     st.warning(
-                        "Add a valid Start Date (DD/MM/YYYY) to at least one workplan action "
-                        "to render its timeline."
+                        "Add a valid Start Date (DD/MM/YYYY) to at least one "
+                        "workplan action to render its timeline."
                     )
                 else:
-                    st.info("Mark an action as **In Workplan?** to populate the live Gantt.")
+                    st.info(
+                        "Mark an action as **In Workplan?** to populate the live Gantt."
+                    )
             else:
                 st.caption(
                     "Live preview of the current unsaved draft. "
@@ -579,8 +586,8 @@ def render():
                 )
                 if missing_dates:
                     st.caption(
-                        f"{len(missing_dates)} workplan action(s) are missing a valid Start Date "
-                        "and are excluded from the timeline until a date is entered."
+                        f"{len(missing_dates)} workplan action(s) are missing a valid "
+                        "Start Date and are excluded from the timeline until a date is entered."
                     )
 
     with execution_tab:
