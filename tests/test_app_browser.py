@@ -229,11 +229,18 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                 )
 
                 nav_buttons = sidebar.locator(
-                    '.st-key-sidebar-navigation button'
+                    '.st-key-sidebar-navigation button[data-testid^="stBaseButton-"]'
                 )
-                assert nav_buttons.count() > 0
+                assert nav_buttons.count() == 3, (
+                    "Study navigation should expose exactly three actionable "
+                    f"destinations, found {nav_buttons.count()}."
+                )
                 for i in range(nav_buttons.count()):
-                    box = nav_buttons.nth(i).bounding_box()
+                    button = nav_buttons.nth(i)
+                    expect(button).to_be_visible(timeout=5_000)
+                    label = button.inner_text().strip()
+                    assert label, f"Sidebar navigation button {i} has no visible label."
+                    box = button.bounding_box()
                     assert box is not None, f"Sidebar navigation button {i} has no geometry."
                     assert box["width"] > 120, box
                     assert box["height"] >= 28, box
