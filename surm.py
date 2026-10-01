@@ -315,7 +315,6 @@ def render_sidebar() -> None:
             default=active_area,
             key="sidebar_area_selector",
             label_visibility="collapsed",
-            width="stretch",
         )
 
         if area and area != active_area:
