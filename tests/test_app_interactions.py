@@ -549,6 +549,7 @@ def test_study_repository_resume_opens_last_saved_page():
             "last_edited_by": "Engineer A",
             "last_edited_at": "2026-10-01T10:00:00",
             "resume_page": "6️⃣ Resolution Planner",
+            "last_saved_page": "6️⃣ Resolution Planner",
         }]
 
         with patch.object(page, "list_sessions", lambda: summaries),              patch.object(page, "load_session_record", lambda summary: True):
