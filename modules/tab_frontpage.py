@@ -130,49 +130,60 @@ def render():
     # ------------------------------------------------------------------
     # 3. Next best action + current signal
     # ------------------------------------------------------------------
-    left, right = st.columns([1.25, 1], gap="large")
+    left, right = st.columns([1, 1], gap="medium")
 
     with left:
         with st.container(border=True):
             st.markdown('<div class="surm-panel-kicker">NEXT ACTION</div>', unsafe_allow_html=True)
             if next_stage.complete:
-                st.success("Core workflow complete.")
-                st.write("Review the PRA Output and confirm the study is ready for governance.")
-                if st.button(
-                    "Review PRA Output →",
-                    key="overview_continue",
-                    type="primary",
-                    use_container_width=True,
-                ):
-                    st.session_state["current_page"] = "📄 PRA Output"
-                    st.rerun()
+                st.markdown("### Core workflow complete")
+                st.caption("The study is ready for final PRA review and governance confirmation.")
+                action_page = "📄 PRA Output"
+                action_label = "Review PRA Output →"
             else:
-                st.markdown(f"### Continue with {next_stage.label}")
-                st.write(next_stage.guidance)
-                if st.button(
-                    f"Continue to {next_stage.label.split(' ', 1)[-1]} →",
-                    key="overview_continue",
-                    type="primary",
-                    use_container_width=True,
-                ):
-                    st.session_state["current_page"] = next_stage.label
-                    st.rerun()
-
-            if warnings:
-                st.markdown("#### Needs attention")
-                for warning in warnings[:3]:
-                    st.warning(warning["message"])
+                st.markdown(
+                    f"### {html.escape(next_stage.label.split(' ', 1)[-1])}"
+                )
+                st.caption(next_stage.guidance)
+                action_page = next_stage.label
+                action_label = f"Continue →"
+            if st.button(
+                action_label,
+                key="overview_continue",
+                type="primary",
+                use_container_width=True,
+            ):
+                st.session_state["current_page"] = action_page
+                st.rerun()
 
     with right:
         with st.container(border=True):
             st.markdown('<div class="surm-panel-kicker">CURRENT SIGNAL</div>', unsafe_allow_html=True)
             critical = analytics.get("critical_uncertainties", [])
             if critical:
-                for item in critical[:4]:
-                    st.markdown(f"• {item}")
+                st.markdown(
+                    '<div class="surm-signal-list">' +
+                    "".join(
+                        f'<div class="surm-signal-item">• {html.escape(str(item))}</div>'
+                        for item in critical[:3]
+                    ) +
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
             else:
                 st.caption("No ranked key uncertainties yet.")
             st.progress(progress / 100, text=f"{progress}% of core workflow complete")
+
+    if warnings:
+        with st.container(border=True):
+            st.markdown('<div class="surm-panel-kicker">ATTENTION</div>', unsafe_allow_html=True)
+            warning_cols = st.columns(min(3, len(warnings)), gap="small")
+            for col, warning in zip(warning_cols, warnings[:3]):
+                with col:
+                    st.markdown(
+                        f'<div class="surm-attention-item">{html.escape(str(warning["message"]))}</div>',
+                        unsafe_allow_html=True,
+                    )
 
     # ------------------------------------------------------------------
     # 4. Study setup — the first data-entry destination on a new study.
