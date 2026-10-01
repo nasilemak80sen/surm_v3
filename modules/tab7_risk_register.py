@@ -291,7 +291,7 @@ def render():
                             "Owner",
                             options=owner_options,
                             width="medium",
-                            help="Team members plus owners already assigned in the Resolution Planner.",
+                            help="Pre-filled from the linked Resolution Planner owner. You can change the owner here to override it.",
                         ),
                         "Contingency Plan": st.column_config.SelectboxColumn(
                             "Contingency",
