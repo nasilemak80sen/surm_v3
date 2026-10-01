@@ -317,9 +317,18 @@ window.addEventListener("error", event => {
             before_auto_preventive_count = page.locator(
                 '[data-kind="preventativeBarrier"]'
             ).count()
-            before_auto_preventive_names = page.locator(
-                '#objects button'
-            ).all_inner_texts()
+            before_auto_document = page.evaluate(
+                """() => ({
+                    preventive: Array.from(
+                        document.querySelectorAll(
+                            '[data-kind="preventativeBarrier"] .barrier-label'
+                        )
+                    ).map(node => node.textContent),
+                    objects: Array.from(
+                        document.querySelectorAll('#objects button')
+                    ).map(node => node.textContent)
+                })"""
+            )
 
             page.locator("#auto").click()
             page.wait_for_timeout(50)
@@ -338,6 +347,10 @@ window.addEventListener("error", event => {
             assert auto_documents
             auto_document = auto_documents[-1]
             assert len(auto_document["preventativeBarriers"]) == before_auto_preventive_count
+            assert len(auto_document["library"]["preventativeBarrier"]) == before_auto_preventive_count
+            assert [node["name"] for node in auto_document["library"]["preventativeBarrier"]] == [
+                "Preventive Barrier"
+            ]
             assert float(
                 page.locator(
                     '[data-kind="preventativeBarrier"][data-id="PREVENTIVE-PLACEMENT-1"]'
