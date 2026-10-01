@@ -183,19 +183,13 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     timeout=10_000,
                 )
 
-                # Navigate using the contextual sidebar journey.
+                # Navigate using the task-oriented sidebar journey.
                 sidebar = page.locator('[data-testid="stSidebar"]')
                 area_switcher = sidebar.locator(
                     '[data-testid="stSegmentedControl"]'
                 )
                 expect(area_switcher).to_have_count(1)
                 expect(area_switcher).to_be_visible(timeout=10_000)
-                expect(
-                    sidebar.get_by_text("Study", exact=True)
-                ).to_be_visible(timeout=10_000)
-                expect(
-                    sidebar.get_by_text("Workflow", exact=True)
-                ).to_be_visible(timeout=10_000)
 
                 print(
                     "Sidebar geometry:",
@@ -205,15 +199,16 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                             const navigation = sidebar
                                 ? sidebar.querySelector('.st-key-sidebar-navigation')
                                 : null;
-                            const selector = navigation
-                                ? navigation.querySelector('[data-testid="stRadio"]')
-                                : null;
-                            const rect = selector ? selector.getBoundingClientRect() : null;
+                            const buttons = navigation
+                                ? navigation.querySelectorAll('button')
+                                : [];
+                            const rect = navigation ? navigation.getBoundingClientRect() : null;
                             return {
                                 viewport: {width: window.innerWidth, height: window.innerHeight},
                                 navigation: rect ? {
                                     x: rect.x, y: rect.y, width: rect.width, height: rect.height,
                                 } : null,
+                                navigationButtonCount: buttons.length,
                                 sidebar: sidebar ? (() => {
                                     const r = sidebar.getBoundingClientRect();
                                     const style = getComputedStyle(sidebar);
@@ -231,35 +226,30 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     ),
                 )
 
-                sidebar.get_by_text("Study", exact=True).click()
-                _wait_for_idle(page)
-                expect(
-                    sidebar.get_by_text("Repository", exact=True)
-                ).to_be_visible(timeout=10_000)
-                expect(
-                    sidebar.get_by_text("Overview", exact=True)
-                ).to_be_visible(timeout=10_000)
-
-                sidebar.get_by_text("Team", exact=True).click()
+                # Study area: direct destination buttons are visible and actionable.
+                sidebar.get_by_role("button", name="Team · OPEN").click()
                 _wait_for_idle(page)
                 _assert_shell(page)
                 expect(
                     page.get_by_text("Team", exact=True).first
                 ).to_be_visible(timeout=10_000)
 
+                # Workflow area: stages expose their real completion/availability state.
                 sidebar = page.locator('[data-testid="stSidebar"]')
-                sidebar.get_by_text("Workflow", exact=True).click()
+                sidebar.get_by_role("button", name="Workflow", exact=True).click()
                 _wait_for_idle(page)
                 expect(
-                    sidebar.get_by_text(re.compile(r"01.*Uncertainties"))
-                ).to_be_visible(timeout=10_000)
-                expect(
-                    sidebar.get_by_text(re.compile(r"07.*Risk Register"))
-                ).to_be_visible(timeout=10_000)
+                    sidebar.get_by_role(
+                        "button",
+                        name=re.compile(r"01.*Uncertainties.*(READY|CURRENT)"),
+                    )
+                ).to_have_count(1)
 
-                sidebar.get_by_text(
-                    re.compile(r"01.*Uncertainties")
-                ).click()
+                uncertainties_button = sidebar.get_by_role(
+                    "button",
+                    name=re.compile(r"01.*Uncertainties.*(READY|CURRENT)"),
+                )
+                uncertainties_button.click()
                 _wait_for_idle(page)
                 _assert_shell(page)
                 expect(
@@ -269,10 +259,15 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     page.get_by_text("Selection Summary", exact=False)
                 ).to_be_visible(timeout=10_000)
 
+                # Return to Study and verify the Overview destination remains
+                # available after workflow navigation.
                 sidebar = page.locator('[data-testid="stSidebar"]')
-                sidebar.get_by_text("Study", exact=True).click()
+                sidebar.get_by_role("button", name="Study", exact=True).click()
                 _wait_for_idle(page)
-                sidebar.get_by_text("Overview", exact=True).click()
+                sidebar.get_by_role(
+                    "button",
+                    name=re.compile(r"Overview.*(OPEN|CURRENT)"),
+                ).click()
                 _wait_for_idle(page)
                 _assert_overview_ui(page)
 
