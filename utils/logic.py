@@ -289,12 +289,13 @@ def build_resolution_planner(
     return pd.DataFrame(rows)
 
 
-def _all_known_risks() -> list[str]:
+def _all_known_risks(session: dict[str, Any] | None = None) -> list[str]:
     """Return master risks plus risks introduced by custom uncertainties."""
-    mapping_risks = list(st.session_state["_mapping"].get("risks", []))
+    source = session if session is not None else dict(st.session_state)
+    mapping_risks = list(source.get("_mapping", {}).get("risks", []))
     custom_risks = [
         risk
-        for uncertainty in st.session_state.get("uncertainties", [])
+        for uncertainty in source.get("uncertainties", [])
         if isinstance(uncertainty, dict)
         for risk in uncertainty.get("risks", [])
     ]
@@ -376,7 +377,7 @@ def build_risk_register(
             ]
 
     rows = []
-    for risk_index, risk in enumerate(_all_known_risks(), start=1):
+    for risk_index, risk in enumerate(_all_known_risks(source), start=1):
         linked_uncertainties: list[str] = []
 
         for _, row in key_unc_df.iterrows():
@@ -439,7 +440,8 @@ def build_risk_register(
                 if unique_resolutions
                 else ""
             ),
-            "Action Owner": existing_row.get("Action Owner", ""),
+            "Action Owner": default_owner,
+            "Action Owner Source": owner_source,
             "Contingency Plan": existing_row.get("Contingency Plan", ""),
             "Impact/Consequence": existing_row.get("Impact/Consequence", ""),
             "Likelihood (H/M/L)": likelihood,
