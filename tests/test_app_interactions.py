@@ -461,6 +461,46 @@ def test_planner_status_counts_handles_workplan_rows():
     assert int(counts["Workplan actions"].sum()) == 3
 
 
+def test_resolution_planner_uses_native_date_picker_and_target_completion_label():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "modules/tab6_resolution_planner.py").read_text(encoding="utf-8")
+
+    assert '"Start Date": st.column_config.DateColumn(' in source
+    assert '"Required Completion": st.column_config.DateColumn(' in source
+    assert 'format="DD/MM/YYYY"' in source
+    assert '"Target Completion Date"' in source
+
+
+def test_resolution_planner_normalizes_calendar_dates_back_to_study_format():
+    from datetime import date
+    from modules import tab6_resolution_planner as page
+
+    prepared = page._prepare_planner_draft([{
+        "Resolution Action": "Test action",
+        "Duration (months)": 3,
+        "Progress (0-1)": 0.50,
+        "Start Date": "05/10/2026",
+        "Required Completion": "31/12/2026",
+        "Part of Workplan": True,
+    }])
+
+    assert str(prepared.loc[0, "Start Date"])[:10] == "2026-10-05"
+    assert str(prepared.loc[0, "Required Completion"])[:10] == "2026-12-31"
+
+    normalized = page._normalize_planner_draft([{
+        "Resolution Action": "Test action",
+        "Duration (months)": 3,
+        "Progress (%)": 75,
+        "Start Date": date(2026, 10, 5),
+        "Required Completion": date(2026, 12, 31),
+        "Part of Workplan": True,
+    }])
+
+    assert normalized[0]["Start Date"] == "05/10/2026"
+    assert normalized[0]["Required Completion"] == "31/12/2026"
+    assert normalized[0]["Progress (0-1)"] == 0.75
+
+
 def test_live_gantt_builds_from_unsaved_workplan_draft():
     from modules import tab6_resolution_planner as page
 
