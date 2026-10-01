@@ -79,8 +79,14 @@ def test_unchanged_risk_source_does_not_recreate_removed_generated_barrier():
     current = ensure_bowtie_register(
         [row],
         current={},
-        uncertainties=[],
-        resolution_list={},
+        uncertainties=[
+            {"uncertainty_id": "UNC-003", "name": "Reservoir continuity", "risks": ["Poor reservoir connectivity"]},
+            {"uncertainty_id": "UNC-007", "name": "Fault properties", "risks": ["Poor reservoir connectivity"]},
+        ],
+        resolution_list={
+            "Reservoir continuity": {"Fault Seal Analysis": "Y", "Integrated Reservoir Connectivity Studies": "Y"},
+            "Fault properties": {"Fault Seal Analysis": "Y", "Integrated Reservoir Connectivity Studies": "Y"},
+        },
         resolution_planner=[],
     )["RSK-001"]
 
