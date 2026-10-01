@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 import html
 import streamlit as st
+from streamlit_extras.grid import grid
 
 from utils.analytics import build_study_analytics, validation_warnings
 from utils.assurance import LIFECYCLE_ORDER
@@ -38,10 +39,14 @@ def _parse_signoff_date(value: str) -> date | None:
 
 
 def render():
-    """Render the study dashboard with a clear setup → progress → governance hierarchy."""
+    """Render the Overview as a disciplined study control center."""
     ss = st.session_state
     stages = stage_results(ss)
-    progress = round(sum(stage.complete for stage in stages) / len(stages) * 100) if stages else 0
+    progress = (
+        round(sum(stage.complete for stage in stages) / len(stages) * 100)
+        if stages
+        else 0
+    )
     next_stage = current_stage(ss)
     analytics = build_study_analytics(dict(ss))
     warnings = validation_warnings(dict(ss))
@@ -49,62 +54,116 @@ def render():
     project = ss.get("project_name") or "Untitled Study"
     field = ss.get("field_name") or "Field not configured"
     phase = ss.get("project_phase") or "Phase not configured"
-    lifecycle = ss.get("study_lifecycle", "Draft")
+    lifecycle = str(ss.get("study_lifecycle", "Draft") or "Draft")
+    revision = ss.get("study_revision", 0)
+
+    workflow_counts = {
+        "completed": sum(1 for stage in stages if stage.complete),
+        "total": len(stages),
+    }
+
+    signoffs = [
+        ("Prepared By", "prep"),
+        ("Reviewed — G&G", "rev_gg"),
+        ("Reviewed — RE", "rev_re"),
+        ("Reviewed — PP", "rev_pp"),
+        ("Endorsed — FDP Lead", "endorsed"),
+    ]
+    signoff_complete = 0
+    for _, key in signoffs:
+        if (
+            str(ss.get(f"{key}_name", "") or "").strip()
+            and str(ss.get(f"{key}_role", "") or "").strip()
+            and str(ss.get(f"{key}_date", "") or "").strip()
+        ):
+            signoff_complete += 1
 
     # ------------------------------------------------------------------
-    # 1. Identity banner
+    # 1. Study identity — compact, high-signal introduction.
+    # ------------------------------------------------------------------
+    with st.container(key="overview-hero", border=False):
+        st.markdown(
+            f"""
+            <div class="overview-hero-inner">
+                <div class="overview-hero-kicker">STUDY CONTROL CENTER</div>
+                <div class="overview-hero-title">{html.escape(project)}</div>
+                <div class="overview-hero-meta">
+                    <span>{html.escape(field)}</span>
+                    <span>{html.escape(phase)}</span>
+                    <span>Revision {html.escape(str(revision))}</span>
+                    <span>{html.escape(lifecycle)}</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Executive snapshot — equal-weight KPIs.
     # ------------------------------------------------------------------
     st.markdown(
-        f"""
-        <div class="overview-cover">
-            <div class="overview-cover-kicker">SURM STUDY</div>
-            <div class="overview-cover-title">{html.escape(project)}</div>
-            <div class="overview-cover-meta">
-                {html.escape(field)} · {html.escape(phase)} ·
-                Revision {ss.get("study_revision", 0)} · {html.escape(lifecycle)}
-            </div>
-        </div>
-        """,
+        '<div class="surm-overview-section-label">EXECUTIVE SNAPSHOT</div>',
         unsafe_allow_html=True,
     )
 
-    # ------------------------------------------------------------------
-    # 2. Executive glance
-    # ------------------------------------------------------------------
-    st.markdown('<div class="surm-overview-section-label">AT A GLANCE</div>', unsafe_allow_html=True)
-    metric_cols = st.columns(4)
-    metric_cols[0].metric(
-        "Study progress",
+    metric_grid = grid(4, gap="medium", vertical_align="top")
+    metric_grid.metric(
+        "Workflow",
         f"{progress}%",
-        help="Completion is based on the authoritative workflow gates.",
+        delta=f"{workflow_counts['completed']} of {workflow_counts['total']} gates",
     )
-    metric_cols[1].metric(
-        "Uncertainties",
-        sum(1 for x in ss.get("uncertainties", []) if isinstance(x, dict) and x.get("selected")),
+    metric_grid.metric(
+        "Selected uncertainties",
+        sum(
+            1
+            for item in ss.get("uncertainties", [])
+            if isinstance(item, dict) and item.get("selected")
+        ),
     )
-    metric_cols[2].metric("Resolution actions", len(ss.get("resolution_planner", [])))
-    metric_cols[3].metric("Risks", len(ss.get("risk_register", [])))
+    metric_grid.metric(
+        "Resolution actions",
+        len(ss.get("resolution_planner", [])),
+    )
+    metric_grid.metric(
+        "Risks",
+        len(ss.get("risk_register", [])),
+    )
 
     # ------------------------------------------------------------------
-    # 3. Next best action + current signal
+    # 3. Decision support — action gets slightly more width than signal.
     # ------------------------------------------------------------------
-    left, right = st.columns([1, 1], gap="medium")
+    action_col, signal_col = st.columns([1.2, 1], gap="large")
 
-    with left:
-        with st.container(border=True):
-            st.markdown('<div class="surm-panel-kicker">NEXT ACTION</div>', unsafe_allow_html=True)
+    with action_col:
+        with st.container(key="overview-next-action", border=True):
+            st.markdown(
+                '<div class="surm-panel-kicker">NEXT ACTION</div>',
+                unsafe_allow_html=True,
+            )
+
             if next_stage.complete:
-                st.markdown("### Core workflow complete")
-                st.caption("The study is ready for final PRA review and governance confirmation.")
-                action_page = "📄 PRA Output"
-                action_label = "Review PRA Output →"
-            else:
-                st.markdown(
-                    f"### {html.escape(next_stage.label.split(' ', 1)[-1])}"
+                action_title = "Core workflow complete"
+                action_copy = (
+                    "Review the PRA output and confirm the remaining governance "
+                    "checkpoints."
                 )
-                st.caption(next_stage.guidance)
+                action_page = "📄 PRA Output"
+                action_label = "Open PRA Output"
+            else:
+                action_title = next_stage.label.split(" ", 1)[-1]
+                action_copy = next_stage.guidance
                 action_page = next_stage.label
-                action_label = f"Continue →"
+                action_label = "Continue to next gate"
+
+            st.markdown(
+                f'<div class="overview-action-stage">{html.escape(action_title)}</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<div class="overview-action-copy">{html.escape(action_copy)}</div>',
+                unsafe_allow_html=True,
+            )
+
             if st.button(
                 action_label,
                 key="overview_continue",
@@ -114,159 +173,238 @@ def render():
                 st.session_state["current_page"] = action_page
                 st.rerun()
 
-    with right:
-        with st.container(border=True):
-            st.markdown('<div class="surm-panel-kicker">CURRENT SIGNAL</div>', unsafe_allow_html=True)
+    with signal_col:
+        with st.container(key="overview-current-signal", border=True):
+            st.markdown(
+                '<div class="surm-panel-kicker">CURRENT SIGNAL</div>',
+                unsafe_allow_html=True,
+            )
+
             critical = analytics.get("critical_uncertainties", [])
             if critical:
                 st.markdown(
-                    '<div class="surm-signal-list">' +
-                    "".join(
-                        f'<div class="surm-signal-item">• {html.escape(str(item))}</div>'
-                        for item in critical[:3]
-                    ) +
-                    '</div>',
+                    '<div class="overview-signal-stack">'
+                    + "".join(
+                        f"""
+                        <div class="overview-signal-row">
+                            <span class="overview-signal-index">{idx:02d}</span>
+                            <span>{html.escape(str(item))}</span>
+                        </div>
+                        """
+                        for idx, item in enumerate(critical[:3], start=1)
+                    )
+                    + "</div>",
                     unsafe_allow_html=True,
                 )
             else:
-                st.caption("No ranked key uncertainties yet.")
-            st.progress(progress / 100, text=f"{progress}% of core workflow complete")
+                st.markdown(
+                    '<div class="overview-empty-signal">'
+                    "No ranked key uncertainties yet."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
 
+            st.progress(
+                progress / 100,
+                text=f"{progress}% workflow complete",
+            )
+
+    # ------------------------------------------------------------------
+    # 4. Attention — only appears when there is something actionable.
+    # ------------------------------------------------------------------
     if warnings:
-        with st.container(border=True):
-            st.markdown('<div class="surm-panel-kicker">ATTENTION</div>', unsafe_allow_html=True)
-            warning_cols = st.columns(min(3, len(warnings)), gap="small")
-            for col, warning in zip(warning_cols, warnings[:3]):
-                with col:
-                    st.markdown(
-                        f'<div class="surm-attention-item">{html.escape(str(warning["message"]))}</div>',
-                        unsafe_allow_html=True,
-                    )
+        with st.container(key="overview-attention", border=True):
+            st.markdown(
+                '<div class="surm-panel-kicker">ATTENTION</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                "".join(
+                    f"""
+                    <div class="overview-attention-row">
+                        <span class="overview-attention-marker">!</span>
+                        <span>{html.escape(str(warning["message"]))}</span>
+                    </div>
+                    """
+                    for warning in warnings[:4]
+                ),
+                unsafe_allow_html=True,
+            )
 
     # ------------------------------------------------------------------
-    # 4. Study setup — the first data-entry destination on a new study.
+    # 5. Study setup — one clean row of identity/governance fields.
     # ------------------------------------------------------------------
-    with st.container(border=True):
+    with st.container(key="overview-study-setup", border=True):
         st.markdown("### Study setup")
-        render_save_hint(
-            "Identity and governance fields are session drafts. Save the study when the details are ready to persist."
+        st.caption(
+            "Study identity is editable here. Lifecycle transitions are recorded "
+            "through Assurance & Review."
         )
 
-        c1, c2, c3, c4 = st.columns([1.15, 1.15, 0.8, 0.9], gap="medium")
         _ensure_widget_value("project_name_input", "project_name")
         _ensure_widget_value("field_name_input", "field_name")
         _ensure_widget_value("project_phase_input", "project_phase")
 
-        with c1:
-            st.text_input(
-                "Project Name",
-                key="project_name_input",
-                placeholder="e.g. Ledang FDP",
-                on_change=_sync_widget_value,
-                args=("project_name", "project_name_input"),
-            )
-        with c2:
-            st.text_input(
-                "Field Name",
-                key="field_name_input",
-                placeholder="e.g. Ledang",
-                on_change=_sync_widget_value,
-                args=("field_name", "field_name_input"),
-            )
-        with c3:
-            st.selectbox(
-                "Project Phase",
-                _PHASES,
-                key="project_phase_input",
-                on_change=_sync_widget_value,
-                args=("project_phase", "project_phase_input"),
-            )
-        with c4:
-            lifecycle_value = str(ss.get("study_lifecycle", "Draft") or "Draft")
-            if lifecycle_value not in LIFECYCLE_ORDER:
-                lifecycle_value = "Draft"
-            ss["study_lifecycle_input"] = lifecycle_value
-            st.selectbox(
-                "Study Lifecycle",
-                LIFECYCLE_ORDER,
-                index=LIFECYCLE_ORDER.index(lifecycle_value),
-                key="study_lifecycle_input",
-                disabled=True,
-                help="Lifecycle transitions are recorded through Assurance & Review.",
-            )
+        setup_grid = grid(
+            [1.5, 1.4, 0.9, 1.0],
+            gap="medium",
+            vertical_align="top",
+        )
+        setup_grid.text_input(
+            "Project Name",
+            key="project_name_input",
+            placeholder="e.g. Ledang FDP",
+            on_change=_sync_widget_value,
+            args=("project_name", "project_name_input"),
+        )
+        setup_grid.text_input(
+            "Field Name",
+            key="field_name_input",
+            placeholder="e.g. Ledang",
+            on_change=_sync_widget_value,
+            args=("field_name", "field_name_input"),
+        )
+        setup_grid.selectbox(
+            "Project Phase",
+            _PHASES,
+            key="project_phase_input",
+            on_change=_sync_widget_value,
+            args=("project_phase", "project_phase_input"),
+        )
 
-        save_col, clear_col, revision_col = st.columns([1.15, 1.1, 0.9], gap="small")
-        with save_col:
-            if st.button("Save study", type="primary", key="fp_save", use_container_width=True):
-                if not ss.get("project_name", "").strip():
-                    st.warning("Enter a Project Name before saving.")
-                elif save_session(auto=False):
-                    st.success("Saved.")
-                else:
-                    st.error("Save failed.")
-        with clear_col:
-            if st.button("Clear details", key="clear_study_details", use_container_width=True):
-                for key, widget_key in (
-                    ("project_name", "project_name_input"),
-                    ("field_name", "field_name_input"),
-                    ("project_phase", "project_phase_input"),
-                ):
-                    ss[key] = ""
-                    ss[widget_key] = ""
-                st.rerun()
-        with revision_col:
-            st.caption("Study revision")
-            st.markdown(f"**Revision {ss.get('study_revision', 0)}**")
+        lifecycle_value = lifecycle if lifecycle in LIFECYCLE_ORDER else "Draft"
+        ss["study_lifecycle_input"] = lifecycle_value
+        setup_grid.selectbox(
+            "Study Lifecycle",
+            LIFECYCLE_ORDER,
+            index=LIFECYCLE_ORDER.index(lifecycle_value),
+            key="study_lifecycle_input",
+            disabled=True,
+            help="Lifecycle transitions are controlled by Assurance & Review.",
+        )
+
+        action_grid = grid(
+            [1.05, 1.05, 0.85, 2.45],
+            gap="small",
+            vertical_align="center",
+        )
+        save_clicked = action_grid.button(
+            "Save study",
+            key="fp_save",
+            type="primary",
+            use_container_width=True,
+        )
+        clear_clicked = action_grid.button(
+            "Clear details",
+            key="clear_study_details",
+            use_container_width=True,
+        )
+        action_grid.markdown(
+            f'<div class="overview-revision"><span>REVISION</span>'
+            f'<strong>{html.escape(str(revision))}</strong></div>',
+            unsafe_allow_html=True,
+        )
+        action_grid.caption("Changes remain session drafts until saved.")
+
+        if save_clicked:
+            if not ss.get("project_name", "").strip():
+                st.warning("Enter a Project Name before saving.")
+            elif save_session(auto=False):
+                st.success("Study saved.")
+            else:
+                st.error("Save failed.")
+
+        if clear_clicked:
+            for key, widget_key in (
+                ("project_name", "project_name_input"),
+                ("field_name", "field_name_input"),
+                ("project_phase", "project_phase_input"),
+            ):
+                ss[key] = ""
+                ss[widget_key] = ""
+            st.rerun()
 
     # ------------------------------------------------------------------
-    # 5. Workflow progress
+    # 6. Workflow progress — compact gate map, not a second dashboard.
     # ------------------------------------------------------------------
-    with st.container(border=True):
+    with st.container(key="overview-workflow", border=True):
         st.markdown("### Workflow progress")
-        st.caption("The sequence below mirrors the authoritative workflow gates.")
+        st.caption("Seven core gates drive the authoritative completion percentage.")
 
-        for row_start in range(0, len(stages), 4):
-            row_cols = st.columns(4, gap="medium")
-            for col, stage in zip(row_cols, stages[row_start:row_start + 4]):
-                state = "Complete" if stage.complete else ("Ready" if stage.available else "Locked")
-                icon = "✓" if stage.complete else ("•" if stage.available else "🔒")
-                col.markdown(f"**{icon} {stage.label}**")
-                col.caption(state)
+        workflow_grid = grid(
+            4,
+            gap="medium",
+            vertical_align="top",
+        )
+        for stage in stages:
+            state = (
+                "Complete"
+                if stage.complete
+                else ("Ready" if stage.available else "Locked")
+            )
+            icon = "✓" if stage.complete else ("•" if stage.available else "—")
+            workflow_grid.markdown(
+                f"""
+                <div class="overview-workflow-item">
+                    <div class="overview-workflow-label">
+                        <span class="overview-workflow-icon">{icon}</span>
+                        <span>{html.escape(stage.label)}</span>
+                    </div>
+                    <div class="overview-workflow-state">{state}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         st.progress(progress / 100, text=f"{progress}% complete")
 
     # ------------------------------------------------------------------
-    # 6. Governance & sign-off — compact review record.
+    # 7. Governance & sign-off — explicit checkpoints with a completion count.
     # ------------------------------------------------------------------
-    with st.container(border=True):
-        st.markdown("### Governance & sign-off")
-        render_save_hint(
-            "Sign-off details remain session drafts until you save the study."
-        )
-        st.caption("Record the responsible person, designation and review date for each governance checkpoint.")
+    with st.container(key="overview-governance", border=True):
+        governance_head = st.columns([1.35, 0.65], gap="medium")
+        with governance_head[0]:
+            st.markdown("### Governance & sign-off")
+            st.caption(
+                "Record the responsible person, designation and date for each checkpoint."
+            )
+        with governance_head[1]:
+            st.markdown(
+                f"""
+                <div class="overview-signoff-summary">
+                    <span>SIGN-OFF</span>
+                    <strong>{signoff_complete}/{len(signoffs)}</strong>
+                    <small>checkpoints recorded</small>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-        header = st.columns([1.25, 1.35, 1.35, 0.95], gap="small")
+        header = st.columns(
+            [1.25, 1.35, 1.35, 0.95],
+            gap="small",
+        )
         header[0].markdown("**CHECKPOINT**")
         header[1].markdown("**NAME**")
         header[2].markdown("**ROLE / DESIGNATION**")
         header[3].markdown("**DATE**")
 
-        signoffs = [
-            ("Prepared By", "prep"),
-            ("Reviewed — G&G", "rev_gg"),
-            ("Reviewed — RE", "rev_re"),
-            ("Reviewed — PP", "rev_pp"),
-            ("Endorsed — FDP Lead", "endorsed"),
-        ]
-        for row_index, (label, key) in enumerate(signoffs):
-            cols = st.columns([1.25, 1.35, 1.35, 0.95], gap="small")
+        for label, key in signoffs:
+            cols = st.columns(
+                [1.25, 1.35, 1.35, 0.95],
+                gap="small",
+            )
             cols[0].markdown(
-                f'<div class="surm-signoff-checkpoint">{html.escape(label)}</div>',
+                f'<div class="surm-signoff-checkpoint">'
+                f'{html.escape(label)}</div>',
                 unsafe_allow_html=True,
             )
+
             name_widget_key = f"{key}_name_input"
             role_widget_key = f"{key}_role_input"
-            date_widget_key = f"{key}_date_picker_{ss.get('study_id', 'new')}"
+            date_widget_key = (
+                f"{key}_date_picker_{ss.get('study_id', 'new')}"
+            )
             _ensure_widget_value(name_widget_key, f"{key}_name")
             _ensure_widget_value(role_widget_key, f"{key}_role")
 
@@ -299,10 +437,12 @@ def render():
                     key=date_widget_key,
                     label_visibility="collapsed",
                 )
-                ss[f"{key}_date"] = value.strftime("%d/%m/%Y") if value else ""
+                ss[f"{key}_date"] = (
+                    value.strftime("%d/%m/%Y") if value else ""
+                )
 
     # ------------------------------------------------------------------
-    # 7. Developer controls remain hidden until explicitly requested.
+    # 8. Developer controls remain hidden until explicitly requested.
     # ------------------------------------------------------------------
     with st.expander("Developer tools", expanded=False):
         if st.button("Load Demo Data", key="load_demo_data"):
@@ -325,7 +465,10 @@ def render():
             ]
             options = mapping.get("resolution_options", [])[:3]
             ss["resolution_list"] = {
-                u["name"]: {o: ("Y" if idx == 0 else "") for idx, o in enumerate(options)}
+                u["name"]: {
+                    o: ("Y" if idx == 0 else "")
+                    for idx, o in enumerate(options)
+                }
                 for u in ulist
             }
             ss["resolution_planner"] = []
