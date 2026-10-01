@@ -818,6 +818,34 @@ def test_surm_shell_integrity_is_not_truncated():
     assert len(source.splitlines()) >= 500
 
 
+def test_overview_uses_equal_action_signal_columns_and_study_setup_lifecycle():
+    from pathlib import Path
+
+    project_root = Path(__file__).resolve().parents[1]
+    source = (
+        project_root / "modules/tab_frontpage.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'st.columns([1, 1], gap="medium")' in source
+    assert 'st.columns([1.15, 1.15, 0.8, 0.9], gap="medium")' in source
+    assert 'key="study_lifecycle_input"' in source
+    assert 'with st.expander("Governance & sign-off"' not in source
+    assert '<div class="surm-panel-kicker">ATTENTION</div>' in source
+
+
+def test_bottom_pager_is_rendered_even_when_workflow_stage_is_locked():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    assert "blocked = False" in source
+    assert "blocked = True" in source
+    assert "render_page_pager(location="bottom")" in source
+    assert "return" not in source[
+        source.index("blocked = False"):
+        source.index("render_page_pager(location="bottom")")
+    ]
+
+
 def test_global_page_pager_covers_all_application_pages():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "surm.py").read_text(encoding="utf-8")
