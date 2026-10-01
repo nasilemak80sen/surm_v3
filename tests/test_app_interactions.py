@@ -12,11 +12,17 @@ def test_shell_uses_one_sidebar_navigation_surface():
     ast.parse(source)
     assert "def render_top_navigation" not in source
     assert "render_top_navigation()" not in source
-    assert "_build_sidebar_navigation" in source
+    assert 'st.selectbox(' in source
+    assert 'key="sidebar_page_selector"' in source
+    assert '"Navigate"' in source
+    assert "_build_sidebar_navigation" not in source
+    assert "_sidebar_nav_item" not in source
     assert "header_slot = st.empty()" not in source
-    assert 'with st.expander("Insights & governance", expanded=False)' in source
-    assert 'with st.expander("Session & export", expanded=False)' in source
-    assert 'with st.expander("Account & access", expanded=False)' in source
+    assert 'with st.expander("More", expanded=False)' in source
+    assert 'with st.expander("Insights & governance", expanded=False)' not in source
+    assert 'with st.expander("Session & export", expanded=False)' not in source
+    assert 'with st.expander("Account & access", expanded=False)' not in source
+    assert 'sidebar_nav_' not in source
 
 
 def test_overview_does_not_duplicate_repository_or_export():
