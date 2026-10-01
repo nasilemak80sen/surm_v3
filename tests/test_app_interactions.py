@@ -526,6 +526,30 @@ def test_resolution_planner_percentage_maps_back_to_canonical_fraction():
     assert normalized[0]["Duration (months)"] == 12
 
 
+def test_live_gantt_uses_current_percentage_draft_value():
+    from modules import tab6_resolution_planner as page
+
+    rows = [{
+        "Resolution Action": "Risk mitigation",
+        "Part of Workplan": True,
+        "Start Date": "01/10/2026",
+        "Duration (months)": 4,
+        "Progress (%)": 75,
+        "Progress (0-1)": 0.10,
+        "Action Owner": "Owner",
+        "Status": "In Progress",
+    }]
+
+    live_rows = page._normalize_planner_draft(rows)
+    assert live_rows[0]["Progress (0-1)"] == 0.75
+
+    figure, count, missing = page._build_live_gantt(live_rows)
+    assert figure is not None
+    assert count == 1
+    assert missing == []
+
+
+
 def test_risk_register_readiness_message_is_not_assessment_only():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "modules/tab7_risk_register.py").read_text(encoding="utf-8")
