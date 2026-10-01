@@ -226,6 +226,18 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     ),
                 )
 
+                nav_buttons = sidebar.locator(
+                    '.st-key-sidebar-navigation button'
+                )
+                expect(nav_buttons.count()).to_be_greater_than(0)
+                for i in range(nav_buttons.count()):
+                    box = nav_buttons.nth(i).bounding_box()
+                    assert box is not None, f"Sidebar navigation button {i} has no geometry."
+                    assert box["width"] > 120, box
+                    assert box["height"] >= 28, box
+                    assert box["x"] >= 0, box
+                    assert box["y"] >= 0, box
+
                 # Study area: direct destination buttons are visible and actionable.
                 sidebar.get_by_role("button", name="Team · OPEN").click()
                 _wait_for_idle(page)
