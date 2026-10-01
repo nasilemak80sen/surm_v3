@@ -2977,3 +2977,340 @@ section[data-testid="stSidebar"]::before {
 .stApp [role="progressbar"] {
     accent-color: var(--surm-console-glow);
 }
+
+
+/* ==========================================================================
+   SURM UX 4.0 — MATURE WORKSPACE SHELL
+   ========================================================================== */
+
+:root {
+    --surm-shell-dark: #10231B;
+    --surm-shell-dark-2: #173328;
+    --surm-shell-line: rgba(255,255,255,0.10);
+    --surm-shell-muted: rgba(228,240,233,0.64);
+    --surm-surface-strong: #FFFFFF;
+    --surm-surface-alt: #F3F6F4;
+}
+
+.stApp {
+    background:
+        linear-gradient(180deg, #F7F9F8 0%, #EFF3F1 100%);
+}
+
+.block-container {
+    max-width: 1360px;
+    padding-top: 1.15rem;
+    padding-bottom: 2.2rem;
+}
+
+/* Global header: quiet hierarchy, not a decorative hero. */
+.surm-header {
+    margin-bottom: 0.7rem;
+    padding: 0.95rem 1.1rem;
+    border-radius: 12px;
+    background: var(--surm-shell-dark);
+    border: 1px solid #233E32;
+    box-shadow: 0 5px 18px rgba(12, 37, 25, 0.08);
+}
+
+.surm-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 9px;
+    background: #193C2D;
+    border-color: #2E5D46;
+    box-shadow: none;
+}
+
+.surm-logo-core {
+    text-shadow: none;
+    font-size: 1.25rem;
+}
+
+.surm-header-pulse {
+    opacity: 0.75;
+}
+
+.surm-header-meta {
+    gap: 0.35rem;
+}
+
+.surm-meta-item {
+    min-width: 88px;
+    padding: 0.38rem 0.55rem;
+    border-radius: 7px;
+    background: rgba(255,255,255,0.045);
+    box-shadow: none;
+}
+
+.surm-meta-label {
+    font-size: 0.54rem;
+}
+
+.surm-meta-value {
+    font-size: 0.7rem;
+}
+
+/* Sidebar: one predictable reading order. */
+section[data-testid="stSidebar"] {
+    background: #0C1D16;
+    box-shadow: 5px 0 18px rgba(7, 23, 15, 0.08);
+}
+
+section[data-testid="stSidebar"]::before {
+    display: none;
+}
+
+.surm-sidebar-study-card {
+    margin-top: 0.2rem;
+    padding: 0.8rem 0.85rem;
+    border-radius: 10px;
+    background: #142A20;
+    border: 1px solid #234337;
+    box-shadow: none;
+}
+
+.surm-sidebar-study-card::after {
+    width: 2px;
+    background: #76D6A0;
+    box-shadow: none;
+}
+
+.surm-sidebar-study-kicker {
+    font-size: 0.55rem;
+    letter-spacing: 0.11em;
+}
+
+.surm-sidebar-study-title {
+    margin-top: 0.2rem;
+    font-size: 0.9rem;
+}
+
+.surm-sidebar-study-meta {
+    margin-top: 0.12rem;
+    font-size: 0.66rem;
+}
+
+.surm-sidebar-study-chips {
+    gap: 0.2rem;
+    margin-top: 0.45rem;
+}
+
+.surm-sidebar-study-chips span {
+    min-height: 1.35rem;
+    padding: 0.16rem 0.38rem;
+    background: rgba(255,255,255,0.055);
+}
+
+section[data-testid="stSidebar"] .stProgress {
+    margin: 0.5rem 0 0.15rem;
+}
+
+section[data-testid="stSidebar"] .stProgress > div > div {
+    height: 5px;
+}
+
+/* Navigate becomes the single visible navigation group. */
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+    margin-top: 0.55rem;
+    margin-bottom: 0.45rem;
+    border: 1px solid #20392D;
+    border-radius: 9px;
+    background: #10251C;
+    box-shadow: none;
+}
+
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
+    padding: 0.5rem 0.65rem;
+    color: rgba(239,247,242,0.90);
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+section[data-testid="stSidebar"] [data-testid="stExpander"] details {
+    background: transparent;
+}
+
+.surm-sidebar-nav-group-title {
+    margin: 0.55rem 0 0.22rem;
+    color: rgba(201,224,211,0.42);
+    font-size: 0.52rem;
+    letter-spacing: 0.11em;
+}
+
+section[data-testid="stSidebar"] .stButton > button {
+    min-height: 2.02rem !important;
+    margin: 0.04rem 0 !important;
+    padding: 0.32rem 0.48rem !important;
+    border: 1px solid transparent !important;
+    border-radius: 7px !important;
+    background: transparent !important;
+    color: rgba(237,246,241,0.80) !important;
+    font-size: 0.69rem !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: #18372A !important;
+    border-color: #27513E !important;
+    color: #FFFFFF !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:focus-visible {
+    outline: 2px solid rgba(118,214,160,0.55);
+    outline-offset: 1px;
+}
+
+.surm-sidebar-nav-current {
+    min-height: 2.02rem;
+    margin: 0.04rem 0;
+    padding: 0.32rem 0.48rem;
+    border-radius: 7px;
+    background: #19372A;
+    border: 1px solid #2A5944;
+    box-shadow: inset 2px 0 0 #76D6A0;
+    color: #F4FFF8;
+}
+
+.surm-sidebar-nav-indicator {
+    width: 0.9rem;
+    flex-basis: 0.9rem;
+    color: #76D6A0;
+}
+
+.surm-sidebar-nav-label {
+    font-size: 0.69rem;
+}
+
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {
+    background: #FFFFFF !important;
+    border-color: #FFFFFF !important;
+    color: #153526 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
+    background: #EDF6F0 !important;
+    border-color: #EDF6F0 !important;
+}
+
+.surm-sidebar-divider {
+    margin: 0.65rem 0 0.5rem;
+    background: #20392D;
+}
+
+/* Compact action strip. */
+section[data-testid="stSidebar"] .surm-sidebar-divider + .surm-sidebar-nav-label {
+    margin-top: 0.45rem;
+}
+
+section[data-testid="stSidebar"] [data-testid="stCheckbox"] label {
+    font-size: 0.66rem;
+}
+
+/* Page pager: identical grammar everywhere. */
+.surm-page-pager {
+    min-height: 3.05rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0.38rem 0.7rem;
+    border: 1px solid #D9E2DD;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.80);
+    box-shadow: 0 2px 8px rgba(21, 50, 34, 0.03);
+    text-align: center;
+}
+
+.surm-page-pager-kicker {
+    color: #6C7B73;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.surm-page-pager-title {
+    margin-top: 0.06rem;
+    color: #18382A;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.surm-page-pager-meta {
+    margin-top: 0.04rem;
+    color: #84918B;
+    font-size: 0.57rem;
+}
+
+.surm-page-pager + div {
+    margin-bottom: 0.35rem;
+}
+
+/* Tone down the old "cyber console" glow while keeping the engineering feel. */
+.overview-cover {
+    padding: 1.1rem 1.2rem;
+    border-radius: 13px;
+    background: #16362A;
+    border-color: #28533F;
+    box-shadow: 0 6px 18px rgba(12, 44, 27, 0.08);
+}
+
+.overview-cover::after {
+    opacity: 0.07;
+}
+
+.overview-cover-title {
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+}
+
+.overview-cover-meta {
+    font-size: 0.68rem;
+}
+
+[data-testid="stMetric"] {
+    min-height: 84px;
+    padding: 0.68rem 0.72rem;
+    border-radius: 10px;
+    background: #FFFFFF;
+    box-shadow: 0 3px 10px rgba(18, 46, 32, 0.035);
+}
+
+[data-testid="stMetric"]::before {
+    width: 2px;
+    box-shadow: none;
+}
+
+.surm-form-header {
+    margin-bottom: 0.65rem;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+    background: #173529;
+    border-color: #28523E;
+    box-shadow: 0 5px 16px rgba(12, 44, 27, 0.065);
+}
+
+.surm-form-header::after {
+    opacity: 0.07;
+}
+
+.surm-stage-status {
+    padding: 0.42rem 0.62rem;
+    border-radius: 8px;
+    background: #FFFFFF;
+}
+
+/* Reduce accidental "card soup" in dense pages. */
+.surm-card,
+.surm-metric-card,
+.surm-progress-card,
+.surm-empty-state {
+    box-shadow: 0 2px 10px rgba(18, 46, 32, 0.035);
+}
+
+@media (max-width: 900px) {
+    .surm-page-pager {
+        min-height: 2.8rem;
+    }
+}
