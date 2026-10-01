@@ -118,6 +118,14 @@ def _parse_planner_date(value: object):
     return pd.to_datetime(text, dayfirst=True, errors="coerce")
 
 
+def _format_planner_date(value: object) -> str:
+    """Return canonical planner date storage as DD/MM/YYYY or blank."""
+    parsed = _parse_planner_date(value)
+    if pd.isna(parsed):
+        return ""
+    return parsed.strftime("%d/%m/%Y")
+
+
 def _prepare_planner_draft(rows: list[dict]) -> pd.DataFrame:
     """Build the user-facing draft table without changing canonical storage."""
     df = pd.DataFrame(rows)
@@ -142,6 +150,15 @@ def _prepare_planner_draft(rows: list[dict]) -> pd.DataFrame:
         .round()
         .astype(int)
     )
+
+    # Convert the stored DD/MM/YYYY strings into real date values so
+    # Streamlit can provide its native calendar picker inside data_editor.
+    for column in ("Start Date", "Required Completion"):
+        if column not in df.columns:
+            df[column] = pd.NaT
+        else:
+            df[column] = df[column].apply(_parse_planner_date)
+
     return df
 
 
@@ -155,6 +172,8 @@ def _normalize_planner_draft(rows: list[dict]) -> list[dict]:
 
         next_row["Duration (months)"] = max(0, min(12, int(round(months))))
         next_row["Progress (0-1)"] = max(0.0, min(1.0, progress_pct / 100.0))
+        for column in ("Start Date", "Required Completion"):
+            next_row[column] = _format_planner_date(next_row.get(column))
         next_row.pop("Progress (%)", None)
         normalized.append(next_row)
 
@@ -477,15 +496,17 @@ def render():
                     ),
                     "Resources": st.column_config.TextColumn("Resources"),
                     "Constraints": st.column_config.TextColumn("Constraints"),
-                    "Start Date": st.column_config.TextColumn(
+                    "Start Date": st.column_config.DateColumn(
                         "Start Date",
-                        help="DD/MM/YYYY",
-                        width="small",
+                        format="DD/MM/YYYY",
+                        width="medium",
+                        help="Select the workplan start date from the calendar.",
                     ),
-                    "Required Completion": st.column_config.TextColumn(
-                        "Completion",
-                        help="DD/MM/YYYY",
-                        width="small",
+                    "Required Completion": st.column_config.DateColumn(
+                        "Target Completion Date",
+                        format="DD/MM/YYYY",
+                        width="medium",
+                        help="Select the target completion date from the calendar.",
                     ),
                     "Progress (%)": st.column_config.NumberColumn(
                         "Progress",
