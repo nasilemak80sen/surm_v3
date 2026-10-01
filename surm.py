@@ -192,100 +192,8 @@ def _enable_edit_mode() -> None:
 # SIDEBAR
 # ============================================================================
 
-def _sidebar_nav_item(page: str, label: str, *, state: str = "available") -> None:
-    """Render one compact, clearly stateful sidebar navigation item."""
-    current_page = st.session_state.get("current_page")
-    if state == "current":
-        st.markdown(
-            f"""
-            <div class="surm-sidebar-nav-item surm-sidebar-nav-current">
-                <span class="surm-sidebar-nav-indicator">●</span>
-                <span class="surm-sidebar-nav-label">{html.escape(label)}</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        return
-
-    if state == "completed":
-        indicator = "✓"
-    elif state == "locked":
-        indicator = "🔒"
-    else:
-        indicator = "•"
-
-    disabled = state == "locked"
-    if st.button(
-        f"{indicator}  {label}",
-        key=f"sidebar_nav_{page}",
-        use_container_width=True,
-        disabled=disabled,
-        type="secondary",
-    ):
-        st.session_state["current_page"] = page
-        st.rerun()
-
-
-def _render_sidebar_nav_group(
-    title: str,
-    pages: list[tuple[str, str, str]],
-) -> None:
-    """Render a small labelled group of primary navigation destinations."""
-    st.markdown(
-        f'<div class="surm-sidebar-nav-group-title">{html.escape(title)}</div>',
-        unsafe_allow_html=True,
-    )
-    for page, label, state in pages:
-        _sidebar_nav_item(page, label, state=state)
-
-
-def _build_sidebar_navigation() -> dict[str, list[tuple[str, str, str]]]:
-    """Build grouped navigation while keeping workflow availability authoritative."""
-    session = cast(dict[str, Any], dict(st.session_state))
-    stage_map = {
-        page: stage
-        for page, stage in zip(WORKFLOW_PAGES, stage_results(session))
-    }
-    current_page = st.session_state.get("current_page")
-
-    def nav_state(page: str) -> str:
-        if page == current_page:
-            return "current"
-        stage = stage_map.get(page)
-        if stage is not None:
-            if stage.complete:
-                return "completed"
-            if not stage.available:
-                return "locked"
-        return "available"
-
-    def item(page: str, label: str) -> tuple[str, str, str]:
-        return page, label, nav_state(page)
-
-    return {
-        "Study": [
-            item("🗂️ Study Repository", "Study Repository"),
-            item("📋 Overview", "Overview"),
-            item("👥 Team", "Team"),
-        ],
-        "Workflow": [
-            item(page, page.split(" ", 1)[-1])
-            for page in WORKFLOW_PAGES
-        ],
-        "Insights & governance": [
-            item("📊 Intelligence", "Intelligence"),
-            item("🛡️ Barrier Management", "Barrier Management"),
-            item("✅ Assurance & Review", "Assurance & Review"),
-            item("🕘 Revision History", "Revision History"),
-        ],
-        "Support": [
-            item("📖 How to Use", "How to Use"),
-        ],
-    }
-
-
 def render_sidebar() -> None:
-    """Render a calm, task-oriented sidebar with one primary navigation system."""
+    """Render a compact engineering-workspace sidebar with one navigation control."""
     from utils.persistence import save_session
     from utils.export_excel import build_excel_export
 
@@ -310,16 +218,15 @@ def render_sidebar() -> None:
             unsafe_allow_html=True,
         )
 
-        # ------------------------------------------------------------------
-        # Study context — always visible because it anchors the user's place.
-        # ------------------------------------------------------------------
         field = str(ss.get("field_name", "") or "").strip()
         project = str(ss.get("project_name", "") or "").strip()
         phase = str(ss.get("project_phase", "") or "").strip()
         lifecycle = str(ss.get("study_lifecycle", "Draft") or "Draft").strip()
         access_mode = "Edit" if study_is_editable(session) else "View"
-        progress = stats["progress"]
 
+        # ------------------------------------------------------------------
+        # Current study
+        # ------------------------------------------------------------------
         st.markdown(
             f"""
             <div class="surm-sidebar-study-card">
@@ -336,53 +243,69 @@ def render_sidebar() -> None:
             unsafe_allow_html=True,
         )
 
+        progress = stats["progress"]
         st.progress(progress / 100, text=f"{progress}% workflow complete")
 
         # ------------------------------------------------------------------
-        # Primary navigation — one compact Navigate control.
+        # Primary navigation — intentionally one control.
         # ------------------------------------------------------------------
-        navigation = _build_sidebar_navigation()
+        current_page = st.session_state.get("current_page", "📋 Overview")
+        try:
+            current_index = NAVIGATION_ORDER.index(current_page)
+        except ValueError:
+            current_index = 0
 
-        with st.expander("Navigate", expanded=True):
-            st.markdown(
-                '<div class="surm-sidebar-nav-group-title">Study</div>',
-                unsafe_allow_html=True,
+        stage_map = {
+            page: stage
+            for page, stage in zip(
+                WORKFLOW_PAGES,
+                stage_results(session),
             )
-            for page, label, state in navigation["Study"]:
-                _sidebar_nav_item(page, label, state=state)
+        }
 
-            st.markdown(
-                '<div class="surm-sidebar-nav-group-title">Workflow</div>',
-                unsafe_allow_html=True,
-            )
-            for page, label, state in navigation["Workflow"]:
+        def navigation_label(page: str) -> str:
+            stage = stage_map.get(page)
+            if page == current_page:
+                marker = "●"
+            elif stage is not None and stage.complete:
+                marker = "✓"
+            elif stage is not None and not stage.available:
+                marker = "🔒"
+            else:
+                marker = "•"
+
+            label = page.split(" ", 1)[-1]
+            if page in WORKFLOW_PAGES:
                 step_no = WORKFLOW_PAGES.index(page) + 1
-                _sidebar_nav_item(page, f"{step_no:02d}  {label}", state=state)
+                label = f"{step_no:02d}  {label}"
+            return f"{marker}  {label}"
 
-            with st.expander("Insights & governance", expanded=False):
-                for page, label, state in navigation["Insights & governance"]:
-                    _sidebar_nav_item(page, label, state=state)
-
-            st.markdown(
-                '<div class="surm-sidebar-nav-group-title">Support</div>',
-                unsafe_allow_html=True,
-            )
-            for page, label, state in navigation["Support"]:
-                _sidebar_nav_item(page, label, state=state)
-
-        # ------------------------------------------------------------------
-        # Frequent study actions stay visible; secondary options are collapsed.
-        # ------------------------------------------------------------------
-        st.markdown('<div class="surm-sidebar-divider"></div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="surm-sidebar-nav-label">Study actions</div>',
-            unsafe_allow_html=True,
+        selected_page = st.selectbox(
+            "Navigate",
+            NAVIGATION_ORDER,
+            index=current_index,
+            key="sidebar_page_selector",
+            format_func=navigation_label,
+            help="Use one control to move anywhere in the study workspace.",
         )
 
-        action_col, new_col = st.columns([1.35, 1], gap="small")
+        if selected_page != current_page:
+            st.session_state["current_page"] = selected_page
+            st.rerun()
+
+        try:
+            position = NAVIGATION_ORDER.index(current_page) + 1
+        except ValueError:
+            position = 1
+        st.caption(f"Workspace page {position} of {len(NAVIGATION_ORDER)}")
+
+        # ------------------------------------------------------------------
+        # Primary study actions
+        # ------------------------------------------------------------------
+        action_col, new_col = st.columns(2, gap="small")
         with action_col:
             if st.button(
-                "💾 Save",
+                "💾 Save study",
                 key="sidebar_save_session",
                 use_container_width=True,
                 type="primary",
@@ -393,9 +316,10 @@ def render_sidebar() -> None:
                     st.success("Study saved.")
                 else:
                     st.error("Unable to save the study.")
+
         with new_col:
             if st.button(
-                "＋ New",
+                "＋ New study",
                 key="sidebar_new_study",
                 use_container_width=True,
                 type="secondary",
@@ -403,7 +327,14 @@ def render_sidebar() -> None:
                 create_new_study()
                 st.rerun()
 
-        with st.expander("Session & export", expanded=False):
+        # ------------------------------------------------------------------
+        # Secondary tools and access — one collapsed surface, no nested cards.
+        # ------------------------------------------------------------------
+        with st.expander("More", expanded=False):
+            st.markdown(
+                '<div class="surm-sidebar-section-label">SESSION</div>',
+                unsafe_allow_html=True,
+            )
             st.checkbox(
                 "Enable auto-save",
                 key="_auto_save_enabled",
@@ -420,9 +351,10 @@ def render_sidebar() -> None:
             if ss.get("_resume_message"):
                 st.success(ss["_resume_message"])
 
-            # Excel generation is intentionally explicit. The full workbook
-            # contains many styled sheets and should never block initial app
-            # rendering just because this expander is collapsed.
+            st.markdown(
+                '<div class="surm-sidebar-section-label">EXPORT</div>',
+                unsafe_allow_html=True,
+            )
             if st.button(
                 "⚙ Prepare Excel export",
                 key="prepare_excel_export",
@@ -456,7 +388,10 @@ def render_sidebar() -> None:
                     use_container_width=True,
                 )
 
-        with st.expander("Account & access", expanded=False):
+            st.markdown(
+                '<div class="surm-sidebar-section-label">ACCOUNT & ACCESS</div>',
+                unsafe_allow_html=True,
+            )
             st.caption(f"Active user: {current_user_label()}")
             if auth_required():
                 st.caption("Authentication: enforced")
