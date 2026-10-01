@@ -443,6 +443,49 @@ def test_risk_register_dropdowns_source_team_and_planner_and_normalize_others():
     assert "Custom Consequence" not in normalized[0]
 
 
+def test_live_gantt_builds_from_unsaved_workplan_draft():
+    from modules import tab6_resolution_planner as page
+
+    rows = [
+        {
+            "Resolution Action": "Acquire surveillance data",
+            "Part of Workplan": True,
+            "Start Date": "01/10/2026",
+            "Duration (months)": 6,
+            "Progress (0-1)": 0.5,
+            "Action Owner": "RE User",
+            "Status": "In Progress",
+            "Required Completion": "31/03/2027",
+        },
+        {
+            "Resolution Action": "Decision gate",
+            "Part of Workplan": True,
+            "Start Date": "15/10/2026",
+            "Duration (months)": 0,
+            "Progress (0-1)": 1.0,
+            "Action Owner": "PE User",
+            "Status": "Resolved",
+            "Required Completion": "15/10/2026",
+        },
+        {
+            "Resolution Action": "Missing start",
+            "Part of Workplan": True,
+            "Start Date": "",
+            "Duration (months)": 3,
+            "Progress (0-1)": 0.25,
+            "Action Owner": "RE User",
+            "Status": "Open",
+        },
+    ]
+
+    figure, count, missing = page._build_live_gantt(rows)
+
+    assert figure is not None
+    assert count == 2
+    assert missing == ["Missing start"]
+    assert len(figure.data) >= 3  # planned/progress + milestone/deadline traces
+
+
 def test_resolution_planner_uses_bounded_months_and_percentage_progress():
     from modules import tab6_resolution_planner as page
 
@@ -453,6 +496,7 @@ def test_resolution_planner_uses_bounded_months_and_percentage_progress():
 
     assert '"Duration (months)": st.column_config.SelectboxColumn(' in source
     assert 'options=_MONTH_OPTIONS' in source
+    assert 'Every edit reruns the app and refreshes the' in source
     assert '"Progress (%)": st.column_config.NumberColumn(' in source
     assert 'min_value=0' in source
     assert 'max_value=100' in source
