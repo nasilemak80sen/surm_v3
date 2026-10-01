@@ -255,6 +255,10 @@ def render_sidebar() -> None:
         except ValueError:
             current_index = 0
 
+        # Keep the selector aligned with navigation from pager buttons and
+        # other page-level actions before the widget is instantiated.
+        ss["sidebar_page_selector"] = current_page
+
         stage_map = {
             page: stage
             for page, stage in zip(
