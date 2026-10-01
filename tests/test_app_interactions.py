@@ -848,10 +848,10 @@ def test_bottom_pager_is_rendered_even_when_workflow_stage_is_locked():
 
     assert "blocked = False" in source
     assert "blocked = True" in source
-    assert "render_page_pager(location="bottom")" in source
+    assert 'render_page_pager(location="bottom")' in source
     assert "return" not in source[
         source.index("blocked = False"):
-        source.index("render_page_pager(location="bottom")")
+        source.index('render_page_pager(location="bottom")')
     ]
 
 
