@@ -87,12 +87,31 @@ def _custom_value(value: object, options: list[str]) -> str:
 
 
 def _normalize_risk_rows(rows: list[dict], owner_options: list[str]) -> list[dict]:
-    """Resolve controlled Others choices into canonical saved risk text."""
+    """Resolve controlled inputs and preserve planner-vs-manual owner lineage."""
     normalized: list[dict] = []
-    for row in rows:
+    previous_rows = st.session_state.get("risk_register", []) or []
+
+    for index, row in enumerate(rows):
         next_row = dict(row)
         owner = str(next_row.get("Action Owner", "") or "").strip()
+        previous = (
+            previous_rows[index]
+            if index < len(previous_rows)
+            and isinstance(previous_rows[index], dict)
+            else {}
+        )
+        previous_owner = str(previous.get("Action Owner", "") or "").strip()
+        previous_source = str(
+            previous.get("Action Owner Source", "") or ""
+        ).strip()
+
         next_row["Action Owner"] = owner
+        if owner != previous_owner:
+            next_row["Action Owner Source"] = "manual"
+        else:
+            next_row["Action Owner Source"] = (
+                previous_source or "manual"
+            )
 
         contingency = str(next_row.get("Contingency Plan", "") or "").strip()
         if contingency == _OTHER_OPTION:
@@ -293,6 +312,7 @@ def render():
                             width="medium",
                             help="Pre-filled from the linked Resolution Planner owner. You can change the owner here to override it.",
                         ),
+                        "Action Owner Source": None,
                         "Contingency Plan": st.column_config.SelectboxColumn(
                             "Contingency",
                             options=_CONTINGENCY_OPTIONS,
