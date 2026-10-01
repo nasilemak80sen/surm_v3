@@ -92,8 +92,6 @@ def _normalize_risk_rows(rows: list[dict], owner_options: list[str]) -> list[dic
     for row in rows:
         next_row = dict(row)
         owner = str(next_row.get("Action Owner", "") or "").strip()
-        if owner == _OTHER_OPTION:
-            owner = str(next_row.get("Custom Owner", "") or "").strip()
         next_row["Action Owner"] = owner
 
         contingency = str(next_row.get("Contingency Plan", "") or "").strip()
@@ -106,7 +104,6 @@ def _normalize_risk_rows(rows: list[dict], owner_options: list[str]) -> list[dic
             consequence = str(next_row.get("Custom Consequence", "") or "").strip()
         next_row["Impact/Consequence"] = consequence
 
-        next_row.pop("Custom Owner", None)
         next_row.pop("Custom Contingency", None)
         next_row.pop("Custom Consequence", None)
         normalized.append(next_row)
@@ -250,9 +247,6 @@ def render():
             risk_df.at[index, "Action Owner"] = _editor_choice(
                 row.get("Action Owner", ""), owner_options
             )
-            risk_df.at[index, "Custom Owner"] = _custom_value(
-                row.get("Action Owner", ""), owner_options
-            )
             risk_df.at[index, "Contingency Plan"] = _editor_choice(
                 row.get("Contingency Plan", ""), _CONTINGENCY_OPTIONS
             )
@@ -298,11 +292,6 @@ def render():
                             options=owner_options,
                             width="medium",
                             help="Team members plus owners already assigned in the Resolution Planner.",
-                        ),
-                        "Custom Owner": st.column_config.TextColumn(
-                            "Custom Owner",
-                            width="medium",
-                            help="Only needed for a legacy/custom owner not present in Team or Resolution Planner.",
                         ),
                         "Contingency Plan": st.column_config.SelectboxColumn(
                             "Contingency",
