@@ -31,7 +31,10 @@ def _stable_id(prefix: str, text: str) -> str:
     return f"{prefix}-{digest}"
 
 
-def _source_signature(risk_row: dict[str, Any]) -> str:
+def _source_signature(
+    risk_row: dict[str, Any],
+    resolution_planner: list[dict[str, Any]] | None = None,
+) -> str:
     parts = [
         str(risk_row.get("risk_id", "")),
         str(risk_row.get("Risk", "")),
@@ -40,6 +43,24 @@ def _source_signature(risk_row: dict[str, Any]) -> str:
         str(risk_row.get("Contingency Plan", "")),
         str(risk_row.get("Impact/Consequence", "")),
     ]
+
+    planner_map = {}
+    for row in resolution_planner or []:
+        if not isinstance(row, dict):
+            continue
+        action = str(row.get("Resolution Action", "") or "").strip()
+        if not action:
+            continue
+        planner_map[action] = (
+            str(row.get("resolution_id", "") or "").strip(),
+            str(row.get("Action Owner", "") or "").strip(),
+            str(row.get("Description", "") or "").strip(),
+        )
+
+    for action in _items(risk_row.get("Resolution Plan")):
+        planner_id, owner, description = planner_map.get(action, ("", "", ""))
+        parts.extend([action, planner_id, owner, description])
+
     return hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()
 
 
@@ -275,7 +296,7 @@ def build_bowtie_document(
         "version": BOWTIE_SCHEMA_VERSION,
         "risk_id": risk_id,
         "name": risk_name,
-        "source_signature": _source_signature(risk_row),
+        "source_signature": _source_signature(risk_row, resolution_planner),
         "pages": [{
             "id": "PAGE_1",
             "name": risk_name or "Risk Bowtie",
