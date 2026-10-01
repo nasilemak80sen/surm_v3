@@ -461,6 +461,40 @@ def test_planner_status_counts_handles_workplan_rows():
     assert int(counts["Workplan actions"].sum()) == 3
 
 
+def test_study_repository_resume_opens_last_saved_page():
+    from unittest.mock import patch
+
+    def app():
+        import streamlit as st
+        from modules import tab_study_repository as page
+        from utils.session import init_session
+
+        init_session()
+        summaries = [{
+            "project_name": "Resume Study",
+            "field_name": "North Field",
+            "phase": "PGR1",
+            "completion": 62,
+            "study_lifecycle": "Draft",
+            "study_revision": 4,
+            "last_edited_by": "Engineer A",
+            "last_edited_at": "2026-10-01T10:00:00",
+            "resume_page": "6️⃣ Resolution Planner",
+        }]
+
+        with patch.object(page, "list_sessions", lambda: summaries),              patch.object(page, "load_session_record", lambda summary: True):
+            page.render()
+
+    at = _run_app(app)
+
+    assert at.button(key="repository_edit_0")
+    at.button(key="repository_edit_0").click().run()
+
+    assert not at.exception
+    assert at.session_state["study_access_mode"] == "edit"
+    assert at.session_state["current_page"] == "6️⃣ Resolution Planner"
+
+
 def test_resolution_planner_uses_native_date_picker_and_target_completion_label():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "modules/tab6_resolution_planner.py").read_text(encoding="utf-8")
