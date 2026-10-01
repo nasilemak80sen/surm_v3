@@ -50,6 +50,8 @@ def render():
             df,
             num_rows="dynamic",
             use_container_width=True,
+            height=360,
+            row_height=38,
             column_config={
                 "Name": st.column_config.TextColumn("Name", width="medium"),
                 "Function / Role": st.column_config.SelectboxColumn(
