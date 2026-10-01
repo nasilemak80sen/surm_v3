@@ -7,6 +7,7 @@ import html
 import streamlit as st
 
 from utils.analytics import build_study_analytics, validation_warnings
+from utils.assurance import LIFECYCLE_ORDER
 from utils.form_ui import render_save_hint
 from utils.persistence import save_session
 from utils.workflow import current_stage, stage_results
@@ -34,49 +35,6 @@ def _parse_signoff_date(value: str) -> date | None:
         return date(year, month, day)
     except (TypeError, ValueError):
         return None
-
-
-def _signoff_row(label: str, key: str) -> None:
-    st.markdown(f"**{label}**")
-    cols = st.columns([1.2, 1.2, 0.85])
-
-    name_widget_key = f"{key}_name_input"
-    role_widget_key = f"{key}_role_input"
-    date_widget_key = f"{key}_date_picker_{st.session_state.get('study_id', 'new')}"
-
-    _ensure_widget_value(name_widget_key, f"{key}_name")
-    _ensure_widget_value(role_widget_key, f"{key}_role")
-
-    with cols[0]:
-        st.text_input(
-            "Name",
-            key=name_widget_key,
-            placeholder="Full name",
-            label_visibility="collapsed",
-            on_change=_sync_widget_value,
-            args=(f"{key}_name", name_widget_key),
-        )
-    with cols[1]:
-        st.text_input(
-            "Role",
-            key=role_widget_key,
-            placeholder="Role / designation",
-            label_visibility="collapsed",
-            on_change=_sync_widget_value,
-            args=(f"{key}_role", role_widget_key),
-        )
-    with cols[2]:
-        if date_widget_key not in st.session_state:
-            st.session_state[date_widget_key] = _parse_signoff_date(
-                st.session_state.get(f"{key}_date", "")
-            )
-        value = st.date_input(
-            "Date",
-            format="DD/MM/YYYY",
-            key=date_widget_key,
-            label_visibility="collapsed",
-        )
-        st.session_state[f"{key}_date"] = value.strftime("%d/%m/%Y") if value else ""
 
 
 def render():
@@ -223,8 +181,20 @@ def render():
                 on_change=_sync_widget_value,
                 args=("project_phase", "project_phase_input"),
             )
+        with c4:
+            lifecycle_value = str(ss.get("study_lifecycle", "Draft") or "Draft")
+            if lifecycle_value not in LIFECYCLE_ORDER:
+                lifecycle_value = "Draft"
+            st.selectbox(
+                "Study Lifecycle",
+                LIFECYCLE_ORDER,
+                index=LIFECYCLE_ORDER.index(lifecycle_value),
+                key="study_lifecycle_input",
+                disabled=True,
+                help="Lifecycle transitions are recorded through Assurance & Review.",
+            )
 
-        save_col, clear_col, _ = st.columns([1.15, 1.1, 3.75])
+        save_col, clear_col, revision_col = st.columns([1.15, 1.1, 0.9], gap="small")
         with save_col:
             if st.button("Save study", type="primary", key="fp_save", use_container_width=True):
                 if not ss.get("project_name", "").strip():
