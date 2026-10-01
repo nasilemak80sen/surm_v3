@@ -140,58 +140,51 @@ def build_bowtie_document(
         cause_node_by_name[name] = node
         cause_placement_by_name[name] = placement
 
-    # One preventive barrier identity per resolution option, with associations
-    # derived from the uncertainty-specific resolution mapping.
+    # The Risk Register is the canonical Bowtie input. Only resolution
+    # actions actually written into this risk row become preventive barriers.
+    # Do not re-read the full upstream resolution mapping here: doing so can
+    # silently re-introduce options the user did not select for this risk.
+    selected_resolution_names = list(dict.fromkeys(
+        _items(risk_row.get("Resolution Plan"))
+    ))
+
     barrier_by_option: dict[str, dict[str, Any]] = {}
     barrier_counter = 0
-    for cause_name in cause_names:
-        options = resolution_list.get(cause_name, {}) or {}
-        for option, enabled in options.items():
-            if enabled != "Y":
-                continue
-            option = str(option).strip()
-            if not option:
-                continue
-            if option in barrier_by_option:
-                continue
 
-            barrier_counter += 1
-            planner_match = next(
-                (
-                    row for row in resolution_planner
-                    if str(row.get("Resolution Action", "")).strip() == option
-                ),
-                {},
-            )
-            barrier_id = str(
-                planner_match.get("resolution_id")
-                or _stable_id("RES", option)
-            )
-            barrier = {
-                "id": barrier_id,
-                "type": "preventativeBarrier",
-                "name": option,
-                "description": str(planner_match.get("Description", "") or ""),
-                "owner": str(planner_match.get("Action Owner", "") or ""),
-                "effectiveness": "",
-                "degradation_factors": [],
-                "controls": [],
-                "surm_source": {
-                    "type": "resolution",
-                    "resolution_action": option,
-                    "resolution_id": barrier_id,
-                },
-            }
-            barrier_by_option[option] = {
-                "node": barrier,
-                "index": barrier_counter,
-                "cause_names": [],
-            }
-            library["preventativeBarrier"].append(barrier)
-
-        for option, enabled in options.items():
-            if enabled == "Y" and str(option).strip() in barrier_by_option:
-                barrier_by_option[str(option).strip()]["cause_names"].append(cause_name)
+    for option in selected_resolution_names:
+        planner_match = next(
+            (
+                row for row in resolution_planner
+                if str(row.get("Resolution Action", "")).strip() == option
+            ),
+            {},
+        )
+        barrier_counter += 1
+        barrier_id = str(
+            planner_match.get("resolution_id")
+            or _stable_id("RES", option)
+        )
+        barrier = {
+            "id": barrier_id,
+            "type": "preventativeBarrier",
+            "name": option,
+            "description": str(planner_match.get("Description", "") or ""),
+            "owner": str(planner_match.get("Action Owner", "") or ""),
+            "effectiveness": "",
+            "degradation_factors": [],
+            "controls": [],
+            "surm_source": {
+                "type": "resolution",
+                "resolution_action": option,
+                "resolution_id": barrier_id,
+            },
+        }
+        barrier_by_option[option] = {
+            "node": barrier,
+            "index": barrier_counter,
+            "cause_names": list(cause_names),
+        }
+        library["preventativeBarrier"].append(barrier)
 
     for option, item in barrier_by_option.items():
         index = item["index"]
