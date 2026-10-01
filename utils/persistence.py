@@ -131,6 +131,7 @@ def save_session(auto: bool = False) -> bool:
             "study_id": document.study_id,
             "study_owner": document.study_owner,
             "methodology_version": document.methodology_version,
+            "last_saved_page": document.last_saved_page,
         },
         "session": payload,
     }
@@ -228,6 +229,9 @@ def load_session(project_name: str, field_name: str, phase_name: str = "") -> bo
             or meta.get("last_saved_page")
             or "📋 Overview"
         )
+        # Resume routing is based on the durable saved workspace, never the
+        # repository page that happened to be open when the record was loaded.
+        st.session_state["_pending_navigation_page"] = st.session_state["last_saved_page"]
         st.session_state["current_page"] = st.session_state["last_saved_page"]
         st.session_state["_saved_signature"] = study_state_signature(st.session_state)
         st.session_state["study_id"] = (
