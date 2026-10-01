@@ -893,14 +893,14 @@ def test_global_page_pager_covers_all_application_pages():
     assert 'key=f"pager_next_{location}"' in source
 
 
-def test_sidebar_navigation_is_single_clean_selector():
+def test_sidebar_uses_direct_page_actions_not_legacy_selector():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "surm.py").read_text(encoding="utf-8")
 
-    assert 'key="sidebar_page_selector"' in source
-    assert 'Current page' in source
-    assert 'group = "Study"' in source
-    assert 'group = "Workflow"' in source
+    assert 'key=f"sidebar_page_{index}_{page}"' in source
+    assert 'st.radio(' not in source
+    assert 'st.selectbox(' not in source
+    assert 'Current page' not in source
     assert 'with st.expander("Utilities & access", expanded=False)' in source
     assert 'with st.expander("Navigate", expanded=True)' not in source
 
