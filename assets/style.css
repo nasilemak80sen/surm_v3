@@ -4133,10 +4133,6 @@ section[data-testid="stSidebar"] > div:last-child {
     font-size: 0.5rem;
 }
 
-.sturm-never {
-    display: none;
-}
-
 /* The sign-off table should read like a register, not five independent cards. */
 .st-key-overview-governance [data-testid="stHorizontalBlock"] {
     align-items: center;
