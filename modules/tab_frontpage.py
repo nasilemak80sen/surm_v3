@@ -183,7 +183,7 @@ def render():
             "Identity and governance fields are session drafts. Save the study when the details are ready to persist."
         )
 
-        c1, c2, c3 = st.columns([1.15, 1.15, 0.8], gap="medium")
+        c1, c2, c3, c4 = st.columns([1.15, 1.15, 0.8, 0.9], gap="medium")
         _ensure_widget_value("project_name_input", "project_name")
         _ensure_widget_value("field_name_input", "field_name")
         _ensure_widget_value("project_phase_input", "project_phase")
@@ -232,6 +232,9 @@ def render():
                     ss[key] = ""
                     ss[widget_key] = ""
                 st.rerun()
+        with revision_col:
+            st.caption("Study revision")
+            st.markdown(f"**Revision {ss.get('study_revision', 0)}**")
 
     # ------------------------------------------------------------------
     # 5. Workflow progress
@@ -251,36 +254,70 @@ def render():
         st.progress(progress / 100, text=f"{progress}% complete")
 
     # ------------------------------------------------------------------
-    # 6. Governance and sign-off are secondary until the study is ready.
+    # 6. Governance & sign-off — compact review record.
     # ------------------------------------------------------------------
-    with st.expander("Governance & sign-off", expanded=False):
-        st.markdown("### Governance")
+    with st.container(border=True):
+        st.markdown("### Governance & sign-off")
         render_save_hint(
-            "Lifecycle and sign-off fields remain session drafts until you save the study."
+            "Sign-off details remain session drafts until you save the study."
         )
-        life_col, rev_col = st.columns([1.1, 2], gap="large")
-        with life_col:
-            _ensure_widget_value("study_lifecycle_input", "study_lifecycle")
-            st.selectbox(
-                "Study lifecycle",
-                ["Draft", "In Review", "Reviewed", "Approved", "Archived"],
-                key="study_lifecycle_input",
-                on_change=_sync_widget_value,
-                args=("study_lifecycle", "study_lifecycle_input"),
-            )
-            st.caption(f"Revision {ss.get('study_revision', 0)}")
+        st.caption("Record the responsible person, designation and review date for each governance checkpoint.")
 
-        with rev_col:
-            st.caption("Sign-off")
-            signoffs = [
-                ("Prepared By", "prep"),
-                ("Reviewed By — G&G", "rev_gg"),
-                ("Reviewed By — RE", "rev_re"),
-                ("Reviewed By — PP", "rev_pp"),
-                ("Endorsed By — FDP Lead", "endorsed"),
-            ]
-            for label, key in signoffs:
-                _signoff_row(label, key)
+        header = st.columns([1.25, 1.35, 1.35, 0.95], gap="small")
+        header[0].markdown("**CHECKPOINT**")
+        header[1].markdown("**NAME**")
+        header[2].markdown("**ROLE / DESIGNATION**")
+        header[3].markdown("**DATE**")
+
+        signoffs = [
+            ("Prepared By", "prep"),
+            ("Reviewed — G&G", "rev_gg"),
+            ("Reviewed — RE", "rev_re"),
+            ("Reviewed — PP", "rev_pp"),
+            ("Endorsed — FDP Lead", "endorsed"),
+        ]
+        for row_index, (label, key) in enumerate(signoffs):
+            cols = st.columns([1.25, 1.35, 1.35, 0.95], gap="small")
+            cols[0].markdown(
+                f'<div class="surm-signoff-checkpoint">{html.escape(label)}</div>',
+                unsafe_allow_html=True,
+            )
+            name_widget_key = f"{key}_name_input"
+            role_widget_key = f"{key}_role_input"
+            date_widget_key = f"{key}_date_picker_{ss.get('study_id', 'new')}"
+            _ensure_widget_value(name_widget_key, f"{key}_name")
+            _ensure_widget_value(role_widget_key, f"{key}_role")
+
+            with cols[1]:
+                st.text_input(
+                    "Name",
+                    key=name_widget_key,
+                    placeholder="Full name",
+                    label_visibility="collapsed",
+                    on_change=_sync_widget_value,
+                    args=(f"{key}_name", name_widget_key),
+                )
+            with cols[2]:
+                st.text_input(
+                    "Role",
+                    key=role_widget_key,
+                    placeholder="Role / designation",
+                    label_visibility="collapsed",
+                    on_change=_sync_widget_value,
+                    args=(f"{key}_role", role_widget_key),
+                )
+            with cols[3]:
+                if date_widget_key not in ss:
+                    ss[date_widget_key] = _parse_signoff_date(
+                        ss.get(f"{key}_date", "")
+                    )
+                value = st.date_input(
+                    "Date",
+                    format="DD/MM/YYYY",
+                    key=date_widget_key,
+                    label_visibility="collapsed",
+                )
+                ss[f"{key}_date"] = value.strftime("%d/%m/%Y") if value else ""
 
     # ------------------------------------------------------------------
     # 7. Developer controls remain hidden until explicitly requested.
