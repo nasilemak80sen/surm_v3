@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -111,10 +113,23 @@ def _planner_status_counts(rows: list[dict]) -> pd.DataFrame:
 
 
 def _parse_planner_date(value: object):
-    """Parse planner dates while accepting the UI's DD/MM/YYYY format."""
+    """Parse planner dates from native calendar values or DD/MM/YYYY strings."""
+    if value is None or value is pd.NaT:
+        return pd.NaT
+
+    if isinstance(value, (pd.Timestamp, datetime, date)):
+        parsed = pd.to_datetime(value, errors="coerce")
+        return parsed if not pd.isna(parsed) else pd.NaT
+
     text = str(value or "").strip()
     if not text:
         return pd.NaT
+
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%Y/%m/%d"):
+        parsed = pd.to_datetime(text, format=fmt, errors="coerce")
+        if not pd.isna(parsed):
+            return parsed
+
     return pd.to_datetime(text, dayfirst=True, errors="coerce")
 
 
