@@ -10,19 +10,11 @@ Run:
 
 from __future__ import annotations
 
+import html
 import os
 from pathlib import Path
 from typing import Any, cast
 import streamlit as st
-
-from components.header import render_header as render_shared_header
-from components.workflow import render_page_frame, render_workflow_list
-from utils.analytics import build_study_analytics
-from utils.assurance import study_is_editable
-from utils.auth import auth_required, can_delete_study, can_edit_study, current_user_label, resolve_identity
-from utils.styles import load_css
-from utils.workflow import current_stage, stage_results, validate_stage
-
 
 # ============================================================================
 # APPLICATION CONFIGURATION
@@ -49,15 +41,29 @@ st.set_page_config(
 
 
 # ============================================================================
-# IMPORT APPLICATION SERVICES
+# IMPORT APPLICATION COMPONENTS
+# ============================================================================
+# All application-local imports intentionally happen after set_page_config so
+# no imported module can accidentally issue a Streamlit command first.
+
+from components.header import render_header as render_shared_header
+from components.workflow import render_page_frame
+from utils.assurance import study_is_editable
+from utils.auth import (
+    auth_required,
+    can_edit_study,
+    current_user_label,
+    resolve_identity,
+)
+from utils.styles import load_css
+from utils.workflow import current_stage, stage_results, validate_stage
+
+
+# ============================================================================
+# APPLICATION SERVICES + PAGE MODULES
 # ============================================================================
 
-from utils.session import create_new_study, init_session
-
-
-# ============================================================================
-# IMPORT PAGE MODULES
-# ============================================================================
+from utils.session import create_new_study, init_session, study_has_unsaved_changes
 
 from modules.tab_frontpage import render as render_frontpage
 from modules.tab_documentation import render as render_documentation
@@ -78,50 +84,8 @@ from modules.tab_revision_history import render as render_revision_history
 
 
 # ============================================================================
-# CSS
+# APPLICATION HEADER
 # ============================================================================
-
-# ============================================================================
-# THEME
-# ============================================================================
-
-def apply_theme() -> None:
-    """
-    Apply theme variables from session state.
-
-    Phase 1 intentionally keeps this simple.
-    Full theme customisation will be addressed in Phase 2.
-    """
-
-    primary = st.session_state.get(
-        "ui_primary_color",
-        "#176B3A",
-    )
-
-    background = st.session_state.get(
-        "ui_background_color",
-        "#F5F7F6",
-    )
-
-    st.markdown(
-        f"""
-        <style>
-
-        :root {{
-            --surm-primary: {primary};
-            --surm-background: {background};
-        }}
-
-        .stApp {{
-            background: var(--surm-background);
-        }}
-
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 # ============================================================================
 # APPLICATION HEADER
 # ============================================================================
@@ -136,9 +100,10 @@ def render_header() -> None:
         field=ss.get("field_name"),
         project=ss.get("project_name"),
         phase=ss.get("project_phase"),
+        workspace=str(ss.get("current_page", "Workspace")).split(" ", 1)[-1],
         app_name=APP_NAME,
         subtitle=APP_SUBTITLE,
-        saved=bool(ss.get("_last_saved")),
+        saved=bool(ss.get("_last_saved")) and not study_has_unsaved_changes(ss),
     )
 
 
@@ -214,35 +179,299 @@ def calculate_study_progress() -> dict:
     }
 
 
-def _load_selected_session(session_meta: dict) -> None:
-    """Streamlit callback for explicit saved-study loading."""
-    from utils.persistence import load_session_record
-
-    if not load_session_record(session_meta):
-        st.session_state["_resume_message"] = "Unable to load the selected study."
-
-
-def _delete_selected_session(project_name: str, field_name: str) -> None:
-    """Streamlit callback for deleting a saved study."""
-    from utils.persistence import delete_session
-
-    allowed, reason = can_delete_study()
+def _enable_edit_mode() -> None:
+    allowed, reason = can_edit_study(dict(st.session_state))
     if not allowed:
         st.error(reason)
         return
+    st.session_state["study_access_mode"] = "edit"
+    st.rerun()
 
-    if delete_session(project_name, field_name):
-        if (
-            st.session_state.get("project_name", "").strip() == project_name
-            and st.session_state.get("field_name", "").strip() == field_name
-        ):
-            create_new_study()
+
+# ============================================================================
+# SIDEBAR
+# ============================================================================
+
+def _sidebar_nav_item(page: str, label: str, *, state: str = "available") -> None:
+    """Render one compact, clearly stateful sidebar navigation item."""
+    current_page = st.session_state.get("current_page")
+    if state == "current":
+        st.markdown(
+            f"""
+            <div class="surm-sidebar-nav-item surm-sidebar-nav-current">
+                <span class="surm-sidebar-nav-indicator">●</span>
+                <span class="surm-sidebar-nav-label">{html.escape(label)}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+
+    if state == "completed":
+        indicator = "✓"
+    elif state == "locked":
+        indicator = "🔒"
     else:
-        st.session_state["_resume_message"] = "Unable to delete the selected study."
+        indicator = "•"
 
+    disabled = state == "locked"
+    if st.button(
+        f"{indicator}  {label}",
+        key=f"sidebar_nav_{page}",
+        use_container_width=True,
+        disabled=disabled,
+        type="secondary",
+    ):
+        st.session_state["current_page"] = page
+        st.rerun()
+
+
+def _render_sidebar_nav_group(
+    title: str,
+    pages: list[tuple[str, str, str]],
+) -> None:
+    """Render a small labelled group of primary navigation destinations."""
+    st.markdown(
+        f'<div class="surm-sidebar-nav-group-title">{html.escape(title)}</div>',
+        unsafe_allow_html=True,
+    )
+    for page, label, state in pages:
+        _sidebar_nav_item(page, label, state=state)
+
+
+def _build_sidebar_navigation() -> dict[str, list[tuple[str, str, str]]]:
+    """Build grouped navigation while keeping workflow availability authoritative."""
+    session = cast(dict[str, Any], dict(st.session_state))
+    stage_map = {
+        page: stage
+        for page, stage in zip(WORKFLOW_PAGES, stage_results(session))
+    }
+    current_page = st.session_state.get("current_page")
+
+    def nav_state(page: str) -> str:
+        if page == current_page:
+            return "current"
+        stage = stage_map.get(page)
+        if stage is not None:
+            if stage.complete:
+                return "completed"
+            if not stage.available:
+                return "locked"
+        return "available"
+
+    def item(page: str, label: str) -> tuple[str, str, str]:
+        return page, label, nav_state(page)
+
+    return {
+        "Study": [
+            item("🗂️ Study Repository", "Study Repository"),
+            item("📋 Overview", "Overview"),
+            item("👥 Team", "Team"),
+        ],
+        "Workflow": [
+            item(page, page.split(" ", 1)[-1])
+            for page in WORKFLOW_PAGES
+        ],
+        "Insights & governance": [
+            item("📊 Intelligence", "Intelligence"),
+            item("🛡️ Barrier Management", "Barrier Management"),
+            item("✅ Assurance & Review", "Assurance & Review"),
+            item("🕘 Revision History", "Revision History"),
+        ],
+        "Support": [
+            item("📖 How to Use", "How to Use"),
+        ],
+    }
+
+
+def render_sidebar() -> None:
+    """Render a calm, task-oriented sidebar with one primary navigation system."""
+    from utils.persistence import save_session
+    from utils.export_excel import build_excel_export
+
+    ss = st.session_state
+    stats = calculate_study_progress()
+    session = cast(dict[str, Any], dict(ss))
+
+    with st.sidebar:
+        # ------------------------------------------------------------------
+        # Brand
+        # ------------------------------------------------------------------
+        st.markdown(
+            """
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">🛢️</div>
+                <div>
+                    <div class="sidebar-brand-title">SURM Toolkit</div>
+                    <div class="sidebar-brand-subtitle">PETRONAS CARIGALI</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # ------------------------------------------------------------------
+        # Study context — always visible because it anchors the user's place.
+        # ------------------------------------------------------------------
+        field = str(ss.get("field_name", "") or "").strip()
+        project = str(ss.get("project_name", "") or "").strip()
+        phase = str(ss.get("project_phase", "") or "").strip()
+        lifecycle = str(ss.get("study_lifecycle", "Draft") or "Draft").strip()
+        access_mode = "Edit" if study_is_editable(session) else "View"
+        progress = stats["progress"]
+
+        st.markdown(
+            f"""
+            <div class="surm-sidebar-study-card">
+                <div class="surm-sidebar-study-kicker">CURRENT STUDY</div>
+                <div class="surm-sidebar-study-title">{html.escape(project or "Untitled Study")}</div>
+                <div class="surm-sidebar-study-meta">{html.escape(field or "Field not configured")}</div>
+                <div class="surm-sidebar-study-chips">
+                    <span>{html.escape(phase or "Phase —")}</span>
+                    <span>{html.escape(lifecycle)}</span>
+                    <span>{html.escape(access_mode)}</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.progress(progress / 100, text=f"{progress}% workflow complete")
+
+        # ------------------------------------------------------------------
+        # Primary navigation — one source of truth.
+        # ------------------------------------------------------------------
+        st.markdown(
+            '<div class="surm-sidebar-nav-label">Navigate</div>',
+            unsafe_allow_html=True,
+        )
+        navigation = _build_sidebar_navigation()
+
+        _render_sidebar_nav_group("Study", navigation["Study"])
+        _render_sidebar_nav_group("Workflow", navigation["Workflow"])
+
+        with st.expander("Insights & governance", expanded=False):
+            for page, label, state in navigation["Insights & governance"]:
+                _sidebar_nav_item(page, label, state=state)
+
+        _render_sidebar_nav_group("Support", navigation["Support"])
+
+        # ------------------------------------------------------------------
+        # Frequent study actions stay visible; secondary options are collapsed.
+        # ------------------------------------------------------------------
+        st.markdown('<div class="surm-sidebar-divider"></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="surm-sidebar-nav-label">Study actions</div>',
+            unsafe_allow_html=True,
+        )
+
+        action_col, new_col = st.columns([1.35, 1], gap="small")
+        with action_col:
+            if st.button(
+                "💾 Save",
+                key="sidebar_save_session",
+                use_container_width=True,
+                type="primary",
+            ):
+                if not project:
+                    st.warning("Set a Project Name before saving.")
+                elif save_session(auto=False):
+                    st.success("Study saved.")
+                else:
+                    st.error("Unable to save the study.")
+        with new_col:
+            if st.button(
+                "＋ New",
+                key="sidebar_new_study",
+                use_container_width=True,
+                type="secondary",
+            ):
+                create_new_study()
+                st.rerun()
+
+        with st.expander("Session & export", expanded=False):
+            st.checkbox(
+                "Enable auto-save",
+                key="_auto_save_enabled",
+                help="Automatically save the current study when supported.",
+            )
+
+            last_saved = ss.get("_last_saved", "")
+            st.caption(
+                f"Last saved: {last_saved.replace('T', ' ')[:19]}"
+                if last_saved
+                else "No save recorded yet."
+            )
+
+            if ss.get("_resume_message"):
+                st.success(ss["_resume_message"])
+
+            # Excel generation is intentionally explicit. The full workbook
+            # contains many styled sheets and should never block initial app
+            # rendering just because this expander is collapsed.
+            if st.button(
+                "⚙ Prepare Excel export",
+                key="prepare_excel_export",
+                use_container_width=True,
+                type="secondary",
+                help="Build the current study workbook when you are ready to export it.",
+            ):
+                try:
+                    with st.spinner("Preparing Excel workbook..."):
+                        ss["_excel_export_data"] = build_excel_export()
+                    st.success("Excel workbook prepared.")
+                except Exception as exc:
+                    ss.pop("_excel_export_data", None)
+                    st.error(f"Excel export unavailable: {exc}")
+
+            excel_data = ss.get("_excel_export_data")
+            if excel_data:
+                filename = (
+                    f"SURM_{field.replace(' ', '_')}.xlsx"
+                    if field
+                    else "SURM_Output.xlsx"
+                )
+                st.download_button(
+                    "📥 Download Excel",
+                    data=excel_data,
+                    file_name=filename,
+                    mime=(
+                        "application/vnd.openxmlformats-officedocument."
+                        "spreadsheetml.sheet"
+                    ),
+                    use_container_width=True,
+                )
+
+        with st.expander("Account & access", expanded=False):
+            st.caption(f"Active user: {current_user_label()}")
+            if auth_required():
+                st.caption("Authentication: enforced")
+                if resolve_identity().authenticated:
+                    st.button(
+                        "Log out",
+                        key="sidebar_logout",
+                        use_container_width=True,
+                        on_click=st.logout,
+                        type="secondary",
+                    )
+            else:
+                st.caption("Authentication: local development mode")
+
+        st.caption(f"{APP_NAME} v{APP_VERSION}")
+
+
+# ============================================================================
+# READ-ONLY VIEW
+# ============================================================================
 
 def _render_read_only_page(page_name: str) -> None:
-    """Render study data without creating editable Streamlit widgets."""
+    """Render a safe, widget-free snapshot for view-only study sessions.
+
+    Loaded studies intentionally enter ``study_access_mode='view'``. The
+    read-only path must never call editable page renderers because those pages
+    create Streamlit widgets and can mutate session state on rerun.
+    """
+
     section_keys = {
         "📋 Overview": ["project_name", "field_name", "project_phase", "study_lifecycle", "study_revision"],
         "👥 Team": ["team_members"],
@@ -259,352 +488,25 @@ def _render_read_only_page(page_name: str) -> None:
         "✅ Assurance & Review": ["study_reviews", "study_lifecycle"],
         "🕘 Revision History": ["study_change_log", "study_revision"],
     }
-    st.info("Read-only view. Select Edit Study to unlock changes.")
+
+    st.info("Read-only view. Select **Edit Study** to unlock changes.")
+
     for key in section_keys.get(page_name, []):
         value = st.session_state.get(key, "")
         st.markdown(f"### {key.replace('_', ' ').title()}")
-        if isinstance(value, (list, dict)):
-            st.dataframe(value, use_container_width=True, hide_index=True)
-        else:
-            st.write(value or "Not configured")
 
-
-def _enable_edit_mode() -> None:
-    allowed, reason = can_edit_study(dict(st.session_state))
-    if not allowed:
-        st.error(reason)
-        return
-    st.session_state["study_access_mode"] = "edit"
-    st.rerun()
-
-
-# ============================================================================
-# SIDEBAR
-# ============================================================================
-
-def render_sidebar() -> None:
-    """
-    Render the application's persistent sidebar.
-
-    The sidebar owns:
-        - project context
-        - progress
-        - session controls
-        - export
-    """
-
-    from utils.persistence import (
-        save_session,
-        list_sessions,
-        load_session_record,
-        delete_session,
-    )
-
-    from utils.export_excel import build_excel_export
-
-    ss = st.session_state
-    stats = calculate_study_progress()
-    session = cast(dict[str, Any], dict(ss))
-
-    with st.sidebar:
-
-        # --------------------------------------------------------------------
-        # BRAND
-        # --------------------------------------------------------------------
-
-        st.markdown(
-            """
-            <div class="sidebar-brand">
-
-                <div class="sidebar-brand-icon">
-                    🛢️
-                </div>
-
-                <div>
-                    <div class="sidebar-brand-title">
-                        SURM Toolkit
-                    </div>
-
-                    <div class="sidebar-brand-subtitle">
-                        PETRONAS CARIGALI
-                    </div>
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.divider()
-
-        # --------------------------------------------------------------------
-        # IDENTITY
-        # --------------------------------------------------------------------
-
-        st.markdown(
-            '<div class="sidebar-section-title">Identity</div>',
-            unsafe_allow_html=True,
-        )
-        st.caption(f"Active user: {current_user_label()}")
-        if auth_required():
-            st.caption("Authentication: enforced")
-            if resolve_identity().authenticated:
-                st.button(
-                    "Log out",
-                    key="sidebar_logout",
-                    use_container_width=True,
-                    on_click=st.logout,
-                )
-        else:
-            st.caption("Authentication: local development mode")
-
-        # --------------------------------------------------------------------
-        # PROJECT CONTEXT
-        # --------------------------------------------------------------------
-
-        st.markdown(
-            '<div class="sidebar-section-title">Current Study</div>',
-            unsafe_allow_html=True,
-        )
-
-        field = ss.get("field_name", "").strip()
-        project = ss.get("project_name", "").strip()
-        phase = ss.get("project_phase", "").strip()
-
-        st.markdown(
-            f"""
-            <div class="sidebar-study">
-
-                <div class="sidebar-study-row">
-                    <span>Field</span>
-                    <strong>{field or "Not configured"}</strong>
-                </div>
-
-                <div class="sidebar-study-row">
-                    <span>Project</span>
-                    <strong>{project or "Not configured"}</strong>
-                </div>
-
-                <div class="sidebar-study-row">
-                    <span>Phase</span>
-                    <strong>{phase or "Not configured"}</strong>
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.divider()
-
-        # --------------------------------------------------------------------
-        # PROGRESS
-        # --------------------------------------------------------------------
-
-        st.markdown(
-            '<div class="sidebar-section-title">Study Progress</div>',
-            unsafe_allow_html=True,
-        )
-
-        progress = stats["progress"]
-
-        st.progress(
-            progress / 100,
-            text=f"{progress}% complete",
-        )
-
-        st.caption(
-            "Progress is based on completion of the core study stages."
-        )
-
-        st.markdown(
-            '<div class="sidebar-section-title">Study Workflow</div>',
-            unsafe_allow_html=True,
-        )
-
-        workflow_items = [
-            {
-                "number": index,
-                "label": label.split(" ", 1)[-1],
-                "page": label,
-                "completed": stage.complete,
-                "locked": not stage.available,
-                "description": None,
-            }
-            for index, (label, stage) in enumerate(
-                zip(WORKFLOW_PAGES, stage_results(session)),
-                start=1,
-            )
-        ]
-
-        render_workflow_list(
-            workflow_items,
-            current_page=ss.get("current_page"),
-        )
-
-        st.divider()
-
-        # --------------------------------------------------------------------
-        # SESSION
-        # --------------------------------------------------------------------
-
-        st.markdown(
-            '<div class="sidebar-section-title">Session</div>',
-            unsafe_allow_html=True,
-        )
-
-        if st.button(
-            "💾 Save Session",
-            key="sidebar_save_session",
-            use_container_width=True,
-            type="primary",
-        ):
-
-            if not project:
-                st.warning(
-                    "Set a Project Name before saving."
-                )
-
+        if isinstance(value, list):
+            if value and all(isinstance(item, dict) for item in value):
+                st.dataframe(value, use_container_width=True, hide_index=True)
             else:
-                success = save_session(auto=False)
-
-                if success:
-                    st.success("Session saved.")
-                else:
-                    st.error(
-                        "Unable to save the session."
-                    )
-
-        if st.button(
-            "＋ New Study",
-            key="sidebar_new_study",
-            use_container_width=True,
-        ):
-            create_new_study()
-            st.rerun()
-
-        # IMPORTANT:
-        # Streamlit owns this widget's state.
-        # We never assign st.session_state["_auto_save_enabled"]
-        # after creating the widget.
-
-        st.checkbox(
-            "Enable auto-save",
-            key="_auto_save_enabled",
-            help="Automatically save the current study when supported.",
-        )
-
-        last_saved = ss.get("_last_saved", "")
-
-        if last_saved:
-            st.caption(
-                f"Last saved: {last_saved.replace('T', ' ')[:19]}"
-            )
+                st.write(value or "No records.")
+        elif isinstance(value, dict):
+            if value:
+                st.json(value)
+            else:
+                st.caption("No records.")
         else:
-            st.caption("No save recorded yet.")
-
-        if ss.get("_resume_message"):
-            st.success(ss["_resume_message"])
-
-        st.divider()
-
-        # --------------------------------------------------------------------
-        # SAVED SESSIONS
-        # --------------------------------------------------------------------
-
-        st.markdown(
-            '<div class="sidebar-section-title">Saved Sessions</div>',
-            unsafe_allow_html=True,
-        )
-
-        sessions = list_sessions()
-
-        if sessions:
-
-            labels = [
-                (
-                    f'{session.get("project_name", "Unnamed")} — '
-                    f'{session.get("field_name", "Unknown")}'
-                )
-                for session in sessions
-            ]
-
-            selected_label = st.selectbox(
-                "Saved studies",
-                labels,
-                key="saved_session_selector",
-            )
-
-            selected_index = labels.index(selected_label)
-            selected_session = sessions[selected_index]
-
-            col_load, col_delete = st.columns(2)
-
-            with col_load:
-                st.button(
-                    "Load",
-                    key="load_saved_session",
-                    use_container_width=True,
-                    on_click=_load_selected_session,
-                    args=(selected_session,),
-                )
-
-            with col_delete:
-                st.button(
-                    "Delete",
-                    key="delete_saved_session",
-                    use_container_width=True,
-                    on_click=_delete_selected_session,
-                    args=(
-                        selected_session.get("project_name", ""),
-                        selected_session.get("field_name", ""),
-                    ),
-                )
-
-        else:
-            st.info("No saved studies yet. Create and save a study to make it available here.")
-
-        st.divider()
-
-        # --------------------------------------------------------------------
-        # EXPORT
-        # --------------------------------------------------------------------
-
-        st.markdown(
-            '<div class="sidebar-section-title">Export</div>',
-            unsafe_allow_html=True,
-        )
-
-        try:
-            excel_data = build_excel_export()
-
-            filename = (
-                f"SURM_{field.replace(' ', '_')}.xlsx"
-                if field
-                else "SURM_Output.xlsx"
-            )
-
-            st.download_button(
-                "📥 Download Excel",
-                data=excel_data,
-                file_name=filename,
-                mime=(
-                    "application/vnd.openxmlformats-officedocument."
-                    "spreadsheetml.sheet"
-                ),
-                use_container_width=True,
-            )
-
-        except Exception as exc:
-            st.warning(
-                f"Excel export unavailable: {exc}"
-            )
-
-        st.divider()
-
-        st.caption(
-            f"{APP_NAME} v{APP_VERSION}"
-        )
+            st.write(value if str(value).strip() else "Not configured")
 
 
 # ============================================================================
@@ -651,11 +553,17 @@ def render_navigation() -> None:
     """
 
     page_names = list(PAGE_DEFINITIONS.keys())
+
+    # Repository resume has priority over the page that rendered the load
+    # action. Consume it once, then let normal sidebar navigation take over.
+    pending_page = st.session_state.pop("_pending_navigation_page", None)
+    if pending_page in PAGE_DEFINITIONS:
+        st.session_state["current_page"] = pending_page
+
     selected_page = st.session_state.get("current_page", page_names[0])
     if selected_page not in PAGE_DEFINITIONS:
         selected_page = page_names[0]
 
-    selected_index = page_names.index(selected_page)
     is_workflow_page = selected_page in WORKFLOW_PAGES
     workflow_index = WORKFLOW_PAGES.index(selected_page) if is_workflow_page else -1
     title = selected_page.split(" ", 1)[-1]
@@ -718,53 +626,6 @@ def render_navigation() -> None:
 
 
 
-def render_top_navigation() -> None:
-    """Render the primary page switcher above the anchored application header."""
-
-    page_names = list(PAGE_DEFINITIONS.keys())
-    current_page = st.session_state.get("current_page", page_names[0])
-    current_index = page_names.index(current_page) if current_page in page_names else 0
-
-    def sync_navigation() -> None:
-        st.session_state["current_page"] = st.session_state["top_navigation"]
-
-    def choose_page(page: str) -> None:
-        st.session_state["current_page"] = page
-        st.session_state["top_navigation"] = page
-
-    if "top_navigation" not in st.session_state:
-        st.session_state["top_navigation"] = current_page
-    elif st.session_state["top_navigation"] not in page_names:
-        st.session_state["top_navigation"] = current_page
-
-    st.markdown('<div class="surm-top-navigation-label">Study navigation</div>', unsafe_allow_html=True)
-    nav_left, nav_select, nav_right = st.columns([1, 5, 1])
-    with nav_left:
-        st.button(
-            "← Previous",
-            key="top_previous",
-            disabled=current_index == 0,
-            on_click=choose_page,
-            args=(page_names[current_index - 1],) if current_index else (page_names[0],),
-        )
-    with nav_select:
-        st.selectbox(
-            "Navigate to",
-            page_names,
-            key="top_navigation",
-            on_change=sync_navigation,
-            label_visibility="collapsed",
-        )
-    with nav_right:
-        st.button(
-            "Next →",
-            key="top_next",
-            disabled=current_index == len(page_names) - 1,
-            on_click=choose_page,
-            args=(page_names[current_index + 1],) if current_index < len(page_names) - 1 else (page_names[-1],),
-        )
-
-
 # ============================================================================
 # FOOTER
 # ============================================================================
@@ -814,17 +675,12 @@ def main() -> None:
 
     # Saved studies are loaded explicitly from the sidebar.
 
-
-    # Reserve the header's visual position, process page inputs, then fill the
-    # header and live sidebar from the newest session values.
-    header_slot = st.empty()
-    render_top_navigation()
-    render_navigation()
-
-    with header_slot.container():
-        render_header()
-
+    # Keep the Streamlit element tree stable across reruns: render the
+    # persistent header directly before the page content instead of creating
+    # an empty placeholder and filling it after the page has rendered.
+    render_header()
     render_sidebar()
+    render_navigation()
 
     # ------------------------------------------------------------------------
     # 8. Footer

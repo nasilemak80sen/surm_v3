@@ -21,8 +21,13 @@ port = 8501
 headless = true
 enableXsrfProtection = true
 maxUploadSize = 50
-runOnSave = true
+
+# SURM is commonly run from synchronized corporate folders. Do not rerun the
+# application on every file-system change; that can interrupt a live browser
+# session while the working tree or sync client updates files.
+runOnSave = false
 fileWatcherType = "auto"
+folderWatchBlacklist = [".git", ".venv", "__pycache__", ".pytest_cache"]
 
 [logger]
 level = "info"

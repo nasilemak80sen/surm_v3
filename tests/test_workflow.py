@@ -119,6 +119,35 @@ def test_unassessed_risk_blocks_pra():
     assert pra_stage.available is False
 
 
+def test_assessed_risk_without_governance_fields_does_not_unlock_pra():
+    session = make_minimal_ready_session()
+    session["risk_register"][0]["Action Owner"] = ""
+    session["risk_register"][0]["Contingency Plan"] = ""
+    session["risk_register"][0]["Impact/Consequence"] = ""
+
+    stages = stage_results(session)
+    risk_stage = next(s for s in stages if s.key == "risk_register")
+    pra_stage = next(s for s in stages if s.key == "pra_output")
+
+    assert risk_stage.complete is False
+    assert "PRA readiness still needs" in risk_stage.guidance
+    assert "owner" in risk_stage.guidance
+    assert "contingency" in risk_stage.guidance
+    assert "consequence" in risk_stage.guidance
+    assert pra_stage.available is False
+
+
+def test_low_risk_is_still_valid_for_pra_when_governance_is_complete():
+    session = make_minimal_ready_session()
+    session["risk_register"][0]["Likelihood (H/M/L)"] = "L"
+    session["risk_register"][0]["Impact (H/M/L)"] = "L"
+
+    stages = stage_results(session)
+    risk_stage = next(s for s in stages if s.key == "risk_register")
+
+    assert risk_stage.complete is True
+
+
 def test_ready_flow_completes_through_pra():
     session = make_minimal_ready_session()
     stages = stage_results(session)

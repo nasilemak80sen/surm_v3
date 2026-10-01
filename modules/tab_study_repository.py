@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from utils.form_ui import render_form_header
 from utils.persistence import delete_session, list_sessions, load_session_record
 from utils.session import create_new_study
 
@@ -17,11 +18,48 @@ def _last_edit(session: dict) -> tuple[str, str]:
     return latest.get("actor", "local-user"), latest.get("saved_at", session.get("saved_at", ""))
 
 
+def _resume_page(session_meta: dict) -> str:
+    """Return the last persisted study workspace, with a safe legacy fallback."""
+    page = str((session_meta or {}).get("resume_page", "") or "").strip()
+    valid_prefixes = (
+        "📋 Overview",
+        "👥 Team",
+        "1️⃣ ",
+        "2️⃣ ",
+        "3️⃣ ",
+        "4️⃣ ",
+        "5️⃣ ",
+        "6️⃣ ",
+        "7️⃣ ",
+        "📄 PRA Output",
+        "📊 Intelligence",
+        "🛡️ Barrier Management",
+        "✅ Assurance & Review",
+        "🕘 Revision History",
+    )
+    return page if page.startswith(valid_prefixes) else "📋 Overview"
+
+
+def _load_saved_study(session_meta: dict, *, edit: bool) -> None:
+    """Load a saved study and route directly to its durable saved workspace."""
+    if not load_session_record(session_meta):
+        st.error("Unable to load this saved study.")
+        return
+
+    # persistence.load_session() has already resolved the canonical durable
+    # last_saved_page. Read it back from session state rather than trusting
+    # the repository summary/card that triggered the load.
+    target = _resume_page({
+        "resume_page": st.session_state.get("last_saved_page", "📋 Overview")
+    })
+    st.session_state["current_page"] = target
+    st.session_state["_pending_navigation_page"] = target
+    st.session_state["study_access_mode"] = "edit" if edit else "view"
+    st.rerun()
+
+
 def _load_for_view(session_meta: dict) -> None:
-    if load_session_record(session_meta):
-        st.session_state["study_access_mode"] = "view"
-        st.session_state["current_page"] = "📋 Overview"
-        st.rerun()
+    _load_saved_study(session_meta, edit=False)
 
 
 def _delete_saved(project_name: str, field_name: str) -> None:
@@ -32,8 +70,12 @@ def _delete_saved(project_name: str, field_name: str) -> None:
 
 
 def render() -> None:
-    st.markdown("## Study Repository")
-    st.info("Browse completed and saved field studies. View opens a study read-only; Edit unlocks its workflow pages.")
+    render_form_header(
+        "STUDY MANAGEMENT",
+        "Study Repository",
+        "Browse saved field studies, open a read-only view, or resume an editable study.",
+        next_step="Overview",
+    )
 
     sessions = list_sessions()
     if not sessions:
@@ -60,18 +102,32 @@ def render() -> None:
             with meta_col:
                 actor = summary.get("last_edited_by", "local-user")
                 edited_at = summary.get("last_edited_at", summary.get("saved_at", "—"))
-                st.caption(f"Revision {summary.get('study_revision', 0)} · Last edited by {actor} · {str(edited_at).replace('T', ' ')[:19]}")
+                st.caption(
+                    f"Revision {summary.get('study_revision', 0)} · "
+                    f"Last edited by {actor} · {str(edited_at).replace('T', ' ')[:19]}"
+                )
+                st.caption(
+                    f"Resume point: **{_resume_page(summary).split(' ', 1)[-1]}**"
+                )
             with action_col:
                 view_col, edit_col, delete_col = st.columns(3)
                 with view_col:
-                    if st.button("View", key=f"repository_view_{index}", use_container_width=True):
+                    if st.button(
+                        "View",
+                        key=f"repository_view_{index}",
+                        use_container_width=True,
+                        help=f"Open the saved study at {_resume_page(summary).split(' ', 1)[-1]} in read-only mode.",
+                    ):
                         _load_for_view(summary)
                 with edit_col:
-                    if st.button("Edit", key=f"repository_edit_{index}", use_container_width=True):
-                        if load_session_record(summary):
-                            st.session_state["study_access_mode"] = "edit"
-                            st.session_state["current_page"] = "📋 Overview"
-                            st.rerun()
+                    if st.button(
+                        "Resume at saved page",
+                        key=f"repository_edit_{index}",
+                        use_container_width=True,
+                        type="primary",
+                        help=f"Continue from the last saved workspace: {_resume_page(summary).split(' ', 1)[-1]}",
+                    ):
+                        _load_saved_study(summary, edit=True)
                 with delete_col:
                     if st.button("Delete", key=f"repository_delete_{index}", use_container_width=True):
                         _delete_saved(summary.get("project_name", ""), summary.get("field_name", ""))

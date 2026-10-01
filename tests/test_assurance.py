@@ -14,7 +14,7 @@ def test_new_canonical_entities_round_trip():
 
     restored = StudyDocument.from_session(document.to_dict())
 
-    assert document.schema_version == "2.2"
+    assert document.schema_version == "2.3"
     assert restored.barrier_register == {"RES-001": {"name": "Fault Seal Analysis"}}
     assert restored.study_role == "Reviewer"
     assert restored.study_reviews == [{"to": "Reviewed"}]

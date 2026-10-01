@@ -289,12 +289,13 @@ def build_resolution_planner(
     return pd.DataFrame(rows)
 
 
-def _all_known_risks() -> list[str]:
+def _all_known_risks(session: dict[str, Any] | None = None) -> list[str]:
     """Return master risks plus risks introduced by custom uncertainties."""
-    mapping_risks = list(st.session_state["_mapping"].get("risks", []))
+    source = session if session is not None else dict(st.session_state)
+    mapping_risks = list(source.get("_mapping", {}).get("risks", []))
     custom_risks = [
         risk
-        for uncertainty in st.session_state.get("uncertainties", [])
+        for uncertainty in source.get("uncertainties", [])
         if isinstance(uncertainty, dict)
         for risk in uncertainty.get("risks", [])
     ]
@@ -306,9 +307,41 @@ def _all_known_risks() -> list[str]:
     return output
 
 
+def _resolution_planner_owners(session: dict, resolutions: list[str]) -> list[str]:
+    """Return unique owners from Resolution Planner actions in stable order."""
+    wanted = set(resolutions)
+    owners: list[str] = []
+
+    for row in session.get("resolution_planner", []) or []:
+        if not isinstance(row, dict):
+            continue
+
+        action = str(row.get("Resolution Action", "") or "").strip()
+        owner = str(row.get("Action Owner", "") or "").strip()
+
+        if (
+            action in wanted
+            and owner
+            and owner not in owners
+        ):
+            owners.append(owner)
+
+    return owners
+
+
+def _default_risk_owner(
+    session: dict,
+    resolutions: list[str],
+) -> str:
+    """Return the default owner inherited from the linked planner actions."""
+    owners = _resolution_planner_owners(session, resolutions)
+    return owners[0] if owners else ""
+
+
 def build_risk_register(
     key_unc_df: pd.DataFrame,
     resolution_df: pd.DataFrame,
+    session: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
     """
     Build one row per linked risk.
@@ -319,15 +352,17 @@ def build_risk_register(
     if key_unc_df.empty:
         return pd.DataFrame()
 
-    options = st.session_state["_mapping"]["resolution_options"]
+    source = session if session is not None else dict(st.session_state)
+
+    options = source.get("_mapping", {}).get("resolution_options", [])
     uncertainty_details = {
         u["name"]: u
-        for u in st.session_state.get("uncertainties", [])
+        for u in source.get("uncertainties", [])
         if isinstance(u, dict)
     }
     existing = {
         row["Risk"]: row
-        for row in st.session_state.get("risk_register", [])
+        for row in source.get("risk_register", [])
         if isinstance(row, dict) and row.get("Risk")
     }
 
@@ -342,7 +377,7 @@ def build_risk_register(
             ]
 
     rows = []
-    for risk_index, risk in enumerate(_all_known_risks(), start=1):
+    for risk_index, risk in enumerate(_all_known_risks(source), start=1):
         linked_uncertainties: list[str] = []
 
         for _, row in key_unc_df.iterrows():
@@ -362,6 +397,26 @@ def build_risk_register(
 
         unique_resolutions = list(dict.fromkeys(all_resolutions))
         existing_row = existing.get(risk, {})
+
+        # New risks inherit the first populated owner from the linked
+        # Resolution Planner action(s). That inheritance remains active until
+        # the user explicitly overrides the owner in Risk Register.
+        planner_owner = _default_risk_owner(
+            source,
+            unique_resolutions,
+        )
+        existing_owner = str(
+            existing_row.get("Action Owner", "") or ""
+        ).strip()
+        owner_source = str(
+            existing_row.get("Action Owner Source", "") or ""
+        ).strip()
+        if owner_source == "planner_default" or not existing_owner:
+            default_owner = planner_owner
+            owner_source = "planner_default" if planner_owner else "manual"
+        else:
+            default_owner = existing_owner
+            owner_source = "manual"
 
         likelihood = existing_row.get("Likelihood (H/M/L)", "")
         impact = existing_row.get("Impact (H/M/L)", "")
@@ -385,7 +440,8 @@ def build_risk_register(
                 if unique_resolutions
                 else ""
             ),
-            "Action Owner": existing_row.get("Action Owner", ""),
+            "Action Owner": default_owner,
+            "Action Owner Source": owner_source,
             "Contingency Plan": existing_row.get("Contingency Plan", ""),
             "Impact/Consequence": existing_row.get("Impact/Consequence", ""),
             "Likelihood (H/M/L)": likelihood,

@@ -17,11 +17,55 @@ from utils.coercion import safe_int
 
 SURM_METHODOLOGY_VERSION = "SURM-2026.01"
 
+# Session-only values that must not make the study appear dirty.
+_SIGNATURE_EXCLUDED_KEYS = {
+    "_mapping",
+    "_last_saved",
+    "_last_save_auto",
+    "_saved_signature",
+    "_resume_message",
+    "_resume_attempted",
+    "_auto_save_enabled",
+    "study_mode",
+    "study_access_mode",
+    "top_navigation",
+    "ui_primary_color",
+    "ui_background_color",
+}
+
+
+def study_state_signature(session=None) -> str:
+    """Return a deterministic signature for durable study state."""
+    source = st.session_state if session is None else session
+    payload = {
+        str(key): value
+        for key, value in source.items()
+        if str(key) not in _SIGNATURE_EXCLUDED_KEYS
+        and not str(key).startswith("_")
+    }
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        ensure_ascii=False,
+        default=str,
+        separators=(",", ":"),
+    )
+
+
+def study_has_unsaved_changes(session=None) -> bool:
+    """Return whether durable study state differs from the last saved snapshot."""
+    source = st.session_state if session is None else session
+    saved_signature = str(source.get("_saved_signature", "") or "")
+    if not saved_signature:
+        return False
+    return study_state_signature(source) != saved_signature
+
 
 DEFAULT_SESSION_STATE = {
     "project_name",
     "field_name",
     "project_phase",
+    "last_saved_page",
     "study_id",
     "study_owner",
     "methodology_version",
@@ -86,6 +130,7 @@ def init_session():
         "project_name": "",
         "field_name": "",
         "project_phase": "",
+        "last_saved_page": "📋 Overview",
         "study_id": str(uuid4()),
         "study_owner": os.environ.get("SURM_USER", "local-user"),
         "methodology_version": SURM_METHODOLOGY_VERSION,
@@ -168,6 +213,7 @@ def init_session():
         # Persistence tracking
         "_last_saved": "",
         "_last_save_auto": False,
+        "_saved_signature": "",
         "_auto_save_enabled": True,
 
         # UI customisation

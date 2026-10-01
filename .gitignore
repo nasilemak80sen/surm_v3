@@ -30,3 +30,6 @@ sessions.db
 *.db-shm
 *.db-wal
 notebooks/.ipynb_checkpoints/
+
+# Test diagnostics
+test-artifacts/

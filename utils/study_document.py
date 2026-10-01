@@ -19,6 +19,7 @@ STUDY_KEYS = (
     "project_name",
     "field_name",
     "project_phase",
+    "last_saved_page",
     "study_owner",
     "methodology_version",
     "team_members",
@@ -67,11 +68,12 @@ class StudyDocument:
     """Durable study state independent of Streamlit widget state."""
 
     study_id: str = field(default_factory=lambda: str(uuid4()))
-    schema_version: str = "2.2"
+    schema_version: str = "2.3"
 
     project_name: str = ""
     field_name: str = ""
     project_phase: str = ""
+    last_saved_page: str = "📋 Overview"
     study_owner: str = "local-user"
     methodology_version: str = "SURM-2026.01"
 
@@ -118,6 +120,7 @@ class StudyDocument:
             "project_name": "",
             "field_name": "",
             "project_phase": "",
+            "last_saved_page": "📋 Overview",
             "study_owner": "local-user",
             "methodology_version": "SURM-2026.01",
             "team_members": [],
@@ -164,6 +167,9 @@ class StudyDocument:
         values["project_name"] = _text(values["project_name"])
         values["field_name"] = _text(values["field_name"])
         values["project_phase"] = _text(values["project_phase"])
+        values["last_saved_page"] = (
+            _text(values.get("last_saved_page")) or "📋 Overview"
+        )
         values["study_owner"] = _text(values.get("study_owner")) or "local-user"
         values["methodology_version"] = (
             _text(values.get("methodology_version")) or "SURM-2026.01"

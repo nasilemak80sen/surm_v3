@@ -1,9 +1,12 @@
+# Reproducible SURM runtime dependencies.
+# Versions below are pinned to the known-good CI environment used by the
+# September 2026 regression gate.
 streamlit==1.62.0
-pandas>=2.0.0
-openpyxl>=3.1.0
-plotly>=5.20.0
-kaleido>=0.2.1
-Pillow>=10.0.0
-matplotlib>=3.8.0
-numpy>=1.26.0
-psycopg2-binary>=2.9.0
+pandas==3.0.6
+openpyxl==3.1.5
+plotly==7.1.0
+kaleido==1.4.0
+Pillow==12.3.0
+matplotlib==3.11.2
+numpy==2.5.3
+psycopg2-binary==2.9.13

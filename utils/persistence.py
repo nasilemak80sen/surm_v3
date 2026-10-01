@@ -8,12 +8,17 @@ import streamlit as st
 from utils.auth import auth_required, can_delete_study, can_edit_study, current_user_label
 from utils.coercion import safe_int
 from utils.db import get_db
-from utils.session import DEFAULT_SESSION_STATE, normalize_entity_ids
+from utils.session import DEFAULT_SESSION_STATE, normalize_entity_ids, study_state_signature
 from utils.study_document import StudyDocument
 from utils.workflow import completion_percent
 import math
 
 _SKIP_EXACT  = {"_mapping", "_last_saved", "_last_save_auto", "_resume_message", "_resume_attempted"}
+
+_NON_RESUMABLE_PAGES = {
+    "🗂️ Study Repository",
+    "📖 How to Use",
+}
 _SKIP_PREFIX = ("_", "unc_")
 
 
@@ -78,6 +83,15 @@ def save_session(auto: bool = False) -> bool:
         except Exception:
             return ""
 
+    current_page = str(
+        st.session_state.get("current_page", "📋 Overview")
+        or "📋 Overview"
+    )
+    if current_page not in _NON_RESUMABLE_PAGES:
+        st.session_state["last_saved_page"] = current_page
+    elif not st.session_state.get("last_saved_page"):
+        st.session_state["last_saved_page"] = "📋 Overview"
+
     previous_revision = safe_int(
         st.session_state.get("study_revision", 0),
         default=0,
@@ -117,6 +131,7 @@ def save_session(auto: bool = False) -> bool:
             "study_id": document.study_id,
             "study_owner": document.study_owner,
             "methodology_version": document.methodology_version,
+            "last_saved_page": document.last_saved_page,
         },
         "session": payload,
     }
@@ -140,6 +155,8 @@ def save_session(auto: bool = False) -> bool:
         if not saved_document or saved_document.to_dict() != document.to_dict():
             st.warning("The study was saved but could not be verified. Please retry.")
             return False
+
+        st.session_state["_saved_signature"] = study_state_signature(st.session_state)
     return ok
 
 
@@ -207,6 +224,16 @@ def load_session(project_name: str, field_name: str, phase_name: str = "") -> bo
         st.session_state["study_lifecycle"] = meta.get("study_lifecycle", data.get("session", {}).get("study_lifecycle", "Draft"))
         st.session_state["study_mode"] = "loaded"
         st.session_state["study_access_mode"] = "view"
+        st.session_state["last_saved_page"] = (
+            data.get("session", {}).get("last_saved_page")
+            or meta.get("last_saved_page")
+            or "📋 Overview"
+        )
+        # Resume routing is based on the durable saved workspace, never the
+        # repository page that happened to be open when the record was loaded.
+        st.session_state["_pending_navigation_page"] = st.session_state["last_saved_page"]
+        st.session_state["current_page"] = st.session_state["last_saved_page"]
+        st.session_state["_saved_signature"] = study_state_signature(st.session_state)
         st.session_state["study_id"] = (
             data.get("session", {}).get("study_id")
             or meta.get("study_id")

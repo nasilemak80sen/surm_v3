@@ -462,6 +462,7 @@ class SQLiteDB(SessionDB):
                         "saved_at": row[5],
                         "study_lifecycle": payload.get("study_lifecycle", "Draft"),
                         "study_revision": payload.get("study_revision", 0),
+                        "resume_page": payload.get("last_saved_page", "📋 Overview"),
                         "last_edited_by": latest.get("actor", "local-user"),
                         "last_edited_at": latest.get("saved_at", row[5]),
                     }
@@ -922,6 +923,7 @@ class PostgresDB(SessionDB):
                         "saved_at": saved_at,
                         "study_lifecycle": payload.get("study_lifecycle", "Draft"),
                         "study_revision": payload.get("study_revision", 0),
+                        "resume_page": payload.get("last_saved_page", "📋 Overview"),
                         "last_edited_by": latest.get("actor", "local-user"),
                         "last_edited_at": latest.get("saved_at", saved_at),
                     }

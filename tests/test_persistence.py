@@ -21,6 +21,7 @@ class PersistenceTests(unittest.TestCase):
         self.assertIn("barrier_register", DEFAULT_SESSION_STATE)
         self.assertIn("study_reviews", DEFAULT_SESSION_STATE)
         self.assertIn("study_role", DEFAULT_SESSION_STATE)
+        self.assertIn("last_saved_page", DEFAULT_SESSION_STATE)
 
     def test_load_session_record_uses_project_and_field(self):
         with patch("utils.persistence.load_session", return_value=True) as mock_load:
@@ -35,6 +36,21 @@ class PersistenceTests(unittest.TestCase):
 
         self.assertFalse(result)
         mock_load.assert_not_called()
+
+    def test_study_document_round_trip_preserves_resume_page(self):
+        from utils.study_document import StudyDocument
+
+        document = StudyDocument.from_session({
+            "project_name": "Alpha",
+            "field_name": "Beta",
+            "last_saved_page": "6️⃣ Resolution Planner",
+        })
+
+        payload = document.to_dict()
+        restored = StudyDocument.from_record({"session": payload, "meta": {}})
+
+        self.assertEqual(restored.last_saved_page, "6️⃣ Resolution Planner")
+
 
     def test_create_new_study_clears_existing_workspace(self):
         init_session()
@@ -118,6 +134,7 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(summaries[0]["study_revision"], 3)
         self.assertEqual(summaries[0]["last_edited_by"], "Engineer A")
         self.assertEqual(summaries[0]["last_edited_at"], "2026-09-01T12:30:00")
+        self.assertEqual(summaries[0]["resume_page"], "📋 Overview")
 
     def test_sqlite_version_and_record_queries_support_history_and_portfolio(self):
         with tempfile.TemporaryDirectory() as directory:

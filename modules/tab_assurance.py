@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from utils.analytics import validation_warnings
-from utils.form_ui import render_save_hint
+from utils.form_ui import render_form_header, render_save_hint
 from utils.intelligence import build_bowtie_qa
 from utils.assurance import LIFECYCLE_ORDER, validate_transition, signoff_complete
 from utils.persistence import save_session
@@ -21,9 +21,10 @@ def render():
     warnings = validation_warnings(dict(session))
     qa = build_bowtie_qa(dict(session))
 
-    st.markdown("## ✅ Assurance & Review")
-    st.caption(
-        "Lifecycle, review decisions, governance readiness and reproducible revision controls."
+    render_form_header(
+        "STUDY GOVERNANCE",
+        "Assurance & Review",
+        "Control lifecycle, review decisions, validation findings and approval readiness.",
     )
 
     metrics = st.columns(5)

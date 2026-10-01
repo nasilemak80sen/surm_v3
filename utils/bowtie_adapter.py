@@ -31,7 +31,10 @@ def _stable_id(prefix: str, text: str) -> str:
     return f"{prefix}-{digest}"
 
 
-def _source_signature(risk_row: dict[str, Any]) -> str:
+def _source_signature(
+    risk_row: dict[str, Any],
+    resolution_planner: list[dict[str, Any]] | None = None,
+) -> str:
     parts = [
         str(risk_row.get("risk_id", "")),
         str(risk_row.get("Risk", "")),
@@ -40,6 +43,24 @@ def _source_signature(risk_row: dict[str, Any]) -> str:
         str(risk_row.get("Contingency Plan", "")),
         str(risk_row.get("Impact/Consequence", "")),
     ]
+
+    planner_map = {}
+    for row in resolution_planner or []:
+        if not isinstance(row, dict):
+            continue
+        action = str(row.get("Resolution Action", "") or "").strip()
+        if not action:
+            continue
+        planner_map[action] = (
+            str(row.get("resolution_id", "") or "").strip(),
+            str(row.get("Action Owner", "") or "").strip(),
+            str(row.get("Description", "") or "").strip(),
+        )
+
+    for action in _items(risk_row.get("Resolution Plan")):
+        planner_id, owner, description = planner_map.get(action, ("", "", ""))
+        parts.extend([action, planner_id, owner, description])
+
     return hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()
 
 
@@ -119,58 +140,51 @@ def build_bowtie_document(
         cause_node_by_name[name] = node
         cause_placement_by_name[name] = placement
 
-    # One preventive barrier identity per resolution option, with associations
-    # derived from the uncertainty-specific resolution mapping.
+    # The Risk Register is the canonical Bowtie input. Only resolution
+    # actions actually written into this risk row become preventive barriers.
+    # Do not re-read the full upstream resolution mapping here: doing so can
+    # silently re-introduce options the user did not select for this risk.
+    selected_resolution_names = list(dict.fromkeys(
+        _items(risk_row.get("Resolution Plan"))
+    ))
+
     barrier_by_option: dict[str, dict[str, Any]] = {}
     barrier_counter = 0
-    for cause_name in cause_names:
-        options = resolution_list.get(cause_name, {}) or {}
-        for option, enabled in options.items():
-            if enabled != "Y":
-                continue
-            option = str(option).strip()
-            if not option:
-                continue
-            if option in barrier_by_option:
-                continue
 
-            barrier_counter += 1
-            planner_match = next(
-                (
-                    row for row in resolution_planner
-                    if str(row.get("Resolution Action", "")).strip() == option
-                ),
-                {},
-            )
-            barrier_id = str(
-                planner_match.get("resolution_id")
-                or _stable_id("RES", option)
-            )
-            barrier = {
-                "id": barrier_id,
-                "type": "preventativeBarrier",
-                "name": option,
-                "description": str(planner_match.get("Description", "") or ""),
-                "owner": str(planner_match.get("Action Owner", "") or ""),
-                "effectiveness": "",
-                "degradation_factors": [],
-                "controls": [],
-                "surm_source": {
-                    "type": "resolution",
-                    "resolution_action": option,
-                    "resolution_id": barrier_id,
-                },
-            }
-            barrier_by_option[option] = {
-                "node": barrier,
-                "index": barrier_counter,
-                "cause_names": [],
-            }
-            library["preventativeBarrier"].append(barrier)
-
-        for option, enabled in options.items():
-            if enabled == "Y" and str(option).strip() in barrier_by_option:
-                barrier_by_option[str(option).strip()]["cause_names"].append(cause_name)
+    for option in selected_resolution_names:
+        planner_match = next(
+            (
+                row for row in resolution_planner
+                if str(row.get("Resolution Action", "")).strip() == option
+            ),
+            {},
+        )
+        barrier_counter += 1
+        barrier_id = str(
+            planner_match.get("resolution_id")
+            or _stable_id("RES", option)
+        )
+        barrier = {
+            "id": barrier_id,
+            "type": "preventativeBarrier",
+            "name": option,
+            "description": str(planner_match.get("Description", "") or ""),
+            "owner": str(planner_match.get("Action Owner", "") or ""),
+            "effectiveness": "",
+            "degradation_factors": [],
+            "controls": [],
+            "surm_source": {
+                "type": "resolution",
+                "resolution_action": option,
+                "resolution_id": barrier_id,
+            },
+        }
+        barrier_by_option[option] = {
+            "node": barrier,
+            "index": barrier_counter,
+            "cause_names": list(cause_names),
+        }
+        library["preventativeBarrier"].append(barrier)
 
     for option, item in barrier_by_option.items():
         index = item["index"]
@@ -275,7 +289,7 @@ def build_bowtie_document(
         "version": BOWTIE_SCHEMA_VERSION,
         "risk_id": risk_id,
         "name": risk_name,
-        "source_signature": _source_signature(risk_row),
+        "source_signature": _source_signature(risk_row, resolution_planner),
         "pages": [{
             "id": "PAGE_1",
             "name": risk_name or "Risk Bowtie",
@@ -313,6 +327,361 @@ def build_bowtie_document(
     }
 
 
+_GENERATED_SOURCE_TYPES = {
+    "uncertainty",
+    "resolution",
+    "risk_consequence",
+    "risk_contingency",
+}
+
+
+def _source_key(node: dict[str, Any]) -> tuple[str, str] | None:
+    """Return a stable identity for SURM-generated Bowtie nodes."""
+    source = node.get("surm_source") or {}
+    source_type = str(source.get("type", "") or "").strip()
+
+    if source_type == "uncertainty":
+        identity = str(
+            source.get("uncertainty_id")
+            or node.get("id")
+            or node.get("name")
+            or ""
+        ).strip()
+    elif source_type == "resolution":
+        identity = str(
+            source.get("resolution_id")
+            or source.get("resolution_action")
+            or node.get("name")
+            or ""
+        ).strip()
+    elif source_type in {"risk_consequence", "risk_contingency"}:
+        identity = str(node.get("name", "") or "").strip()
+    else:
+        return None
+
+    return (source_type, identity) if identity else None
+
+
+def _merge_generated_category(
+    existing: dict[str, Any],
+    desired: dict[str, Any],
+    *,
+    placement_key: str,
+    library_key: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, str]]:
+    """Merge SURM-generated nodes while preserving manual nodes and layout."""
+    existing_nodes = [
+        node for node in (existing.get("library", {}).get(library_key, []) or [])
+        if isinstance(node, dict)
+    ]
+    desired_nodes = [
+        node for node in (desired.get("library", {}).get(library_key, []) or [])
+        if isinstance(node, dict)
+    ]
+    existing_placements = [
+        placement for placement in (existing.get(placement_key, []) or [])
+        if isinstance(placement, dict)
+    ]
+    desired_placements = [
+        placement for placement in (desired.get(placement_key, []) or [])
+        if isinstance(placement, dict)
+    ]
+
+    existing_generated = {
+        _source_key(node): node
+        for node in existing_nodes
+        if _source_key(node) is not None
+    }
+
+    merged_nodes = [
+        deepcopy(node)
+        for node in existing_nodes
+        if _source_key(node) is None
+    ]
+    merged_placements = [
+        deepcopy(placement)
+        for placement in existing_placements
+        if not _source_key(
+            next(
+                (
+                    node for node in existing_nodes
+                    if str(node.get("id", "")) == str(placement.get("nodeId", ""))
+                ),
+                {},
+            )
+        )
+    ]
+
+    desired_node_id_to_actual: dict[str, str] = {}
+    desired_placement_id_to_actual: dict[str, str] = {}
+
+    for desired_node in desired_nodes:
+        key = _source_key(desired_node)
+        current = existing_generated.get(key) if key else None
+
+        if current:
+            merged = deepcopy(current)
+            merged["name"] = desired_node.get("name", merged.get("name", ""))
+            merged["description"] = desired_node.get(
+                "description",
+                merged.get("description", ""),
+            )
+            if desired_node.get("type") in {
+                "preventativeBarrier",
+                "mitigativeBarrier",
+            }:
+                merged["owner"] = desired_node.get(
+                    "owner",
+                    merged.get("owner", ""),
+                )
+            merged["surm_source"] = deepcopy(
+                desired_node.get("surm_source", merged.get("surm_source", {}))
+            )
+            actual_id = str(current.get("id", ""))
+            merged_nodes.append(merged)
+        else:
+            merged = deepcopy(desired_node)
+            actual_id = str(merged.get("id", ""))
+            merged_nodes.append(merged)
+
+        desired_node_id_to_actual[str(desired_node.get("id", ""))] = actual_id
+
+    existing_placement_by_node = {
+        str(placement.get("nodeId", "")): placement
+        for placement in existing_placements
+        if isinstance(placement, dict)
+    }
+
+    used_placement_ids = {
+        str(placement.get("id", ""))
+        for placement in existing_placements
+        if placement.get("id")
+    }
+
+    for desired_placement in desired_placements:
+        desired_node_id = str(desired_placement.get("nodeId", ""))
+        actual_node_id = desired_node_id_to_actual.get(desired_node_id, desired_node_id)
+        current_placement = existing_placement_by_node.get(actual_node_id)
+
+        if current_placement:
+            # Preserve existing position/size exactly. Reconciliation must not
+            # turn a source update into an implicit layout operation.
+            merged_placements.append(deepcopy(current_placement))
+            desired_placement_id_to_actual[str(desired_placement.get("id", ""))] = str(
+                current_placement.get("id", "")
+            )
+            continue
+
+        new_placement = deepcopy(desired_placement)
+        new_placement["nodeId"] = actual_node_id
+        placement_id = str(new_placement.get("id", ""))
+        while placement_id in used_placement_ids:
+            placement_id = f"{placement_id}-NEW"
+        new_placement["id"] = placement_id
+        used_placement_ids.add(placement_id)
+        merged_placements.append(new_placement)
+        desired_placement_id_to_actual[str(desired_placement.get("id", ""))] = placement_id
+
+    return merged_nodes, merged_placements, desired_placement_id_to_actual
+
+
+def reconcile_bowtie_document(
+    existing: dict[str, Any],
+    risk_row: dict[str, Any],
+    *,
+    uncertainties: list[dict[str, Any]],
+    resolution_list: dict[str, Any],
+    resolution_planner: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Synchronise risk-form data into an existing Bowtie without rebuilding it.
+
+    SURM-generated nodes are updated/added/removed from the current Risk
+    Register inputs. Manual Bowtie nodes, edits, relationships and placements
+    remain intact. Layout is never created as a side effect of synchronisation.
+    """
+    desired = build_bowtie_document(
+        risk_row,
+        uncertainties=uncertainties,
+        resolution_list=resolution_list,
+        resolution_planner=resolution_planner,
+    )
+    result = deepcopy(existing)
+
+    result["risk_id"] = desired["risk_id"]
+    result["name"] = desired["name"]
+    result["source_signature"] = desired["source_signature"]
+    result["needs_refresh"] = False
+
+    pages = result.get("pages") or desired.get("pages") or []
+    if not pages:
+        pages = deepcopy(desired.get("pages", []))
+    if pages:
+        pages[0]["name"] = desired["name"]
+        pages[0]["topLevelEvent"] = {
+            **(pages[0].get("topLevelEvent") or {}),
+            "name": desired["name"],
+        }
+    result["pages"] = pages
+
+    placement_maps = {}
+    for category in (
+        ("causes", "cause"),
+        ("preventativeBarriers", "preventativeBarrier"),
+        ("mitigativeBarriers", "mitigativeBarrier"),
+        ("outcomes", "outcome"),
+    ):
+        merged_nodes, merged_placements, id_map = _merge_generated_category(
+            result,
+            desired,
+            placement_key=category[0],
+            library_key=category[1],
+        )
+        result.setdefault("library", {})[category[1]] = merged_nodes
+        result[category[0]] = merged_placements
+        placement_maps[category[0]] = id_map
+
+    # Build lookup for the resulting node source type so relationship updates
+    # preserve links to manual barriers while replacing only SURM-generated stops.
+    placement_source_types: dict[str, str] = {}
+    library = result.get("library", {}) or {}
+    for placement_key, library_key in (
+        ("causes", "cause"),
+        ("preventativeBarriers", "preventativeBarrier"),
+        ("mitigativeBarriers", "mitigativeBarrier"),
+        ("outcomes", "outcome"),
+    ):
+        nodes_by_id = {
+            str(node.get("id", "")): node
+            for node in library.get(library_key, []) or []
+            if isinstance(node, dict)
+        }
+        for placement in result.get(placement_key, []) or []:
+            node = nodes_by_id.get(str(placement.get("nodeId", "")))
+            if node:
+                source_type = str((node.get("surm_source") or {}).get("type", ""))
+                placement_source_types[str(placement.get("id", ""))] = source_type
+
+    desired_lines = []
+    for desired_line in desired.get("lines", []) or []:
+        origin_id = str(desired_line.get("originId", ""))
+        mapped_origin = origin_id
+        for id_map in placement_maps.values():
+            mapped_origin = id_map.get(origin_id, mapped_origin)
+        if mapped_origin == origin_id and not any(
+            str(p.get("id", "")) == origin_id
+            for key in ("causes", "outcomes")
+            for p in result.get(key, []) or []
+        ):
+            continue
+
+        desired_stops = []
+        for stop_id in desired_line.get("stops", []) or []:
+            mapped_stop = stop_id
+            for id_map in placement_maps.values():
+                mapped_stop = id_map.get(stop_id, mapped_stop)
+            if mapped_stop not in desired_stops:
+                desired_stops.append(mapped_stop)
+
+        desired_lines.append({
+            **deepcopy(desired_line),
+            "originId": mapped_origin,
+            "stops": desired_stops,
+        })
+
+    desired_origin_ids = {
+        str(line.get("originId", ""))
+        for line in desired_lines
+    }
+
+    existing_lines = [
+        line for line in (result.get("lines", []) or [])
+        if isinstance(line, dict)
+    ]
+    reconciled_lines = []
+
+    for line in existing_lines:
+        origin = str(line.get("originId", ""))
+        if origin in desired_origin_ids:
+            continue
+
+        if origin and placement_source_types.get(origin) in _GENERATED_SOURCE_TYPES:
+            continue
+
+        # Preserve manual relationship records.
+        reconciled_lines.append(deepcopy(line))
+
+    for desired_line in desired_lines:
+        existing_line = next(
+            (
+                line for line in existing_lines
+                if str(line.get("originId", "")) == str(desired_line.get("originId", ""))
+            ),
+            None,
+        )
+
+        if existing_line:
+            generated_stops = set(
+                desired_line.get("stops", []) or []
+            )
+            manual_stops = [
+                stop
+                for stop in (existing_line.get("stops", []) or [])
+                if placement_source_types.get(str(stop))
+                not in _GENERATED_SOURCE_TYPES
+            ]
+            desired_line["stops"] = []
+            for stop in [*manual_stops, *generated_stops]:
+                if stop not in desired_line["stops"]:
+                    desired_line["stops"].append(stop)
+
+            merged_line = {
+                **deepcopy(existing_line),
+                **deepcopy(desired_line),
+            }
+            reconciled_lines.append(merged_line)
+        else:
+            reconciled_lines.append(deepcopy(desired_line))
+
+    result["lines"] = reconciled_lines
+
+    # Keep the existing browser/editor layout untouched, only extending it for
+    # genuinely new source-derived placements. Drop stale entries for nodes
+    # that are no longer present so a later node cannot inherit old geometry.
+    active_layout_ids = {
+        str(placement.get("id", ""))
+        for placement_key in (
+            "causes",
+            "preventativeBarriers",
+            "mitigativeBarriers",
+            "outcomes",
+        )
+        for placement in result.get(placement_key, []) or []
+        if placement.get("id")
+    }
+    result["layout"] = {
+        str(pid): deepcopy(value)
+        for pid, value in (result.get("layout", {}) or {}).items()
+        if str(pid) in active_layout_ids
+    }
+    for placement_key in (
+        "causes",
+        "preventativeBarriers",
+        "mitigativeBarriers",
+        "outcomes",
+    ):
+        for placement in result.get(placement_key, []) or []:
+            pid = str(placement.get("id", ""))
+            result["layout"].setdefault(pid, {
+                "x": placement.get("x", 0),
+                "y": placement.get("y", 0),
+                "w": placement.get("w", 0),
+                "h": placement.get("h", 0),
+            })
+
+    result["layout_version"] = 2
+    return result
+
+
 def ensure_bowtie_register(
     risk_rows: list[dict[str, Any]],
     *,
@@ -321,11 +690,7 @@ def ensure_bowtie_register(
     resolution_list: dict[str, Any],
     resolution_planner: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Ensure every current risk has a persisted Bowtie document.
-
-    Existing diagrams are preserved even when the upstream risk changes; the
-    source_signature lets the UI tell the engineer that a refresh is available.
-    """
+    """Ensure every current risk has a Bowtie reconciled to Risk Register data."""
     current_register = deepcopy(current or {})
     result: dict[str, Any] = {}
 
@@ -336,9 +701,22 @@ def ensure_bowtie_register(
 
         existing = current_register.get(risk_id)
         if existing:
-            result[risk_id] = existing
-            if existing.get("source_signature") != _source_signature(row):
-                result[risk_id]["needs_refresh"] = True
+            current_signature = _source_signature(
+                row,
+                resolution_planner,
+            )
+            if existing.get("source_signature") == current_signature:
+                # No upstream form data changed. Preserve the current Bowtie
+                # exactly; this is critical after Auto Layout or manual edits.
+                result[risk_id] = existing
+            else:
+                result[risk_id] = reconcile_bowtie_document(
+                    existing,
+                    row,
+                    uncertainties=uncertainties,
+                    resolution_list=resolution_list,
+                    resolution_planner=resolution_planner,
+                )
             continue
 
         result[risk_id] = build_bowtie_document(
@@ -357,7 +735,17 @@ def refresh_bowtie_document(
     uncertainties: list[dict[str, Any]],
     resolution_list: dict[str, Any],
     resolution_planner: list[dict[str, Any]],
+    current: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Synchronise a Risk Register row into Bowtie, preserving manual edits."""
+    if current:
+        return reconcile_bowtie_document(
+            current,
+            risk_row,
+            uncertainties=uncertainties,
+            resolution_list=resolution_list,
+            resolution_planner=resolution_planner,
+        )
     return build_bowtie_document(
         risk_row,
         uncertainties=uncertainties,
