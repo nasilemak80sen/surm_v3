@@ -4429,7 +4429,7 @@ section[data-testid="stSidebar"] {
     margin-bottom: 0.55rem;
 }
 
-section[data-testid="stSidebar"] .stButton.st-key-sidebar_continue_next_stage > button {
+section[data-testid="stSidebar"] .st-key-sidebar_continue_next_stage .stButton > button {
     min-height: 2.3rem !important;
     border-color: #79C79A !important;
     background: #EAF7EF !important;
@@ -4437,7 +4437,7 @@ section[data-testid="stSidebar"] .stButton.st-key-sidebar_continue_next_stage > 
     font-weight: 800 !important;
 }
 
-section[data-testid="stSidebar"] .stButton.st-key-sidebar_continue_next_stage > button:hover {
+section[data-testid="stSidebar"] .st-key-sidebar_continue_next_stage .stButton > button:hover {
     background: #F4FBF6 !important;
 }
 
