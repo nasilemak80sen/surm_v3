@@ -281,7 +281,7 @@ def build_resolution_planner(
             "Required Completion": existing_row.get("Required Completion", ""),
             "Progress (0-1)": min(max(safe_float(existing_row.get("Progress (0-1)", 0.0), default=0.0), 0.0), 1.0),
             "Status": existing_row.get("Status", "Open"),
-            "Action Owner": default_owner,
+            "Action Owner": existing_row.get("Action Owner", ""),
             "Part of Workplan": existing_row.get("Part of Workplan", True),
             "Remarks": existing_row.get("Remarks", ""),
         })
