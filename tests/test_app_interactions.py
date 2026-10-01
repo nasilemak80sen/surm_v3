@@ -5,27 +5,54 @@ import pandas as pd
 import pytest
 
 
-def test_shell_uses_one_sidebar_navigation_surface():
+def test_sidebar_is_task_oriented_and_state_aware():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "surm.py").read_text(encoding="utf-8")
 
     ast.parse(source)
-    assert "def render_top_navigation" not in source
-    assert "render_top_navigation()" not in source
+
+    # One area selector + direct page actions: no second dropdown/radio
+    # abstraction should compete with the journey.
     assert 'st.segmented_control(' in source
-    assert 'st.radio(' in source
+    assert 'st.radio(' not in source
     assert 'key="sidebar_area_selector"' in source
-    assert 'key="sidebar_page_selector"' in source
-    assert 'ss["sidebar_page_selector"] = current_area_page' in source
+    assert 'key=f"sidebar_page_{index}_{page}"' in source
+    assert 'key="sidebar_continue_next_stage"' in source
+
+    # The navigation is generated from the same workflow truth used by the
+    # main router, so the sidebar cannot silently invent a different state.
+    assert 'stage_map = {' in source
+    assert 'stage_results(session)' in source
+    assert 'stage.complete' in source
+    assert 'stage.available' in source
+    assert 'disabled=disabled' in source
+    assert 'if next_stage and next_stage != current_page:' in source
+
+    # Study / workflow / insights / support remain mutually explicit.
     assert 'area_pages = {' in source
-    assert "_build_sidebar_navigation" not in source
-    assert "_sidebar_nav_item" not in source
-    assert "header_slot = st.empty()" not in source
+    assert '"Study": study_pages' in source
+    assert '"Workflow": WORKFLOW_PAGES' in source
+    assert '"Insights": insight_pages' in source
+    assert '"Support": support_pages' in source
+
+    # Navigation stays separate from utility actions.
     assert 'with st.expander("Utilities & access", expanded=False)' in source
     assert 'with st.expander("Insights & governance", expanded=False)' not in source
     assert 'with st.expander("Session & export", expanded=False)' not in source
     assert 'with st.expander("Account & access", expanded=False)' not in source
-    assert 'sidebar_nav_' not in source
+
+
+def test_sidebar_workflow_labels_expose_completion_and_lock_state():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    assert 'state = "COMPLETE"' in source
+    assert 'state = "READY"' in source
+    assert 'state = "LOCKED"' in source
+    assert 'state = "CURRENT"' in source
+    assert 'st.button(' in source
+    assert 'disabled=disabled' in source
+    assert '"Locked stages become available when their upstream gate is satisfied."' in source
 
 
 def test_overview_does_not_duplicate_repository_or_export():
