@@ -183,24 +183,35 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     timeout=10_000,
                 )
 
-                # Navigate using the single sidebar workspace selector.
+                # Navigate using the contextual sidebar journey.
                 sidebar = page.locator('[data-testid="stSidebar"]')
-                page_selector = sidebar.get_by_label("Current page")
-                expect(page_selector).to_have_count(1)
-                expect(page_selector).to_be_visible(timeout=10_000)
+                area_switcher = sidebar.locator(
+                    '[data-testid="stSegmentedControl"]'
+                )
+                expect(area_switcher).to_have_count(1)
+                expect(area_switcher).to_be_visible(timeout=10_000)
+                expect(
+                    sidebar.get_by_text("Study", exact=True)
+                ).to_be_visible(timeout=10_000)
+                expect(
+                    sidebar.get_by_text("Workflow", exact=True)
+                ).to_be_visible(timeout=10_000)
 
                 print(
                     "Sidebar geometry:",
                     page.evaluate(
                         """() => {
                             const sidebar = document.querySelector('[data-testid="stSidebar"]');
-                            const selector = sidebar
-                                ? sidebar.querySelector('[data-testid="stSelectbox"]')
+                            const navigation = sidebar
+                                ? sidebar.querySelector('.st-key-sidebar-navigation')
+                                : null;
+                            const selector = navigation
+                                ? navigation.querySelector('[data-testid="stRadio"]')
                                 : null;
                             const rect = selector ? selector.getBoundingClientRect() : null;
                             return {
                                 viewport: {width: window.innerWidth, height: window.innerHeight},
-                                selector: rect ? {
+                                navigation: rect ? {
                                     x: rect.x, y: rect.y, width: rect.width, height: rect.height,
                                 } : null,
                                 sidebar: sidebar ? (() => {
@@ -220,22 +231,34 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     ),
                 )
 
-                page_selector.click()
-                page.get_by_role(
-                    "option",
-                    name=re.compile(r"Study\s+—\s+Team"),
-                ).click()
+                sidebar.get_by_text("Study", exact=True).click()
+                _wait_for_idle(page)
+                expect(
+                    sidebar.get_by_text("Repository", exact=True)
+                ).to_be_visible(timeout=10_000)
+                expect(
+                    sidebar.get_by_text("Overview", exact=True)
+                ).to_be_visible(timeout=10_000)
+
+                sidebar.get_by_text("Team", exact=True).click()
                 _wait_for_idle(page)
                 _assert_shell(page)
                 expect(
                     page.get_by_text("Team", exact=True).first
                 ).to_be_visible(timeout=10_000)
 
-                page_selector = sidebar.get_by_label("Current page")
-                page_selector.click()
-                page.get_by_role(
-                    "option",
-                    name=re.compile(r"Workflow\s+01.*Uncertainties"),
+                sidebar = page.locator('[data-testid="stSidebar"]')
+                sidebar.get_by_text("Workflow", exact=True).click()
+                _wait_for_idle(page)
+                expect(
+                    sidebar.get_by_text(re.compile(r"01.*Uncertainties"))
+                ).to_be_visible(timeout=10_000)
+                expect(
+                    sidebar.get_by_text(re.compile(r"07.*Risk Register"))
+                ).to_be_visible(timeout=10_000)
+
+                sidebar.get_by_text(
+                    re.compile(r"01.*Uncertainties")
                 ).click()
                 _wait_for_idle(page)
                 _assert_shell(page)
@@ -246,12 +269,10 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     page.get_by_text("Selection Summary", exact=False)
                 ).to_be_visible(timeout=10_000)
 
-                page_selector = sidebar.get_by_label("Current page")
-                page_selector.click()
-                page.get_by_role(
-                    "option",
-                    name=re.compile(r"Study\s+—\s+Overview"),
-                ).click()
+                sidebar = page.locator('[data-testid="stSidebar"]')
+                sidebar.get_by_text("Study", exact=True).click()
+                _wait_for_idle(page)
+                sidebar.get_by_text("Overview", exact=True).click()
                 _wait_for_idle(page)
                 _assert_overview_ui(page)
 
