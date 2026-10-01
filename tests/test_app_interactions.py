@@ -139,7 +139,8 @@ def test_multi_action_forms_disable_accidental_enter_submission():
 
     for relative_path in TARGET_FORM_FILES:
         source = (project_root / relative_path).read_text(encoding="utf-8")
-        assert "enter_to_submit=False" in source, relative_path
+        if "st.form(" in source:
+            assert "enter_to_submit=False" in source, relative_path
 
 
 
@@ -588,7 +589,8 @@ def test_resolution_planner_uses_bounded_months_and_percentage_progress():
 
     assert '"Duration (months)": st.column_config.SelectboxColumn(' in source
     assert 'options=_MONTH_OPTIONS' in source
-    assert 'Every edit reruns the app and refreshes the' in source
+    assert '_planner_draft_rows' in source
+    assert 'st.form("planner_form"' not in source
     assert '"Progress (%)": st.column_config.NumberColumn(' in source
     assert 'min_value=0' in source
     assert 'max_value=100' in source
