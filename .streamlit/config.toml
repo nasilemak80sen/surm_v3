@@ -6,11 +6,27 @@
 
 [theme]
 base = "light"
-primaryColor = "#00a19c"
+primaryColor = "#006B67"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F8F9FA"
+secondaryBackgroundColor = "#F4F7F7"
 textColor = "#0A0E27"
 font = "sans serif"
+linkColor = "#006B67"
+codeTextColor = "#0A0E27"
+codeBackgroundColor = "#EEF3F3"
+borderColor = "#D8E1E1"
+dataframeBorderColor = "#D8E1E1"
+dataframeHeaderBackgroundColor = "#EDF3F3"
+chartCategoricalColors = ["#006B67", "#145DA0", "#D97706", "#A83232", "#6B4EFF", "#4F6D3A", "#606B75"]
+baseRadius = "medium"
+showWidgetBorder = true
+showSidebarBorder = true
+
+[theme.sidebar]
+backgroundColor = "#0E2928"
+secondaryBackgroundColor = "#153735"
+textColor = "#F4FAF6"
+primaryColor = "#006B67"
 
 [client]
 toolbarMode = "minimal"

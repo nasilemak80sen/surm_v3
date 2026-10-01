@@ -163,9 +163,11 @@ def calculate_study_progress() -> dict:
     )
 
     stages = stage_results(ss)
+    completed_stages = sum(stage.complete for stage in stages)
+    total_stages = len(stages)
     progress = round(
-        (sum(stage.complete for stage in stages) / len(stages)) * 100
-    )
+        (completed_stages / total_stages) * 100
+    ) if total_stages else 0
 
     return {
         "selected_uncertainties": selected_uncertainties,
@@ -175,6 +177,8 @@ def calculate_study_progress() -> dict:
         "resolution_actions": actions,
         "risks": risks,
         "team_members": team,
+        "completed_stages": completed_stages,
+        "total_stages": total_stages,
         "progress": progress,
     }
 
@@ -192,102 +196,11 @@ def _enable_edit_mode() -> None:
 # SIDEBAR
 # ============================================================================
 
-def _sidebar_nav_item(page: str, label: str, *, state: str = "available") -> None:
-    """Render one compact, clearly stateful sidebar navigation item."""
-    current_page = st.session_state.get("current_page")
-    if state == "current":
-        st.markdown(
-            f"""
-            <div class="surm-sidebar-nav-item surm-sidebar-nav-current">
-                <span class="surm-sidebar-nav-indicator">●</span>
-                <span class="surm-sidebar-nav-label">{html.escape(label)}</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        return
-
-    if state == "completed":
-        indicator = "✓"
-    elif state == "locked":
-        indicator = "🔒"
-    else:
-        indicator = "•"
-
-    disabled = state == "locked"
-    if st.button(
-        f"{indicator}  {label}",
-        key=f"sidebar_nav_{page}",
-        use_container_width=True,
-        disabled=disabled,
-        type="secondary",
-    ):
-        st.session_state["current_page"] = page
-        st.rerun()
-
-
-def _render_sidebar_nav_group(
-    title: str,
-    pages: list[tuple[str, str, str]],
-) -> None:
-    """Render a small labelled group of primary navigation destinations."""
-    st.markdown(
-        f'<div class="surm-sidebar-nav-group-title">{html.escape(title)}</div>',
-        unsafe_allow_html=True,
-    )
-    for page, label, state in pages:
-        _sidebar_nav_item(page, label, state=state)
-
-
-def _build_sidebar_navigation() -> dict[str, list[tuple[str, str, str]]]:
-    """Build grouped navigation while keeping workflow availability authoritative."""
-    session = cast(dict[str, Any], dict(st.session_state))
-    stage_map = {
-        page: stage
-        for page, stage in zip(WORKFLOW_PAGES, stage_results(session))
-    }
-    current_page = st.session_state.get("current_page")
-
-    def nav_state(page: str) -> str:
-        if page == current_page:
-            return "current"
-        stage = stage_map.get(page)
-        if stage is not None:
-            if stage.complete:
-                return "completed"
-            if not stage.available:
-                return "locked"
-        return "available"
-
-    def item(page: str, label: str) -> tuple[str, str, str]:
-        return page, label, nav_state(page)
-
-    return {
-        "Study": [
-            item("🗂️ Study Repository", "Study Repository"),
-            item("📋 Overview", "Overview"),
-            item("👥 Team", "Team"),
-        ],
-        "Workflow": [
-            item(page, page.split(" ", 1)[-1])
-            for page in WORKFLOW_PAGES
-        ],
-        "Insights & governance": [
-            item("📊 Intelligence", "Intelligence"),
-            item("🛡️ Barrier Management", "Barrier Management"),
-            item("✅ Assurance & Review", "Assurance & Review"),
-            item("🕘 Revision History", "Revision History"),
-        ],
-        "Support": [
-            item("📖 How to Use", "How to Use"),
-        ],
-    }
-
-
 def render_sidebar() -> None:
-    """Render a calm, task-oriented sidebar with one primary navigation system."""
-    from utils.persistence import save_session
+    """Render a visual, contextual navigation rail for the study workspace."""
+    from streamlit_extras.grid import grid
     from utils.export_excel import build_excel_export
+    from utils.persistence import save_session
 
     ss = st.session_state
     stats = calculate_study_progress()
@@ -300,7 +213,7 @@ def render_sidebar() -> None:
         st.markdown(
             """
             <div class="sidebar-brand">
-                <div class="sidebar-brand-icon">🛢️</div>
+                <div class="sidebar-brand-icon">◈</div>
                 <div>
                     <div class="sidebar-brand-title">SURM Toolkit</div>
                     <div class="sidebar-brand-subtitle">PETRONAS CARIGALI</div>
@@ -310,86 +223,307 @@ def render_sidebar() -> None:
             unsafe_allow_html=True,
         )
 
-        # ------------------------------------------------------------------
-        # Study context — always visible because it anchors the user's place.
-        # ------------------------------------------------------------------
         field = str(ss.get("field_name", "") or "").strip()
         project = str(ss.get("project_name", "") or "").strip()
         phase = str(ss.get("project_phase", "") or "").strip()
-        lifecycle = str(ss.get("study_lifecycle", "Draft") or "Draft").strip()
-        access_mode = "Edit" if study_is_editable(session) else "View"
+        lifecycle = str(
+            ss.get("study_lifecycle", "Draft") or "Draft"
+        ).strip()
+        access_mode = "EDIT" if study_is_editable(session) else "VIEW"
         progress = stats["progress"]
+        completed_stages = stats["completed_stages"]
+        total_stages = stats["total_stages"]
 
-        st.markdown(
-            f"""
-            <div class="surm-sidebar-study-card">
-                <div class="surm-sidebar-study-kicker">CURRENT STUDY</div>
-                <div class="surm-sidebar-study-title">{html.escape(project or "Untitled Study")}</div>
-                <div class="surm-sidebar-study-meta">{html.escape(field or "Field not configured")}</div>
-                <div class="surm-sidebar-study-chips">
-                    <span>{html.escape(phase or "Phase —")}</span>
+        # ------------------------------------------------------------------
+        # Current study identity
+        # ------------------------------------------------------------------
+        with st.container(key="sidebar-study-context", border=False):
+            st.markdown(
+                f"""
+                <div class="sidebar-context-kicker">CURRENT STUDY</div>
+                <div class="sidebar-context-title">
+                    {html.escape(project or "Untitled Study")}
+                </div>
+                <div class="sidebar-context-meta">
+                    {html.escape(field or "Field not configured")}
+                    <span>·</span>
+                    {html.escape(phase or "Phase —")}
+                </div>
+                <div class="sidebar-context-status">
                     <span>{html.escape(lifecycle)}</span>
                     <span>{html.escape(access_mode)}</span>
                 </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+                <div class="sidebar-stage-progress">
+                    <div class="sidebar-stage-progress-header">
+                        <span>STUDY STAGES</span>
+                        <strong>{progress}%</strong>
+                    </div>
+                    <div class="sidebar-stage-progress-summary">
+                        {completed_stages} of {total_stages} stages complete
+                    </div>
+                    <div
+                        class="sidebar-stage-progress-track"
+                        role="progressbar"
+                        aria-label="Study stage completion"
+                        aria-valuemin="0"
+                        aria-valuemax="{total_stages}"
+                        aria-valuenow="{completed_stages}"
+                    >
+                        <div
+                            class="sidebar-stage-progress-fill"
+                            style="width: {progress}%"
+                        ></div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        # ------------------------------------------------------------------
+        # Contextual navigation
+        # ------------------------------------------------------------------
+        current_page = st.session_state.get(
+            "current_page",
+            "📋 Overview",
+        )
+        if current_page not in NAVIGATION_ORDER:
+            current_page = "📋 Overview"
+            st.session_state["current_page"] = current_page
+
+        study_pages = [
+            "🗂️ Study Repository",
+            "📋 Overview",
+            "👥 Team",
+        ]
+        insight_pages = [
+            "📄 PRA Output",
+            "📊 Intelligence",
+            "🛡️ Barrier Management",
+            "✅ Assurance & Review",
+            "🕘 Revision History",
+        ]
+        support_pages = ["📖 How to Use"]
+
+        if current_page in study_pages:
+            active_area = "Study"
+        elif current_page in WORKFLOW_PAGES:
+            active_area = "Workflow"
+        elif current_page in insight_pages:
+            active_area = "Insights"
+        else:
+            active_area = "Support"
+
+        # Keep the workspace selector aligned with the page on entry, but do
+        # not overwrite a user selection before Streamlit can deliver it.
+        if ss.get("sidebar_area_selector") not in {"Study", "Workflow", "Insights", "Support"}:
+            ss["sidebar_area_selector"] = active_area
+
+        stage_map = {
+            page: stage
+            for page, stage in zip(
+                WORKFLOW_PAGES,
+                stage_results(session),
+            )
+        }
+
+        area_pages = {
+            "Study": study_pages,
+            "Workflow": WORKFLOW_PAGES,
+            "Insights": insight_pages,
+            "Support": support_pages,
+        }
+
+        area = st.segmented_control(
+            "Workspace area",
+            ["Study", "Workflow", "Insights", "Support"],
+            key="sidebar_area_selector",
+            label_visibility="collapsed",
         )
 
-        st.progress(progress / 100, text=f"{progress}% workflow complete")
+        if area and area != active_area:
+            st.session_state["current_page"] = area_pages[area][0]
+            st.rerun()
+
+        pages = area_pages.get(area or active_area, study_pages)
+
+        def _go_to(page: str) -> None:
+            _set_current_page(page)
+
+        def _page_title(page: str) -> str:
+            return page.split(" ", 1)[-1]
 
         # ------------------------------------------------------------------
-        # Primary navigation — one source of truth.
+        # Journey header
         # ------------------------------------------------------------------
-        st.markdown(
-            '<div class="surm-sidebar-nav-label">Navigate</div>',
-            unsafe_allow_html=True,
-        )
-        navigation = _build_sidebar_navigation()
+        with st.container(key="sidebar-navigation", border=False):
+            area_title = area or active_area
+            st.markdown(
+                f"""
+                <div class="sidebar-journey-header">
+                    <div>
+                        <div class="sidebar-section-title">
+                            {html.escape(area_title.upper())}
+                        </div>
+                        <div class="sidebar-journey-title">
+                            {(
+                                "Build the study"
+                                if area_title == "Study"
+                                else "Work through the gates"
+                                if area_title == "Workflow"
+                                else "Review and assure"
+                                if area_title == "Insights"
+                                else "Reference and guidance"
+                            )}
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-        _render_sidebar_nav_group("Study", navigation["Study"])
-        _render_sidebar_nav_group("Workflow", navigation["Workflow"])
+            if area_title == "Workflow":
+                completed_count = sum(
+                    1 for stage in stage_map.values()
+                    if stage.complete
+                )
+                next_stage = next(
+                    (
+                        page
+                        for page in WORKFLOW_PAGES
+                        if stage_map.get(page)
+                        and not stage_map[page].complete
+                        and stage_map[page].available
+                    ),
+                    None,
+                )
 
-        with st.expander("Insights & governance", expanded=False):
-            for page, label, state in navigation["Insights & governance"]:
-                _sidebar_nav_item(page, label, state=state)
+                st.markdown(
+                    f"""
+                    <div class="sidebar-workflow-summary">
+                        <span>WORKFLOW PROGRESS</span>
+                        <strong>{completed_count}/{len(WORKFLOW_PAGES)}</strong>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-        _render_sidebar_nav_group("Support", navigation["Support"])
+                if next_stage and next_stage != current_page:
+                    if st.button(
+                        f"Continue · {_page_title(next_stage)}  →",
+                        key="sidebar_continue_next_stage",
+                        type="primary",
+                        use_container_width=True,
+                        on_click=_go_to,
+                        args=(next_stage,),
+                    ):
+                        pass
+
+            page_labels = {
+                "🗂️ Study Repository": ("Repository", "Saved studies"),
+                "📋 Overview": ("Overview", "Study control center"),
+                "👥 Team": ("Team", "Roles and ownership"),
+                "📄 PRA Output": ("PRA Output", "Decision-ready output"),
+                "📊 Intelligence": ("Intelligence", "Signals and analytics"),
+                "🛡️ Barrier Management": ("Barrier Management", "Controls and barriers"),
+                "✅ Assurance & Review": ("Assurance & Review", "Governance checkpoints"),
+                "🕘 Revision History": ("Revision History", "Change trace"),
+                "📖 How to Use": ("How to Use", "Workflow guidance"),
+            }
+
+            for index, page in enumerate(pages):
+                stage = stage_map.get(page)
+                if stage is not None:
+                    if stage.complete:
+                        state = "COMPLETE"
+                        icon = "✓"
+                    elif stage.available:
+                        state = "READY"
+                        icon = "→"
+                    else:
+                        state = "LOCKED"
+                        icon = "—"
+                    step = f"{WORKFLOW_PAGES.index(page) + 1:02d}"
+                    title = _page_title(page)
+                    subtitle = stage.guidance
+                    disabled = not stage.available and not stage.complete
+                else:
+                    label, subtitle = page_labels.get(
+                        page,
+                        (_page_title(page), ""),
+                    )
+                    title = label
+                    state = "CURRENT" if page == current_page else "OPEN"
+                    icon = "●" if page == current_page else "○"
+                    step = f"{index + 1:02d}"
+                    disabled = False
+
+                selected = page == current_page
+                if selected:
+                    state = "CURRENT"
+
+                if stage is not None:
+                    nav_label = f"{icon}  {step}  {title}  ·  {state}"
+                else:
+                    nav_label = f"{icon}  {title}  ·  {state}"
+
+                st.button(
+                    nav_label,
+                    key=f"sidebar_page_{index}_{page}",
+                    use_container_width=True,
+                    disabled=disabled,
+                    type="primary" if selected else "secondary",
+                    on_click=_go_to,
+                    args=(page,),
+                )
+
+            if area_title == "Workflow":
+                st.caption(
+                    "Locked stages become available when their upstream gate is satisfied."
+                )
+            elif area_title == "Study":
+                st.caption("Set up the study, manage the team, then enter the workflow.")
+            elif area_title == "Insights":
+                st.caption("Use these pages for output, intelligence, barriers and assurance.")
+            else:
+                st.caption("Reference material and workflow guidance.")
 
         # ------------------------------------------------------------------
-        # Frequent study actions stay visible; secondary options are collapsed.
+        # Primary actions
         # ------------------------------------------------------------------
-        st.markdown('<div class="surm-sidebar-divider"></div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="surm-sidebar-nav-label">Study actions</div>',
-            unsafe_allow_html=True,
-        )
-
-        action_col, new_col = st.columns([1.35, 1], gap="small")
-        with action_col:
-            if st.button(
-                "💾 Save",
+        with st.container(key="sidebar-actions", border=False):
+            action_grid = grid(2, gap="small", vertical_align="center")
+            save_clicked = action_grid.button(
+                "Save",
                 key="sidebar_save_session",
-                use_container_width=True,
                 type="primary",
-            ):
+                use_container_width=True,
+            )
+            new_clicked = action_grid.button(
+                "＋ New",
+                key="sidebar_new_study",
+                use_container_width=True,
+            )
+
+            if save_clicked:
                 if not project:
                     st.warning("Set a Project Name before saving.")
                 elif save_session(auto=False):
                     st.success("Study saved.")
                 else:
                     st.error("Unable to save the study.")
-        with new_col:
-            if st.button(
-                "＋ New",
-                key="sidebar_new_study",
-                use_container_width=True,
-                type="secondary",
-            ):
+
+            if new_clicked:
                 create_new_study()
                 st.rerun()
 
-        with st.expander("Session & export", expanded=False):
+        # ------------------------------------------------------------------
+        # Secondary utilities
+        # ------------------------------------------------------------------
+        with st.expander("Utilities & access", expanded=False):
+            st.markdown(
+                '<div class="surm-sidebar-section-label">SESSION</div>',
+                unsafe_allow_html=True,
+            )
             st.checkbox(
                 "Enable auto-save",
                 key="_auto_save_enabled",
@@ -403,18 +537,15 @@ def render_sidebar() -> None:
                 else "No save recorded yet."
             )
 
-            if ss.get("_resume_message"):
-                st.success(ss["_resume_message"])
-
-            # Excel generation is intentionally explicit. The full workbook
-            # contains many styled sheets and should never block initial app
-            # rendering just because this expander is collapsed.
+            st.markdown(
+                '<div class="surm-sidebar-section-label">EXPORT</div>',
+                unsafe_allow_html=True,
+            )
             if st.button(
-                "⚙ Prepare Excel export",
+                "Prepare Excel export",
                 key="prepare_excel_export",
                 use_container_width=True,
                 type="secondary",
-                help="Build the current study workbook when you are ready to export it.",
             ):
                 try:
                     with st.spinner("Preparing Excel workbook..."):
@@ -432,7 +563,7 @@ def render_sidebar() -> None:
                     else "SURM_Output.xlsx"
                 )
                 st.download_button(
-                    "📥 Download Excel",
+                    "Download Excel",
                     data=excel_data,
                     file_name=filename,
                     mime=(
@@ -442,7 +573,10 @@ def render_sidebar() -> None:
                     use_container_width=True,
                 )
 
-        with st.expander("Account & access", expanded=False):
+            st.markdown(
+                '<div class="surm-sidebar-section-label">ACCOUNT</div>',
+                unsafe_allow_html=True,
+            )
             st.caption(f"Active user: {current_user_label()}")
             if auth_required():
                 st.caption("Authentication: enforced")
@@ -544,6 +678,125 @@ WORKFLOW_PAGES = [
 ]
 
 
+NAVIGATION_ORDER = [
+    "🗂️ Study Repository",
+    "📋 Overview",
+    "👥 Team",
+    "1️⃣ Uncertainties",
+    "2️⃣ Key Decisions",
+    "3️⃣ Impact Assessment",
+    "4️⃣ Key Uncertainties",
+    "5️⃣ Resolution List",
+    "6️⃣ Resolution Planner",
+    "7️⃣ Risk Register",
+    "📄 PRA Output",
+    "📊 Intelligence",
+    "🛡️ Barrier Management",
+    "✅ Assurance & Review",
+    "🕘 Revision History",
+    "📖 How to Use",
+]
+
+PAGE_AREAS = {
+    "Study": (
+        "🗂️ Study Repository",
+        "📋 Overview",
+        "👥 Team",
+    ),
+    "Workflow": tuple(WORKFLOW_PAGES),
+    "Insights": (
+        "📄 PRA Output",
+        "📊 Intelligence",
+        "🛡️ Barrier Management",
+        "✅ Assurance & Review",
+        "🕘 Revision History",
+    ),
+    "Support": ("📖 How to Use",),
+}
+
+
+def _set_current_page(page: str) -> None:
+    """Keep the sidebar workspace selector synchronized with navigation."""
+    if page not in PAGE_DEFINITIONS:
+        return
+    st.session_state["current_page"] = page
+    st.session_state["sidebar_area_selector"] = next(
+        area for area, pages in PAGE_AREAS.items() if page in pages
+    )
+
+
+def _navigation_target(offset: int) -> str | None:
+    """Return the adjacent page in the consistent application sequence."""
+    current = st.session_state.get("current_page", "📋 Overview")
+    try:
+        index = NAVIGATION_ORDER.index(current)
+    except ValueError:
+        return None
+    target = index + offset
+    if target < 0 or target >= len(NAVIGATION_ORDER):
+        return None
+    return NAVIGATION_ORDER[target]
+
+
+def render_page_pager() -> None:
+    """Render Previous / Next controls at the top of each application page."""
+    current = st.session_state.get("current_page", "📋 Overview")
+    try:
+        position = NAVIGATION_ORDER.index(current) + 1
+    except ValueError:
+        position = 1
+
+    previous_page = _navigation_target(-1)
+    next_page = _navigation_target(1)
+    previous_text = (
+        f"← {previous_page.split(' ', 1)[-1]}"
+        if previous_page else "← Previous"
+    )
+    next_text = (
+        f"{next_page.split(' ', 1)[-1]} →"
+        if next_page else "Next →"
+    )
+
+    container = st.container(key="page-navigation")
+    with container:
+        left, center, right = st.columns([1.35, 2.3, 1.35], gap="small")
+        with left:
+            st.button(
+                previous_text,
+                key="pager_previous",
+                use_container_width=True,
+                disabled=previous_page is None,
+                on_click=_set_current_page if previous_page else None,
+                args=(previous_page,) if previous_page else (),
+            )
+        with center:
+            st.markdown(
+                f"""
+                <div class="surm-page-pager">
+                    <span class="surm-page-pager-kicker">STUDY NAVIGATION</span>
+                    <strong class="surm-page-pager-title">
+                        {html.escape(current.split(" ", 1)[-1])}
+                    </strong>
+                    <span class="surm-page-pager-meta">
+                        Page {position} of {len(NAVIGATION_ORDER)}
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with right:
+            st.button(
+                next_text,
+                key="pager_next",
+                use_container_width=True,
+                disabled=next_page is None,
+                type="primary" if next_page else "secondary",
+                on_click=_set_current_page if next_page else None,
+                args=(next_page,) if next_page else (),
+            )
+
+
+
 def render_navigation() -> None:
     """
     Render page navigation.
@@ -586,16 +839,17 @@ def render_navigation() -> None:
         "🕘 Revision History": "Inspect immutable study revisions and compare durable changes.",
     }
 
+    blocked = False
+    blocked_reason = ""
+    blocked_stage = None
     if is_workflow_page:
         session = cast(dict[str, Any], dict(st.session_state))
         stage_key = stage_results(session)[workflow_index].key
         allowed, reason = validate_stage(session, stage_key)
         if not allowed:
-            render_page_frame(title, descriptions.get(selected_page, "SURM study workspace."), step=workflow_index + 1)
-            st.warning(f"This stage is not ready yet. {reason}")
-            current = current_stage(session)
-            st.info(f"Current study stage: **{current.label}** — {current.guidance}")
-            return
+            blocked = True
+            blocked_reason = reason
+            blocked_stage = current_stage(session)
 
     custom_header_pages = {
         "🗂️ Study Repository",
@@ -613,18 +867,37 @@ def render_navigation() -> None:
             descriptions.get(selected_page, "SURM study workspace."),
         )
 
-    if (
-        not study_is_editable(dict(st.session_state))
-        and selected_page != "🗂️ Study Repository"
-    ):
-        edit_col, _ = st.columns([1, 5])
-        with edit_col:
-            st.button("✏️ Edit Study", key="view_page_edit_study", type="primary", on_click=_enable_edit_mode)
-        _render_read_only_page(selected_page)
-    else:
-        PAGE_DEFINITIONS[selected_page]()
+    render_page_pager()
 
+    if blocked:
+        render_page_frame(
+            title,
+            descriptions.get(selected_page, "SURM study workspace."),
+            step=workflow_index + 1,
+        )
+        st.warning(f"This stage is not ready yet. {blocked_reason}")
+        if blocked_stage is not None:
+            st.info(
+                f"Current study stage: **{blocked_stage.label}** — "
+                f"{blocked_stage.guidance}"
+            )
 
+    if not blocked:
+        if (
+            not study_is_editable(dict(st.session_state))
+            and selected_page != "🗂️ Study Repository"
+        ):
+            edit_col, _ = st.columns([1, 5])
+            with edit_col:
+                st.button(
+                    "✏️ Edit Study",
+                    key="view_page_edit_study",
+                    type="primary",
+                    on_click=_enable_edit_mode,
+                )
+            _render_read_only_page(selected_page)
+        else:
+            PAGE_DEFINITIONS[selected_page]()
 
 # ============================================================================
 # FOOTER

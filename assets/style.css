@@ -11,12 +11,12 @@
 
     /* Primary */
 
-    --surm-primary: #176B3A;
-    --surm-primary-dark: #0F4D2A;
-    --surm-primary-soft: #EAF5EE;
-    --surm-green: #176B3A;
-    --surm-green-dark: #0F4D2A;
-    --surm-green-soft: #EAF5EE;
+    --surm-primary: #006B67;
+    --surm-primary-dark: #00534F;
+    --surm-primary-soft: #E5F3F2;
+    --surm-green: #006B67;
+    --surm-green-dark: #00534F;
+    --surm-green-soft: #E5F3F2;
 
 
     /* Supporting */
@@ -45,16 +45,16 @@
 
     /* Surfaces */
 
-    --surm-background: #F5F7F6;
+    --surm-background: #F5F8F8;
     --surm-surface: #FFFFFF;
-    --surm-surface-soft: #F8FAF9;
+    --surm-surface-soft: #F4F7F7;
 
 
     /* Typography */
 
-    --surm-text: #17201B;
-    --surm-text-secondary: #3F4A43;
-    --surm-text-muted: #66736B;
+    --surm-text: #142522;
+    --surm-text-secondary: #3D504E;
+    --surm-text-muted: #667977;
     --surm-muted: var(--surm-text-muted);
 
     --surm-success: #15803D;
@@ -2439,12 +2439,12 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
    ========================================================================== */
 
 :root {
-    --surm-console: #0B1E16;
-    --surm-console-2: #0F2B20;
-    --surm-console-line: rgba(115, 239, 170, 0.15);
-    --surm-console-glow: #65E3A2;
-    --surm-console-glow-soft: rgba(101, 227, 162, 0.12);
-    --surm-telemetry: #95B9A6;
+    --surm-console: #092A29;
+    --surm-console-2: #103D3B;
+    --surm-console-line: rgba(115, 224, 208, 0.15);
+    --surm-console-glow: #65D7C2;
+    --surm-console-glow-soft: rgba(101, 215, 194, 0.12);
+    --surm-telemetry: #A1C8C1;
 }
 
 .stApp {
@@ -2976,4 +2976,1791 @@ section[data-testid="stSidebar"]::before {
 
 .stApp [role="progressbar"] {
     accent-color: var(--surm-console-glow);
+}
+
+
+/* ==========================================================================
+   SURM UX 4.0 — MATURE WORKSPACE SHELL
+   ========================================================================== */
+
+:root {
+    --surm-shell-dark: #102B2A;
+    --surm-shell-dark-2: #163C3A;
+    --surm-shell-line: rgba(255,255,255,0.10);
+    --surm-shell-muted: rgba(228,240,233,0.64);
+    --surm-surface-strong: #FFFFFF;
+    --surm-surface-alt: #F3F6F4;
+}
+
+.stApp {
+    background:
+        linear-gradient(180deg, #F7F9F8 0%, #EFF3F1 100%);
+}
+
+.block-container {
+    max-width: 1360px;
+    padding-top: 1.15rem;
+    padding-bottom: 2.2rem;
+}
+
+/* Global header: quiet hierarchy, not a decorative hero. */
+.surm-header {
+    margin-bottom: 0.7rem;
+    padding: 0.95rem 1.1rem;
+    border-radius: 12px;
+    background: var(--surm-shell-dark);
+    border: 1px solid #233E32;
+    box-shadow: 0 5px 18px rgba(12, 37, 25, 0.08);
+}
+
+.surm-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 9px;
+    background: #193C2D;
+    border-color: #2E5D46;
+    box-shadow: none;
+}
+
+.surm-logo-core {
+    text-shadow: none;
+    font-size: 1.25rem;
+}
+
+.surm-header-pulse {
+    opacity: 0.75;
+}
+
+.surm-header-meta {
+    gap: 0.35rem;
+}
+
+.surm-meta-item {
+    min-width: 88px;
+    padding: 0.38rem 0.55rem;
+    border-radius: 7px;
+    background: rgba(255,255,255,0.045);
+    box-shadow: none;
+}
+
+.surm-meta-label {
+    font-size: 0.54rem;
+}
+
+.surm-meta-value {
+    font-size: 0.7rem;
+}
+
+/* Sidebar: one predictable reading order. */
+section[data-testid="stSidebar"] {
+    background: #0C1D16;
+    box-shadow: 5px 0 18px rgba(7, 23, 15, 0.08);
+}
+
+section[data-testid="stSidebar"]::before {
+    display: none;
+}
+
+.surm-sidebar-study-card {
+    margin-top: 0.2rem;
+    padding: 0.8rem 0.85rem;
+    border-radius: 10px;
+    background: #142A20;
+    border: 1px solid #234337;
+    box-shadow: none;
+}
+
+.surm-sidebar-study-card::after {
+    width: 2px;
+    background: #76D6A0;
+    box-shadow: none;
+}
+
+.surm-sidebar-study-kicker {
+    font-size: 0.55rem;
+    letter-spacing: 0.11em;
+}
+
+.surm-sidebar-study-title {
+    margin-top: 0.2rem;
+    font-size: 0.9rem;
+}
+
+.surm-sidebar-study-meta {
+    margin-top: 0.12rem;
+    font-size: 0.66rem;
+}
+
+.surm-sidebar-study-chips {
+    gap: 0.2rem;
+    margin-top: 0.45rem;
+}
+
+.surm-sidebar-study-chips span {
+    min-height: 1.35rem;
+    padding: 0.16rem 0.38rem;
+    background: rgba(255,255,255,0.055);
+}
+
+section[data-testid="stSidebar"] .stProgress {
+    margin: 0.5rem 0 0.15rem;
+}
+
+section[data-testid="stSidebar"] .stProgress > div > div {
+    height: 5px;
+}
+
+/* Navigate becomes the single visible navigation group. */
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+    margin-top: 0.55rem;
+    margin-bottom: 0.45rem;
+    border: 1px solid #20392D;
+    border-radius: 9px;
+    background: #10251C;
+    box-shadow: none;
+}
+
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
+    padding: 0.5rem 0.65rem;
+    color: rgba(239,247,242,0.90);
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+section[data-testid="stSidebar"] [data-testid="stExpander"] details {
+    background: transparent;
+}
+
+.surm-sidebar-nav-group-title {
+    margin: 0.55rem 0 0.22rem;
+    color: rgba(201,224,211,0.42);
+    font-size: 0.52rem;
+    letter-spacing: 0.11em;
+}
+
+section[data-testid="stSidebar"] .stButton > button {
+    min-height: 2.02rem !important;
+    margin: 0.04rem 0 !important;
+    padding: 0.32rem 0.48rem !important;
+    border: 1px solid transparent !important;
+    border-radius: 7px !important;
+    background: transparent !important;
+    color: rgba(237,246,241,0.80) !important;
+    font-size: 0.69rem !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: #18372A !important;
+    border-color: #27513E !important;
+    color: #FFFFFF !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:focus-visible {
+    outline: 2px solid rgba(118,214,160,0.55);
+    outline-offset: 1px;
+}
+
+.surm-sidebar-nav-current {
+    min-height: 2.02rem;
+    margin: 0.04rem 0;
+    padding: 0.32rem 0.48rem;
+    border-radius: 7px;
+    background: #19372A;
+    border: 1px solid #2A5944;
+    box-shadow: inset 2px 0 0 #76D6A0;
+    color: #F4FFF8;
+}
+
+.surm-sidebar-nav-indicator {
+    width: 0.9rem;
+    flex-basis: 0.9rem;
+    color: #76D6A0;
+}
+
+.surm-sidebar-nav-label {
+    font-size: 0.69rem;
+}
+
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {
+    background: #FFFFFF !important;
+    border-color: #FFFFFF !important;
+    color: #153526 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
+    background: #EDF6F0 !important;
+    border-color: #EDF6F0 !important;
+}
+
+.surm-sidebar-divider {
+    margin: 0.65rem 0 0.5rem;
+    background: #20392D;
+}
+
+/* Compact action strip. */
+section[data-testid="stSidebar"] .surm-sidebar-divider + .surm-sidebar-nav-label {
+    margin-top: 0.45rem;
+}
+
+section[data-testid="stSidebar"] [data-testid="stCheckbox"] label {
+    font-size: 0.66rem;
+}
+
+/* Page pager: identical grammar everywhere. */
+.surm-page-pager {
+    min-height: 3.05rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0.38rem 0.7rem;
+    border: 1px solid #D9E2DD;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.80);
+    box-shadow: 0 2px 8px rgba(21, 50, 34, 0.03);
+    text-align: center;
+}
+
+.surm-page-pager-kicker {
+    color: #6C7B73;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.surm-page-pager-title {
+    margin-top: 0.06rem;
+    color: #18382A;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.surm-page-pager-meta {
+    margin-top: 0.04rem;
+    color: #84918B;
+    font-size: 0.57rem;
+}
+
+.surm-page-pager + div {
+    margin-bottom: 0.35rem;
+}
+
+/* Tone down the old "cyber console" glow while keeping the engineering feel. */
+.overview-cover {
+    padding: 1.1rem 1.2rem;
+    border-radius: 13px;
+    background: #16362A;
+    border-color: #28533F;
+    box-shadow: 0 6px 18px rgba(12, 44, 27, 0.08);
+}
+
+.overview-cover::after {
+    opacity: 0.07;
+}
+
+.overview-cover-title {
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+}
+
+.overview-cover-meta {
+    font-size: 0.68rem;
+}
+
+[data-testid="stMetric"] {
+    min-height: 84px;
+    padding: 0.68rem 0.72rem;
+    border-radius: 10px;
+    background: #FFFFFF;
+    box-shadow: 0 3px 10px rgba(18, 46, 32, 0.035);
+}
+
+[data-testid="stMetric"]::before {
+    width: 2px;
+    box-shadow: none;
+}
+
+.surm-form-header {
+    margin-bottom: 0.65rem;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+    background: #173529;
+    border-color: #28523E;
+    box-shadow: 0 5px 16px rgba(12, 44, 27, 0.065);
+}
+
+.surm-form-header::after {
+    opacity: 0.07;
+}
+
+.surm-stage-status {
+    padding: 0.42rem 0.62rem;
+    border-radius: 8px;
+    background: #FFFFFF;
+}
+
+/* Reduce accidental "card soup" in dense pages. */
+.surm-card,
+.surm-metric-card,
+.surm-progress-card,
+.surm-empty-state {
+    box-shadow: 0 2px 10px rgba(18, 46, 32, 0.035);
+}
+
+@media (max-width: 900px) {
+    .surm-page-pager {
+        min-height: 2.8rem;
+    }
+}
+
+
+/* ==========================================================================
+   SURM UX 4.1 — BALANCED OVERVIEW + PERSISTENT PAGER
+   ========================================================================== */
+
+.surm-page-pager {
+    min-height: 3.25rem;
+    width: 100%;
+    padding: 0.45rem 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    border: 1px solid #D7E1DB;
+    border-radius: 9px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 7px rgba(17, 46, 31, 0.035);
+    text-align: center;
+}
+
+.surm-page-pager-kicker,
+.surm-page-pager-meta {
+    display: block;
+    color: #718079;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.51rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.surm-page-pager-title {
+    color: #17382A;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.surm-page-pager-kicker::after {
+    content: " · ";
+    color: #A1ADA6;
+}
+
+.surm-page-pager-meta {
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: #8A958F;
+    font-weight: 600;
+}
+
+.surm-page-pager + div {
+    margin-bottom: 0.28rem;
+}
+
+.surm-signal-list {
+    min-height: 5.55rem;
+    padding: 0.15rem 0;
+    display: grid;
+    align-content: start;
+    gap: 0.38rem;
+}
+
+.surm-signal-item {
+    padding: 0.42rem 0.55rem;
+    border-left: 2px solid #B8DCC7;
+    background: #F7FAF8;
+    border-radius: 0 6px 6px 0;
+    color: #425149;
+    font-size: 0.73rem;
+    line-height: 1.35;
+}
+
+.surm-attention-item {
+    min-height: 2.25rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #E3D6B9;
+    border-radius: 7px;
+    background: #FFF9EC;
+    color: #665334;
+    font-size: 0.68rem;
+    line-height: 1.4;
+}
+
+.surm-signoff-checkpoint {
+    min-height: 2.25rem;
+    display: flex;
+    align-items: center;
+    padding: 0.34rem 0.15rem;
+    color: #274436;
+    font-size: 0.69rem;
+    font-weight: 700;
+}
+
+.surm-page-pager + div .stButton > button {
+    min-height: 2.25rem !important;
+    font-size: 0.69rem !important;
+}
+
+
+/* ==========================================================================
+   SURM UX 4.2 — COMPACT SIDEBAR NAVIGATOR
+   ========================================================================== */
+
+/* Keep the sidebar as a quiet control rail: one selector, two actions, one
+   secondary drawer. */
+section[data-testid="stSidebar"] .stSelectbox {
+    margin: 0.55rem 0 0.2rem;
+}
+
+section[data-testid="stSidebar"] .stSelectbox > label {
+    margin-bottom: 0.22rem;
+    color: rgba(220, 236, 226, 0.58);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    min-height: 2.45rem;
+    border: 1px solid #2A493C !important;
+    border-radius: 8px !important;
+    background: #142A20 !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] * {
+    color: #EEF7F1 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] svg {
+    fill: #9BC7AD !important;
+}
+
+section[data-testid="stSidebar"] [data-baseweb="popover"] {
+    border: 1px solid #29473A !important;
+    border-radius: 8px !important;
+    background: #10251C !important;
+}
+
+section[data-testid="stSidebar"] [role="option"] {
+    color: #E7F1EB !important;
+    font-size: 0.72rem !important;
+}
+
+section[data-testid="stSidebar"] [role="option"][aria-selected="true"] {
+    background: #19372A !important;
+}
+
+.surm-sidebar-study-card + div {
+    margin-top: 0.25rem;
+}
+
+.surm-sidebar-section-label {
+    margin: 0.75rem 0 0.28rem;
+    color: rgba(201, 224, 211, 0.46);
+    font-size: 0.52rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+}
+
+section[data-testid="stSidebar"] .stCaption {
+    color: rgba(220, 236, 226, 0.56);
+}
+
+section[data-testid="stSidebar"] .stProgress {
+    margin-bottom: 0.15rem;
+}
+
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+    margin-top: 0.55rem;
+    margin-bottom: 0.35rem;
+}
+
+
+/* ==========================================================================
+   SURM UX 5.0 — DISCIPLINED ENGINEERING WORKSPACE
+   ========================================================================== */
+
+:root {
+    --surm-ui-bg: #F5F8F8;
+    --surm-ui-surface: #FFFFFF;
+    --surm-ui-surface-2: #F4F7F7;
+    --surm-ui-ink: #142F2E;
+    --surm-ui-ink-2: #405452;
+    --surm-ui-muted: #74827B;
+    --surm-ui-line: #DCE5E4;
+    --surm-ui-line-strong: #CCD9D8;
+    --surm-ui-green: #006B67;
+    --surm-ui-green-soft: #E5F3F2;
+    --surm-ui-sidebar: #0E2928;
+    --surm-ui-sidebar-2: #153735;
+}
+
+/* Stop the page from feeling like a stack of floating cards. */
+.stApp {
+    background: var(--surm-ui-bg) !important;
+}
+
+.block-container {
+    max-width: 1400px;
+    padding-top: 1rem;
+    padding-bottom: 2.5rem;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar
+   -------------------------------------------------------------------------- */
+
+section[data-testid="stSidebar"] {
+    background: var(--surm-ui-sidebar) !important;
+    border-right: 1px solid #1E382C;
+    box-shadow: 8px 0 24px rgba(9, 28, 19, 0.08);
+}
+
+section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
+    padding-top: 0.85rem;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand {
+    margin-bottom: 0.7rem;
+    padding: 0 0.1rem;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 7px;
+    background: var(--surm-ui-sidebar-2);
+    border: 1px solid #315243;
+    box-shadow: none;
+    font-size: 0.95rem;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand-title {
+    font-size: 0.83rem;
+    letter-spacing: -0.01em;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand-subtitle {
+    margin-top: 0.04rem;
+    font-size: 0.49rem;
+    letter-spacing: 0.12em;
+    color: rgba(222, 238, 228, 0.48);
+}
+
+.st-key-sidebar-study-context {
+    margin: 0.35rem 0 0.55rem;
+    padding: 0.78rem 0.82rem 0.72rem;
+    border: 1px solid #274638;
+    border-radius: 9px;
+    background: #12281F;
+}
+
+.sidebar-context-kicker {
+    color: rgba(196, 220, 207, 0.46);
+    font-size: 0.49rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.sidebar-context-title {
+    margin-top: 0.18rem;
+    color: #F4FAF6;
+    font-size: 0.84rem;
+    font-weight: 760;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.sidebar-context-meta {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.16rem;
+    color: rgba(221, 237, 228, 0.67);
+    font-size: 0.61rem;
+    line-height: 1.3;
+}
+
+.sidebar-context-status {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.48rem;
+}
+
+.sidebar-context-status span {
+    display: inline-flex;
+    min-height: 1.3rem;
+    align-items: center;
+    padding: 0.12rem 0.38rem;
+    border: 1px solid #2D4E40;
+    border-radius: 5px;
+    background: #183126;
+    color: #B9D3C3;
+    font-size: 0.51rem;
+    font-weight: 720;
+    line-height: 1;
+}
+
+.st-key-sidebar-navigation {
+    margin-top: 0.35rem;
+}
+
+.sidebar-section-title {
+    margin-bottom: 0.26rem;
+    color: rgba(201, 224, 211, 0.43);
+    font-size: 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] {
+    margin-bottom: 0.08rem;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    min-height: 2.45rem;
+    padding-left: 0.62rem;
+    border: 1px solid #2D4D3F !important;
+    border-radius: 8px !important;
+    background: #142B22 !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[role="button"] {
+    color: #EFF7F1 !important;
+    font-size: 0.69rem;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] svg {
+    fill: #9BC9AE !important;
+}
+
+section[data-testid="stSidebar"] [role="listbox"] {
+    border: 1px solid #2B493C !important;
+    border-radius: 8px !important;
+    background: #11271E !important;
+}
+
+section[data-testid="stSidebar"] [role="option"] {
+    min-height: 2rem;
+    color: #E5EFE9 !important;
+    font-size: 0.67rem !important;
+}
+
+section[data-testid="stSidebar"] [role="option"][aria-selected="true"] {
+    background: #1B392C !important;
+    color: #FFFFFF !important;
+}
+
+.st-key-sidebar-navigation > div:last-child p {
+    margin-top: 0.12rem;
+    color: rgba(201, 223, 211, 0.45);
+    font-size: 0.54rem;
+}
+
+.st-key-sidebar-actions {
+    margin-top: 0.62rem;
+}
+
+.st-key-sidebar-actions .stButton > button {
+    min-height: 2.1rem !important;
+    border-radius: 7px !important;
+    font-size: 0.65rem !important;
+    font-weight: 720 !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button {
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:hover {
+    transform: none !important;
+}
+
+section[data-testid="stSidebar"] .stExpander {
+    margin-top: 0.52rem;
+    border: 1px solid #223D31;
+    border-radius: 8px;
+    background: #11271E;
+}
+
+section[data-testid="stSidebar"] .stExpander summary {
+    padding: 0.48rem 0.62rem;
+    color: rgba(236, 246, 240, 0.82);
+    font-size: 0.64rem;
+    font-weight: 710;
+}
+
+section[data-testid="stSidebar"] .surm-sidebar-section-label {
+    margin-top: 0.62rem;
+    margin-bottom: 0.24rem;
+}
+
+section[data-testid="stSidebar"] .stDownloadButton > button {
+    min-height: 2rem;
+    font-size: 0.63rem !important;
+}
+
+section[data-testid="stSidebar"] > div:last-child {
+    padding-bottom: 0.8rem;
+}
+
+/* --------------------------------------------------------------------------
+   Overview hero
+   -------------------------------------------------------------------------- */
+
+.st-key-overview-hero {
+    margin-bottom: 0.9rem;
+}
+
+.st-key-overview-hero .overview-hero-inner {
+    padding: 1.05rem 1.15rem 1rem;
+    border: 1px solid #2B5542;
+    border-radius: 12px;
+    background: #17372A;
+    box-shadow: 0 7px 22px rgba(18, 53, 37, 0.07);
+}
+
+.overview-hero-kicker {
+    color: #8FC9A8;
+    font-size: 0.51rem;
+    font-weight: 820;
+    letter-spacing: 0.13em;
+}
+
+.overview-hero-title {
+    margin-top: 0.18rem;
+    color: #F5FBF7;
+    font-size: clamp(1.45rem, 2.4vw, 2rem);
+    font-weight: 760;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+}
+
+.overview-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.38rem 0.45rem;
+    margin-top: 0.55rem;
+}
+
+.overview-hero-meta span {
+    display: inline-flex;
+    min-height: 1.45rem;
+    align-items: center;
+    padding: 0.17rem 0.45rem;
+    border: 1px solid rgba(210, 235, 220, 0.16);
+    border-radius: 5px;
+    background: rgba(255,255,255,0.055);
+    color: rgba(235, 246, 239, 0.74);
+    font-size: 0.54rem;
+    font-weight: 650;
+}
+
+/* --------------------------------------------------------------------------
+   KPI rail
+   -------------------------------------------------------------------------- */
+
+.surm-overview-section-label {
+    margin: 0.25rem 0 0.42rem;
+    color: #557067;
+    font-size: 0.55rem;
+    font-weight: 820;
+    letter-spacing: 0.12em;
+}
+
+[data-testid="stMetric"] {
+    min-height: 86px;
+    padding: 0.75rem 0.8rem;
+    border: 1px solid var(--surm-ui-line);
+    border-radius: 9px;
+    background: var(--surm-ui-surface);
+    box-shadow: 0 2px 7px rgba(20, 53, 37, 0.025);
+}
+
+[data-testid="stMetric"] label {
+    color: #6C7A73 !important;
+    font-size: 0.61rem !important;
+    font-weight: 650 !important;
+}
+
+[data-testid="stMetricValue"] {
+    color: var(--surm-ui-ink) !important;
+    font-size: 1.45rem !important;
+    font-weight: 780 !important;
+    letter-spacing: -0.02em;
+}
+
+[data-testid="stMetricDelta"] {
+    font-size: 0.58rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   Action / signal
+   -------------------------------------------------------------------------- */
+
+.st-key-overview-next-action,
+.st-key-overview-current-signal,
+.st-key-overview-attention,
+.st-key-overview-study-setup,
+.st-key-overview-workflow,
+.st-key-overview-governance {
+    border-color: var(--surm-ui-line-strong) !important;
+    border-radius: 10px !important;
+    background: var(--surm-ui-surface);
+    box-shadow: 0 2px 9px rgba(20, 53, 37, 0.025);
+}
+
+.st-key-overview-next-action,
+.st-key-overview-current-signal {
+    min-height: 205px;
+    padding: 0.92rem 0.95rem 0.9rem;
+}
+
+.st-key-overview-next-action .surm-panel-kicker,
+.st-key-overview-current-signal .surm-panel-kicker,
+.st-key-overview-attention .surm-panel-kicker {
+    margin-bottom: 0.5rem;
+    color: #55766A;
+    font-size: 0.52rem;
+    font-weight: 820;
+    letter-spacing: 0.12em;
+}
+
+.overview-action-stage {
+    margin-top: 0.18rem;
+    color: #1C4433;
+    font-size: 1.28rem;
+    font-weight: 780;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+}
+
+.overview-action-copy {
+    max-width: 690px;
+    min-height: 3.05rem;
+    margin-top: 0.52rem;
+    color: #64736C;
+    font-size: 0.72rem;
+    line-height: 1.5;
+}
+
+.st-key-overview-next-action .stButton {
+    margin-top: 0.35rem;
+}
+
+.st-key-overview-next-action .stButton > button {
+    max-width: 235px;
+    min-height: 2.15rem;
+    border-radius: 7px;
+    font-size: 0.66rem;
+    font-weight: 760;
+}
+
+.overview-signal-stack {
+    display: grid;
+    gap: 0.32rem;
+    min-height: 6.6rem;
+}
+
+.overview-signal-row {
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: 0.45rem;
+    align-items: start;
+    padding: 0.46rem 0.48rem;
+    border: 1px solid #E2E9E5;
+    border-radius: 6px;
+    background: #FAFCFB;
+    color: #42554C;
+    font-size: 0.66rem;
+    line-height: 1.38;
+}
+
+.overview-signal-index {
+    color: #4B8567;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.55rem;
+    font-weight: 820;
+}
+
+.overview-empty-signal {
+    min-height: 6.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #D8E3DC;
+    border-radius: 6px;
+    background: #FAFCFB;
+    color: #8A9791;
+    font-size: 0.64rem;
+}
+
+.st-key-overview-current-signal .stProgress {
+    margin-top: 0.45rem;
+}
+
+.st-key-overview-current-signal .stProgress p {
+    color: #7A8781;
+    font-size: 0.55rem;
+}
+
+/* --------------------------------------------------------------------------
+   Attention
+   -------------------------------------------------------------------------- */
+
+.st-key-overview-attention {
+    margin-top: 0.78rem;
+    padding: 0.72rem 0.85rem;
+    background: #FFFBF3;
+    border-color: #E8DABB !important;
+}
+
+.overview-attention-row {
+    display: flex;
+    gap: 0.52rem;
+    align-items: flex-start;
+    padding: 0.4rem 0;
+    color: #675738;
+    font-size: 0.65rem;
+    line-height: 1.4;
+}
+
+.overview-attention-row + .overview-attention-row {
+    border-top: 1px solid #EFE5D1;
+}
+
+.overview-attention-marker {
+    width: 1.05rem;
+    height: 1.05rem;
+    display: inline-flex;
+    flex: 0 0 1.05rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #E9D8B7;
+    color: #634D28;
+    font-size: 0.55rem;
+    font-weight: 850;
+}
+
+/* --------------------------------------------------------------------------
+   Study setup
+   -------------------------------------------------------------------------- */
+
+.st-key-overview-study-setup,
+.st-key-overview-workflow,
+.st-key-overview-governance {
+    margin-top: 0.82rem;
+    padding: 0.88rem 0.95rem 0.9rem;
+}
+
+.st-key-overview-study-setup h3,
+.st-key-overview-workflow h3,
+.st-key-overview-governance h3 {
+    margin-bottom: 0.2rem;
+    color: #214735;
+    font-size: 0.91rem;
+    font-weight: 760;
+}
+
+.st-key-overview-study-setup .stCaption,
+.st-key-overview-workflow .stCaption,
+.st-key-overview-governance .stCaption {
+    color: #75817B;
+    font-size: 0.61rem;
+}
+
+.st-key-overview-study-setup .stTextInput,
+.st-key-overview-study-setup .stSelectbox {
+    margin-bottom: 0.12rem;
+}
+
+.st-key-overview-study-setup [data-testid="stTextInput"] input,
+.st-key-overview-study-setup [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    min-height: 2.3rem;
+    border-radius: 6px;
+    border-color: #D1DDD5;
+    background: #FCFDFC;
+}
+
+.st-key-overview-study-setup [data-testid="stTextInput"] label,
+.st-key-overview-study-setup [data-testid="stSelectbox"] label {
+    margin-bottom: 0.18rem;
+    color: #617067;
+    font-size: 0.58rem;
+    font-weight: 700;
+}
+
+.st-key-overview-study-setup .stButton > button {
+    min-height: 2.1rem;
+    border-radius: 6px;
+    font-size: 0.63rem;
+    font-weight: 740;
+}
+
+.overview-revision {
+    min-height: 2.1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0.2rem 0.15rem;
+    border-left: 1px solid #D7E1DB;
+}
+
+.overview-revision span {
+    color: #829088;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.49rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.overview-revision strong {
+    margin-top: 0.04rem;
+    color: #254C3B;
+    font-size: 0.82rem;
+}
+
+/* --------------------------------------------------------------------------
+   Workflow
+   -------------------------------------------------------------------------- */
+
+.st-key-overview-workflow {
+    background: var(--surm-ui-surface-2);
+}
+
+.overview-workflow-item {
+    min-height: 58px;
+    padding: 0.46rem 0.5rem;
+    border: 1px solid #E0E8E3;
+    border-radius: 6px;
+    background: #FFFFFF;
+}
+
+.overview-workflow-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.36rem;
+    color: #294D3D;
+    font-size: 0.61rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.overview-workflow-icon {
+    width: 0.9rem;
+    flex: 0 0 0.9rem;
+    color: #5F8C72;
+    font-weight: 850;
+    text-align: center;
+}
+
+.overview-workflow-state {
+    margin-top: 0.2rem;
+    color: #87938D;
+    font-size: 0.52rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* --------------------------------------------------------------------------
+   Governance
+   -------------------------------------------------------------------------- */
+
+.st-key-overview-governance {
+    background: #FBFCFB;
+}
+
+.overview-signoff-summary {
+    min-height: 3.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    padding-right: 0.15rem;
+}
+
+.overview-signoff-summary span {
+    color: #809088;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.48rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.overview-signoff-summary strong {
+    margin-top: 0.02rem;
+    color: #21503B;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.overview-signoff-summary small {
+    color: #8A958F;
+    font-size: 0.5rem;
+}
+
+/* The sign-off table should read like a register, not five independent cards. */
+.st-key-overview-governance [data-testid="stHorizontalBlock"] {
+    align-items: center;
+}
+
+.st-key-overview-governance [data-testid="stTextInput"] input,
+.st-key-overview-governance [data-testid="stDateInput"] input {
+    min-height: 2.15rem;
+    border-radius: 5px;
+    background: #FFFFFF;
+    border-color: #D7E0DA;
+    font-size: 0.63rem;
+}
+
+.st-key-overview-governance .surm-signoff-checkpoint {
+    min-height: 2.15rem;
+    display: flex;
+    align-items: center;
+    padding-left: 0.1rem;
+    color: #355244;
+    font-size: 0.61rem;
+    font-weight: 700;
+}
+
+@media (max-width: 950px) {
+    .st-key-overview-next-action,
+    .st-key-overview-current-signal {
+        min-height: auto;
+    }
+
+    .overview-hero-meta {
+        gap: 0.28rem;
+    }
+
+    .overview-hero-meta span {
+        font-size: 0.5rem;
+    }
+}
+
+
+/* ==========================================================================
+   SURM UX 5.3 — PRODUCTION WORKSPACE
+   ========================================================================== */
+
+section[data-testid="stSidebar"] {
+    min-width: 18.5rem !important;
+    max-width: 20.5rem !important;
+    background: var(--surm-ui-sidebar) !important;
+    border-right: 1px solid #1E382C !important;
+    box-shadow: 8px 0 24px rgba(9, 28, 19, 0.08) !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
+    padding: 0.8rem 0.7rem 0.9rem !important;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand {
+    margin: 0 0 0.68rem !important;
+    padding: 0 0.12rem !important;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand-icon {
+    width: 2.15rem !important;
+    height: 2.15rem !important;
+    border-radius: 8px !important;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand-title {
+    font-size: 0.88rem !important;
+}
+
+section[data-testid="stSidebar"] .sidebar-brand-subtitle {
+    font-size: 0.5rem !important;
+}
+
+.st-key-sidebar-study-context {
+    margin: 0 0 0.85rem !important;
+    padding: 0.9rem 0.85rem 0.8rem !important;
+    border: 1px solid #2A4A3B !important;
+    border-radius: 10px !important;
+    background: linear-gradient(145deg, #102A27 0%, #0D211E 100%) !important;
+    box-shadow: 0 5px 14px rgba(3, 15, 12, 0.12) !important;
+}
+
+.sidebar-context-kicker {
+    color: #81C8B8 !important;
+    font-size: 0.58rem !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.1em !important;
+}
+
+.sidebar-context-title {
+    margin-top: 0.28rem !important;
+    color: #F4FAF6 !important;
+    font-size: 0.96rem !important;
+    font-weight: 720 !important;
+    line-height: 1.3 !important;
+    overflow-wrap: anywhere !important;
+}
+
+.sidebar-context-meta {
+    margin-top: 0.22rem !important;
+    color: #B4CBBE !important;
+    font-size: 0.68rem !important;
+    line-height: 1.4 !important;
+}
+
+.sidebar-context-status {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.35rem !important;
+    margin-top: 0.58rem !important;
+}
+
+.sidebar-context-status span {
+    display: inline-flex !important;
+    min-height: 1.35rem !important;
+    align-items: center !important;
+    padding: 0.16rem 0.48rem !important;
+    border: 1px solid #31564A !important;
+    border-radius: 999px !important;
+    background: #17342D !important;
+    color: #D6EAE1 !important;
+    font-size: 0.6rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.02em !important;
+}
+
+.sidebar-stage-progress {
+    margin-top: 0.78rem !important;
+    padding-top: 0.68rem !important;
+    border-top: 1px solid rgba(198, 230, 216, 0.14) !important;
+}
+
+.sidebar-stage-progress-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.5rem !important;
+}
+
+.sidebar-stage-progress-header span {
+    color: #B1CEC2 !important;
+    font-size: 0.57rem !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.09em !important;
+}
+
+.sidebar-stage-progress-header strong {
+    color: #8DE0C5 !important;
+    font-size: 0.76rem !important;
+    font-weight: 750 !important;
+    line-height: 1 !important;
+}
+
+.sidebar-stage-progress-summary {
+    margin-top: 0.28rem !important;
+    color: #A7C1B6 !important;
+    font-size: 0.65rem !important;
+    line-height: 1.35 !important;
+}
+
+.sidebar-stage-progress-track {
+    width: 100% !important;
+    height: 0.42rem !important;
+    margin-top: 0.52rem !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(182, 226, 208, 0.16) !important;
+    border-radius: 999px !important;
+    background: #183B32 !important;
+}
+
+.sidebar-stage-progress-fill {
+    height: 100% !important;
+    border-radius: inherit !important;
+    background: linear-gradient(90deg, #48B995, #8DE0C5) !important;
+    transition: width 220ms ease !important;
+}
+
+.st-key-sidebar_area_selector,
+.st-key-sidebar_area_selector [data-testid="stButtonGroup"],
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] {
+    width: 100% !important;
+    margin: 0 0 0.62rem !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] > div {
+    width: 100% !important;
+    min-width: 100% !important;
+    box-sizing: border-box !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.12rem !important;
+    padding: 0.18rem !important;
+    border: 1px solid #2A4B3C !important;
+    border-radius: 8px !important;
+    background: #0C1F17 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 1.86rem !important;
+    padding: 0.22rem 0.1rem !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    background: #142C22 !important;
+    color: #AFC8BA !important;
+    font-size: 0.62rem !important;
+    font-weight: 740 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button p {
+    color: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button:hover {
+    background: #1B392C !important;
+    border-color: #3A614E !important;
+    color: #F4FBF7 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stButtonGroup"]
+button[aria-checked="true"] {
+    background: #2A5B44 !important;
+    border-color: #71BE91 !important;
+    color: #FFFFFF !important;
+}
+
+.st-key-sidebar-navigation {
+    margin: 0 !important;
+    padding: 0.2rem 0.05rem 0.25rem !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+.sidebar-journey-header {
+    margin: 0 0 0.48rem !important;
+    padding: 0 0.15rem !important;
+}
+
+.sidebar-section-title {
+    margin: 0 !important;
+    color: #78B591 !important;
+    font-size: 0.58rem !important;
+    letter-spacing: 0.13em !important;
+}
+
+.sidebar-journey-title {
+    margin-top: 0.1rem !important;
+    color: #E7F2EB !important;
+    font-size: 0.75rem !important;
+    font-weight: 760 !important;
+}
+
+.sidebar-workflow-summary {
+    display: flex !important;
+    align-items: baseline !important;
+    justify-content: space-between !important;
+    margin: 0 0 0.36rem !important;
+    padding: 0.32rem 0.18rem !important;
+    border: 0 !important;
+    border-bottom: 1px solid #294638 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+.sidebar-workflow-summary span {
+    color: #789087 !important;
+    font-size: 0.56rem !important;
+    letter-spacing: 0.1em !important;
+}
+
+.sidebar-workflow-summary strong {
+    color: #91D1A8 !important;
+    font-size: 0.74rem !important;
+}
+
+.st-key-sidebar-navigation .stButton {
+    margin: 0 !important;
+}
+
+.st-key-sidebar-navigation .stButton > button,
+.st-key-sidebar-navigation [data-testid="stBaseButton-secondary"] {
+    width: 100% !important;
+    min-height: 2.28rem !important;
+    margin: 0 !important;
+    padding: 0.4rem 0.58rem !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    color: #BFD4C8 !important;
+    font-size: 0.68rem !important;
+    font-weight: 680 !important;
+    line-height: 1.12 !important;
+    text-align: left !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.st-key-sidebar-navigation .stButton > button:hover:not(:disabled),
+.st-key-sidebar-navigation [data-testid="stBaseButton-secondary"]:hover {
+    background: #173328 !important;
+    border-color: #2F5745 !important;
+    color: #F4FBF7 !important;
+}
+
+.st-key-sidebar-navigation .stButton > button[kind="primary"],
+.st-key-sidebar-navigation [data-testid="stBaseButton-primary"] {
+    background: #24533E !important;
+    border-color: #5FA47C !important;
+    color: #FFFFFF !important;
+    box-shadow: inset 3px 0 0 #91D6AA !important;
+}
+
+.st-key-sidebar-navigation .stButton > button:disabled {
+    opacity: 0.42 !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    color: #71877C !important;
+}
+
+.st-key-sidebar-navigation .stCaptionContainer {
+    display: none !important;
+}
+
+.st-key-sidebar-navigation > div:last-child {
+    margin-top: 0.4rem !important;
+}
+
+.st-key-sidebar-navigation > div:last-child p {
+    margin: 0 0.15rem !important;
+    color: #71877C !important;
+    font-size: 0.58rem !important;
+    line-height: 1.3 !important;
+}
+
+.st-key-sidebar_continue_next_stage {
+    margin: 0.4rem 0 0.55rem !important;
+}
+
+section[data-testid="stSidebar"] .st-key-sidebar_continue_next_stage .stButton > button {
+    min-height: 2.3rem !important;
+    border: 1px solid #82CDA0 !important;
+    border-radius: 7px !important;
+    background: #E8F6ED !important;
+    color: #16402D !important;
+    font-size: 0.68rem !important;
+    font-weight: 820 !important;
+}
+
+section[data-testid="stSidebar"] .st-key-sidebar_continue_next_stage .stButton > button:hover {
+    background: #F5FBF7 !important;
+}
+
+.st-key-sidebar-actions {
+    margin-top: 0.58rem !important;
+    padding-top: 0.55rem !important;
+    border-top: 1px solid #223F31 !important;
+}
+
+.st-key-sidebar-actions .stButton > button {
+    min-height: 2.18rem !important;
+    border-radius: 7px !important;
+    font-size: 0.68rem !important;
+}
+
+.st-key-sidebar-actions .stButton > button[kind="primary"] {
+    background: #EAF7EF !important;
+    border-color: #EAF7EF !important;
+    color: #173D2B !important;
+}
+
+.st-key-sidebar-actions .stButton > button:not([kind="primary"]) {
+    background: #173328 !important;
+    border-color: #2C4E40 !important;
+    color: #D8E8DE !important;
+}
+
+section[data-testid="stSidebar"] .stExpander {
+    margin-top: 0.55rem !important;
+    border: 1px solid #223D31 !important;
+    border-radius: 7px !important;
+    background: #0E231A !important;
+}
+
+section[data-testid="stSidebar"] .stExpander summary {
+    padding: 0.52rem 0.62rem !important;
+    color: #C9DDD2 !important;
+    font-size: 0.66rem !important;
+}
+
+section[data-testid="stSidebar"] .stExpander summary:hover {
+    background: #142C21 !important;
+}
+
+section[data-testid="stSidebar"] > div:last-child {
+    padding-bottom: 0.6rem !important;
+}
+
+.stApp [data-testid="stMainBlockContainer"] {
+    padding-top: 1.15rem !important;
+    padding-bottom: 2.2rem !important;
+}
+
+.stApp [data-testid="stDataEditor"] {
+    margin-top: 0.45rem !important;
+    margin-bottom: 0.7rem !important;
+    border: 1px solid #D4DFD8 !important;
+    border-radius: 9px !important;
+    box-shadow: 0 2px 8px rgba(18, 46, 32, 0.035) !important;
+}
+
+@media (max-width: 900px) {
+    section[data-testid="stSidebar"] {
+        min-width: 16rem !important;
+    }
+
+    section[data-testid="stSidebar"] [data-testid="stButtonGroup"] button {
+        font-size: 0.6rem !important;
+    }
+
+    .stApp [data-testid="stMainBlockContainer"] {
+        padding-top: 0.85rem !important;
+        padding-bottom: 1.5rem !important;
+    }
+}
+
+.surm-header {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.85rem 1.5rem !important;
+    margin-bottom: 0.85rem !important;
+    padding: 1rem 1.2rem !important;
+}
+
+.surm-header-left {
+    flex: 1 1 20rem !important;
+    gap: 0.85rem !important;
+}
+
+.surm-header-brand {
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 0.14rem !important;
+}
+
+.surm-eyebrow {
+    line-height: 1.3 !important;
+}
+
+.surm-title {
+    margin: 0 !important;
+    font-size: clamp(1.2rem, 1.8vw, 1.55rem) !important;
+    line-height: 1.15 !important;
+}
+
+.surm-subtitle {
+    margin: 0.08rem 0 0 !important;
+    line-height: 1.4 !important;
+}
+
+.surm-header-meta {
+    flex: 0 1 auto !important;
+    justify-content: flex-end !important;
+    gap: 0.45rem !important;
+}
+
+.surm-meta-item {
+    min-width: 5rem !important;
+    padding: 0.45rem 0.6rem !important;
+}
+
+.st-key-page-navigation {
+    margin: 0 0 0.8rem !important;
+}
+
+.st-key-page-navigation [data-testid="stHorizontalBlock"] {
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+}
+
+.st-key-page-navigation [data-testid="stColumn"] {
+    display: flex !important;
+    align-items: stretch !important;
+}
+
+.st-key-page-navigation .surm-page-pager {
+    min-height: 3rem !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+    border-color: #D8E1E1 !important;
+    border-radius: 9px !important;
+    box-shadow: none !important;
+}
+
+.st-key-page-navigation .stButton {
+    width: 100% !important;
+    display: flex !important;
+    align-items: stretch !important;
+}
+
+.st-key-page-navigation .stButton > button {
+    width: 100% !important;
+    min-height: 3rem !important;
+    height: 100% !important;
+    padding: 0.55rem 0.75rem !important;
+    border-radius: 9px !important;
+    font-size: 0.76rem !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+}
+
+.st-key-page-navigation .surm-page-pager-title {
+    font-size: 0.82rem !important;
+    line-height: 1.25 !important;
+}
+
+.st-key-page-navigation .surm-page-pager-meta {
+    font-size: 0.62rem !important;
+}
+
+.stApp [data-testid="stMainBlockContainer"] {
+    padding-top: 1.15rem !important;
+    padding-bottom: 2rem !important;
+}
+
+.stApp [data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"] {
+    align-items: stretch;
+}
+
+.stApp [data-testid="stMainBlockContainer"] [data-testid="stDataFrame"],
+.stApp [data-testid="stMainBlockContainer"] [data-testid="stDataEditor"] {
+    border: 1px solid #D8E1E1 !important;
+    border-radius: 9px !important;
+    overflow: hidden !important;
+}
+
+.stApp [data-testid="stMainBlockContainer"] [data-testid="stMetric"] {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    height: 6.75rem !important;
+    min-height: 6.75rem !important;
+}
+
+@media (max-width: 900px) {
+    .surm-header {
+        align-items: flex-start !important;
+        padding: 0.9rem 1rem !important;
+    }
+
+    .surm-header-meta {
+        flex: 1 1 100% !important;
+        justify-content: flex-start !important;
+    }
+
+    .st-key-page-navigation {
+        margin-bottom: 1.1rem !important;
+    }
+
+    .st-key-page-navigation [data-testid="stHorizontalBlock"] {
+        gap: 0.45rem !important;
+    }
+
+    .st-key-page-navigation .stButton > button {
+        padding: 0.4rem 0.5rem !important;
+        font-size: 0.68rem !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .stApp [data-testid="stMainBlockContainer"] [data-testid="stMetric"] {
+        height: auto !important;
+        min-height: 6.75rem !important;
+    }
+
+    .surm-header-left {
+        flex-basis: 100% !important;
+    }
+
+    .surm-header-meta {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        width: 100% !important;
+    }
+
+    .surm-meta-item {
+        min-width: 0 !important;
+    }
+
+    .surm-meta-value {
+        max-width: 100% !important;
+    }
+
+    .st-key-page-navigation [data-testid="stHorizontalBlock"] {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0.3rem !important;
+    }
+
+    .st-key-page-navigation [data-testid="stColumn"] {
+        min-width: 0 !important;
+        width: auto !important;
+    }
+
+    .st-key-page-navigation [data-testid="stColumn"]:nth-child(1),
+    .st-key-page-navigation [data-testid="stColumn"]:nth-child(3) {
+        flex: 1.2 1 0% !important;
+    }
+
+    .st-key-page-navigation [data-testid="stColumn"]:nth-child(2) {
+        flex: 2 1 0% !important;
+    }
+
+    .st-key-page-navigation .surm-page-pager {
+        min-height: 2.8rem !important;
+        padding: 0.35rem 0.25rem !important;
+    }
+
+    .st-key-page-navigation .surm-page-pager-kicker {
+        display: none !important;
+    }
+
+    .st-key-page-navigation .stButton > button {
+        min-height: 2.8rem !important;
+        padding: 0.3rem !important;
+        font-size: 0.62rem !important;
+    }
+
+    .st-key-page-navigation .surm-page-pager-title {
+        font-size: 0.72rem !important;
+    }
+
+    .st-key-page-navigation .surm-page-pager-meta {
+        display: none !important;
+    }
 }

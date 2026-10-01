@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import subprocess
 import sys
@@ -63,7 +64,7 @@ def _assert_shell(page) -> None:
 def _assert_overview_ui(page) -> None:
     """Assert the Overview page contract."""
     _assert_shell(page)
-    expect(page.get_by_text("AT A GLANCE", exact=True)).to_be_visible(timeout=10_000)
+    expect(page.get_by_text("EXECUTIVE SNAPSHOT", exact=True)).to_be_visible(timeout=10_000)
     expect(page.get_by_text("Study setup", exact=True)).to_be_visible(timeout=10_000)
     expect(page.get_by_text("Workflow progress", exact=True)).to_be_visible(timeout=10_000)
     expect(page.get_by_label("Project Name")).to_be_visible(timeout=10_000)
@@ -182,49 +183,34 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     timeout=10_000,
                 )
 
-                # Navigate using real sidebar buttons.
+                # Navigate using the task-oriented sidebar journey.
                 sidebar = page.locator('[data-testid="stSidebar"]')
-                team_button = sidebar.get_by_role(
-                    "button",
-                    name="• Team",
+                area_switcher = sidebar.get_by_role(
+                    "radio",
+                    name="Study",
+                    exact=True,
                 )
-                expect(team_button).to_have_count(1)
-                team_button.scroll_into_view_if_needed()
+                expect(area_switcher).to_have_count(1)
+                expect(area_switcher).to_be_visible(timeout=10_000)
 
                 print(
                     "Sidebar geometry:",
                     page.evaluate(
-                        """button => {
+                        """() => {
                             const sidebar = document.querySelector('[data-testid="stSidebar"]');
-                            const rect = button.getBoundingClientRect();
-                            const hit = document.elementFromPoint(
-                                rect.left + rect.width / 2,
-                                rect.top + rect.height / 2
-                            );
-                            const chain = [];
-                            let node = button;
-                            for (let i = 0; node && i < 5; i++, node = node.parentElement) {
-                                const style = getComputedStyle(node);
-                                const r = node.getBoundingClientRect();
-                                chain.push({
-                                    tag: node.tagName,
-                                    className: node.className,
-                                    display: style.display,
-                                    position: style.position,
-                                    width: r.width,
-                                    height: r.height,
-                                    x: r.x,
-                                    y: r.y,
-                                    transform: style.transform,
-                                    overflow: style.overflow,
-                                    zIndex: style.zIndex,
-                                });
-                            }
+                            const navigation = sidebar
+                                ? sidebar.querySelector('.st-key-sidebar-navigation')
+                                : null;
+                            const buttons = navigation
+                                ? navigation.querySelectorAll('button')
+                                : [];
+                            const rect = navigation ? navigation.getBoundingClientRect() : null;
                             return {
                                 viewport: {width: window.innerWidth, height: window.innerHeight},
-                                button: {
+                                navigation: rect ? {
                                     x: rect.x, y: rect.y, width: rect.width, height: rect.height,
-                                },
+                                } : null,
+                                navigationButtonCount: buttons.length,
                                 sidebar: sidebar ? (() => {
                                     const r = sidebar.getBoundingClientRect();
                                     const style = getComputedStyle(sidebar);
@@ -237,25 +223,62 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                                         zIndex: style.zIndex,
                                     };
                                 })() : null,
-                                hitTestTag: hit ? hit.tagName : null,
-                                hitTestText: hit ? (hit.innerText || "").slice(0, 80) : null,
-                                chain,
                             };
-                        }""",
-                        team_button.element_handle(),
+                        }"""
                     ),
                 )
 
-                team_button.click()
+                nav_buttons = sidebar.locator(
+                    '.st-key-sidebar-navigation button[data-testid^="stBaseButton-"]'
+                )
+                assert nav_buttons.count() == 3, (
+                    "Study navigation should expose exactly three actionable "
+                    f"destinations, found {nav_buttons.count()}."
+                )
+                for i in range(nav_buttons.count()):
+                    button = nav_buttons.nth(i)
+                    expect(button).to_be_visible(timeout=5_000)
+                    label = button.inner_text().strip()
+                    assert label, f"Sidebar navigation button {i} has no visible label."
+                    box = button.bounding_box()
+                    assert box is not None, f"Sidebar navigation button {i} has no geometry."
+                    assert box["width"] > 120, box
+                    assert box["height"] >= 28, box
+                    assert box["x"] >= 0, box
+                    assert box["y"] >= 0, box
+
+                # Study area: direct destination buttons are visible and actionable.
+                sidebar.get_by_role("button", name="Team · OPEN").click()
                 _wait_for_idle(page)
                 _assert_shell(page)
                 expect(
                     page.get_by_text("Team", exact=True).first
                 ).to_be_visible(timeout=10_000)
 
+                # Workflow area: stages expose their real completion/availability state.
+                sidebar = page.locator('[data-testid="stSidebar"]')
+                workflow_area = sidebar.get_by_role(
+                    "radio",
+                    name="Workflow",
+                    exact=True,
+                )
+                workflow_area.click()
+                _wait_for_idle(page)
+                expect(workflow_area).to_have_attribute(
+                    "aria-checked",
+                    "true",
+                    timeout=5_000,
+                )
+                expect(
+                    sidebar.get_by_role(
+                        "button",
+                        name=re.compile(r"01.*Uncertainties.*(READY|CURRENT)"),
+                    )
+                ).to_have_count(1)
+
                 uncertainties_button = sidebar.get_by_role(
                     "button",
-                    name="• Uncertainties",
+                    name=re.compile(r"01.*Uncertainties.*(READY|CURRENT)"),
                 )
                 uncertainties_button.click()
                 _wait_for_idle(page)
@@ -267,11 +290,15 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     page.get_by_text("Selection Summary", exact=False)
                 ).to_be_visible(timeout=10_000)
 
-                overview_button = sidebar.get_by_role(
+                # Return to Study and verify the Overview destination remains
+                # available after workflow navigation.
+                sidebar = page.locator('[data-testid="stSidebar"]')
+                sidebar.get_by_role("radio", name="Study", exact=True).click()
+                _wait_for_idle(page)
+                sidebar.get_by_role(
                     "button",
-                    name="• Overview",
-                )
-                overview_button.click()
+                    name=re.compile(r"Overview.*(OPEN|CURRENT)"),
+                ).click()
                 _wait_for_idle(page)
                 _assert_overview_ui(page)
 

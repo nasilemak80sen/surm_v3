@@ -10,3 +10,4 @@ Pillow==12.3.0
 matplotlib==3.11.2
 numpy==2.5.3
 psycopg2-binary==2.9.13
+streamlit-extras==1.6.0

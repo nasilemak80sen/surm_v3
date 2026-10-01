@@ -5,18 +5,72 @@ import pandas as pd
 import pytest
 
 
-def test_shell_uses_one_sidebar_navigation_surface():
+def test_sidebar_is_task_oriented_and_state_aware():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "surm.py").read_text(encoding="utf-8")
 
     ast.parse(source)
-    assert "def render_top_navigation" not in source
-    assert "render_top_navigation()" not in source
-    assert "_build_sidebar_navigation" in source
-    assert "header_slot = st.empty()" not in source
-    assert 'with st.expander("Insights & governance", expanded=False)' in source
-    assert 'with st.expander("Session & export", expanded=False)' in source
-    assert 'with st.expander("Account & access", expanded=False)' in source
+
+    # One area selector + direct page actions: no second dropdown/radio
+    # abstraction should compete with the journey.
+    assert 'st.segmented_control(' in source
+    assert 'st.radio(' not in source
+    assert 'key="sidebar_area_selector"' in source
+    assert 'key=f"sidebar_page_{index}_{page}"' in source
+    assert 'key="sidebar_continue_next_stage"' in source
+
+    # The navigation is generated from the same workflow truth used by the
+    # main router, so the sidebar cannot silently invent a different state.
+    assert 'stage_map = {' in source
+    assert 'stage_results(session)' in source
+    assert 'stage.complete' in source
+    assert 'stage.available' in source
+    assert 'disabled=disabled' in source
+    assert 'if next_stage and next_stage != current_page:' in source
+
+    # Study / workflow / insights / support remain mutually explicit.
+    assert 'area_pages = {' in source
+    assert '"Study": study_pages' in source
+    assert '"Workflow": WORKFLOW_PAGES' in source
+    assert '"Insights": insight_pages' in source
+    assert '"Support": support_pages' in source
+
+    # Navigation stays separate from utility actions.
+    assert 'with st.expander("Utilities & access", expanded=False)' in source
+    assert 'with st.expander("Insights & governance", expanded=False)' not in source
+    assert 'with st.expander("Session & export", expanded=False)' not in source
+    assert 'with st.expander("Account & access", expanded=False)' not in source
+
+
+def test_sidebar_workflow_labels_expose_completion_and_lock_state():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    assert 'state = "COMPLETE"' in source
+    assert 'state = "READY"' in source
+    assert 'state = "LOCKED"' in source
+    assert 'state = "CURRENT"' in source
+    assert 'st.button(' in source
+    assert 'disabled=disabled' in source
+    assert '"Locked stages become available when their upstream gate is satisfied."' in source
+
+
+def test_sidebar_study_card_shows_accessible_stage_progress():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    sidebar = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "render_sidebar"
+    )
+    sidebar_source = ast.get_source_segment(source, sidebar)
+
+    assert '"completed_stages": completed_stages' in source
+    assert '"total_stages": total_stages' in source
+    assert 'aria-label="Study stage completion"' in sidebar_source
+    assert "{completed_stages} of {total_stages} stages complete" in sidebar_source
+    assert 'class="sidebar-stage-progress-track"' in sidebar_source
+    assert "st.progress(" not in sidebar_source
 
 
 def test_overview_does_not_duplicate_repository_or_export():
@@ -513,9 +567,17 @@ def test_study_repository_resume_opens_last_saved_page():
             "last_edited_by": "Engineer A",
             "last_edited_at": "2026-10-01T10:00:00",
             "resume_page": "6️⃣ Resolution Planner",
+            "last_saved_page": "6️⃣ Resolution Planner",
         }]
 
-        with patch.object(page, "list_sessions", lambda: summaries),              patch.object(page, "load_session_record", lambda summary: True):
+        def load_record(summary):
+            st.session_state["last_saved_page"] = summary["last_saved_page"]
+            st.session_state["_pending_navigation_page"] = summary["last_saved_page"]
+            return True
+
+        with patch.object(page, "list_sessions", lambda: summaries), \
+             patch.object(page, "load_session_record", load_record), \
+             patch.object(page.st, "rerun", lambda: None):
             page.render()
 
     at = _run_app(app)
@@ -525,6 +587,8 @@ def test_study_repository_resume_opens_last_saved_page():
 
     assert not at.exception
     assert at.session_state["study_access_mode"] == "edit"
+    assert at.session_state["last_saved_page"] == "6️⃣ Resolution Planner"
+    assert at.session_state["_pending_navigation_page"] == "6️⃣ Resolution Planner"
     assert at.session_state["current_page"] == "6️⃣ Resolution Planner"
 
 
@@ -798,6 +862,117 @@ def test_excel_export_is_deferred_until_requested():
         assert not at.exception
         assert calls == [True]
         assert at.download_button
+
+def test_surm_shell_integrity_is_not_truncated():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    required_symbols = [
+        "def render_header",
+        "def render_sidebar",
+        "def render_navigation",
+        "def render_footer",
+        "def main",
+    ]
+    for symbol in required_symbols:
+        assert symbol in source
+
+    # Guard against an accidental partial-file update that can leave Streamlit
+    # with an apparently blank application shell.
+    assert len(source.splitlines()) >= 500
+
+
+def test_overview_uses_disciplined_grid_ratios_and_study_setup_lifecycle():
+    from pathlib import Path
+
+    project_root = Path(__file__).resolve().parents[1]
+    source = (
+        project_root / "modules/tab_frontpage.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'grid(4, gap="medium", vertical_align="top")' in source
+    assert 'grid(\n            [1.5, 1.4, 0.9, 1.0],' in source
+    assert 'st.columns([1.2, 1], gap="large")' in source
+    assert 'key="study_lifecycle_input"' in source
+    assert 'ss["study_lifecycle_input"] = lifecycle_value' in source
+    assert 'with st.expander("Governance & sign-off"' not in source
+    assert '<div class="surm-panel-kicker">ATTENTION</div>' in source
+
+
+def test_locked_workflow_pages_keep_top_navigation_without_bottom_pager():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+    router = source[source.index("def render_navigation()"):]
+
+    assert "blocked = False" in source
+    assert "blocked = True" in source
+    assert router.index("render_page_pager()") < router.index("if blocked:")
+    assert router.count("render_page_pager()") == 1
+    assert 'render_page_pager(location="bottom")' not in source
+
+
+def test_single_top_pager_covers_all_application_pages():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    assert "NAVIGATION_ORDER = [" in source
+    assert 'key="pager_previous"' in source
+    assert 'key="pager_next"' in source
+    assert 'st.container(key="page-navigation")' in source
+
+
+def test_page_navigation_keeps_sidebar_workspace_in_sync():
+    def app():
+        import streamlit as st
+        import surm
+
+        surm._set_current_page("1️⃣ Uncertainties")
+        st.write(st.session_state["current_page"])
+        st.write(st.session_state["sidebar_area_selector"])
+
+    at = _run_app(app)
+
+    assert not at.exception
+    assert at.session_state["current_page"] == "1️⃣ Uncertainties"
+    assert at.session_state["sidebar_area_selector"] == "Workflow"
+
+
+def test_sidebar_uses_direct_page_actions_not_legacy_selector():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    assert 'key=f"sidebar_page_{index}_{page}"' in source
+    assert 'st.radio(' not in source
+    assert 'st.selectbox(' not in source
+    assert 'Current page' not in source
+    assert 'with st.expander("Utilities & access", expanded=False)' in source
+    assert 'with st.expander("Navigate", expanded=True)' not in source
+
+
+def test_ui_layout_dependency_and_keyed_sections():
+    project_root = Path(__file__).resolve().parents[1]
+
+    requirements = (
+        project_root / "requirements.txt"
+    ).read_text(encoding="utf-8")
+    overview_source = (
+        project_root / "modules/tab_frontpage.py"
+    ).read_text(encoding="utf-8")
+    sidebar_source = (
+        project_root / "surm.py"
+    ).read_text(encoding="utf-8")
+
+    assert "streamlit-extras==1.6.0" in requirements
+    assert "from streamlit_extras.grid import grid" in overview_source
+    assert "from streamlit_extras.grid import grid" in sidebar_source
+    assert 'key="overview-next-action"' in overview_source
+    assert 'key="overview-current-signal"' in overview_source
+    assert 'key="overview-study-setup"' in overview_source
+    assert 'key="overview-governance"' in overview_source
+    assert 'key="sidebar-study-context"' in sidebar_source
+    assert 'key="sidebar-navigation"' in sidebar_source
+    assert 'key="sidebar-actions"' in sidebar_source
+
 
 def test_entrypoint_boots_as_a_streamlit_app():
     project_root = Path(__file__).resolve().parents[1]
