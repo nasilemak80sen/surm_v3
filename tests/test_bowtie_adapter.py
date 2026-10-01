@@ -74,6 +74,43 @@ def test_bowtie_document_seeds_stable_risk_topology():
     assert "PREVENTIVE-PLACEMENT-2" in cause_line["stops"]
 
 
+def test_unchanged_risk_source_does_not_recreate_removed_generated_barrier():
+    row = _risk()
+    current = ensure_bowtie_register(
+        [row],
+        current={},
+        uncertainties=[],
+        resolution_list={},
+        resolution_planner=[],
+    )["RSK-001"]
+
+    removed_placement = current["preventativeBarriers"][0]
+    removed_node_id = removed_placement["nodeId"]
+    removed_placement_id = removed_placement["id"]
+    current["preventativeBarriers"] = [
+        item for item in current["preventativeBarriers"]
+        if item["id"] != removed_placement_id
+    ]
+    current["library"]["preventativeBarrier"] = [
+        node for node in current["library"]["preventativeBarrier"]
+        if node["id"] != removed_node_id
+    ]
+
+    preserved = ensure_bowtie_register(
+        [row],
+        current={"RSK-001": current},
+        uncertainties=[],
+        resolution_list={},
+        resolution_planner=[],
+    )["RSK-001"]
+
+    assert removed_placement_id not in {
+        item["id"] for item in preserved["preventativeBarriers"]
+    }
+    assert removed_node_id not in {
+        node["id"] for node in preserved["library"]["preventativeBarrier"]
+    }
+
 def test_bowtie_register_reconciles_risk_form_changes_without_rebuilding_layout():
     row = _risk()
     first = ensure_bowtie_register(
