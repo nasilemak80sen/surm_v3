@@ -708,13 +708,22 @@ def ensure_bowtie_register(
 
         existing = current_register.get(risk_id)
         if existing:
-            result[risk_id] = reconcile_bowtie_document(
-                existing,
+            current_signature = _source_signature(
                 row,
-                uncertainties=uncertainties,
-                resolution_list=resolution_list,
-                resolution_planner=resolution_planner,
+                resolution_planner,
             )
+            if existing.get("source_signature") == current_signature:
+                # No upstream form data changed. Preserve the current Bowtie
+                # exactly; this is critical after Auto Layout or manual edits.
+                result[risk_id] = existing
+            else:
+                result[risk_id] = reconcile_bowtie_document(
+                    existing,
+                    row,
+                    uncertainties=uncertainties,
+                    resolution_list=resolution_list,
+                    resolution_planner=resolution_planner,
+                )
             continue
 
         result[risk_id] = build_bowtie_document(
