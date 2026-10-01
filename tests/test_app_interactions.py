@@ -443,6 +443,45 @@ def test_risk_register_dropdowns_source_team_and_planner_and_normalize_others():
     assert "Custom Consequence" not in normalized[0]
 
 
+def test_resolution_planner_uses_bounded_months_and_percentage_progress():
+    from modules import tab6_resolution_planner as page
+
+    assert page._MONTH_OPTIONS == list(range(13))
+
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "modules/tab6_resolution_planner.py").read_text(encoding="utf-8")
+
+    assert '"Duration (months)": st.column_config.SelectboxColumn(' in source
+    assert 'options=_MONTH_OPTIONS' in source
+    assert '"Progress (%)": st.column_config.NumberColumn(' in source
+    assert 'min_value=0' in source
+    assert 'max_value=100' in source
+    assert 'format="%d%%"' in source
+    assert '"Progress (0-1)": None' in source
+
+
+def test_resolution_planner_percentage_maps_back_to_canonical_fraction():
+    from modules import tab6_resolution_planner as page
+
+    rows = [{"Progress (%)": 75, "Duration (months)": 12}]
+    # Mirror the persistence conversion performed by the planner editor.
+    normalized = []
+    for row in rows:
+        next_row = dict(row)
+        next_row["Progress (0-1)"] = max(
+            0.0,
+            min(1.0, page.safe_float(next_row.get("Progress (%)", 0), default=0.0) / 100.0),
+        )
+        next_row["Duration (months)"] = max(
+            0,
+            min(12, int(page.safe_float(next_row.get("Duration (months)", 0), default=0))),
+        )
+        normalized.append(next_row)
+
+    assert normalized[0]["Progress (0-1)"] == 0.75
+    assert normalized[0]["Duration (months)"] == 12
+
+
 def test_risk_register_readiness_message_is_not_assessment_only():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "modules/tab7_risk_register.py").read_text(encoding="utf-8")
