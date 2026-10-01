@@ -440,7 +440,7 @@ def _merge_generated_category(
 
     used_placement_ids = {
         str(placement.get("id", ""))
-        for placement in merged_placements
+        for placement in existing_placements
         if placement.get("id")
     }
 
@@ -631,8 +631,24 @@ def reconcile_bowtie_document(
     result["lines"] = reconciled_lines
 
     # Keep the existing browser/editor layout untouched, only extending it for
-    # genuinely new source-derived placements.
-    result["layout"] = deepcopy(result.get("layout", {}) or {})
+    # genuinely new source-derived placements. Drop stale entries for nodes
+    # that are no longer present so a later node cannot inherit old geometry.
+    active_layout_ids = {
+        str(placement.get("id", ""))
+        for placement_key in (
+            "causes",
+            "preventativeBarriers",
+            "mitigativeBarriers",
+            "outcomes",
+        )
+        for placement in result.get(placement_key, []) or []
+        if placement.get("id")
+    }
+    result["layout"] = {
+        str(pid): deepcopy(value)
+        for pid, value in (result.get("layout", {}) or {}).items()
+        if str(pid) in active_layout_ids
+    }
     for placement_key in (
         "causes",
         "preventativeBarriers",
@@ -648,6 +664,7 @@ def reconcile_bowtie_document(
                 "h": placement.get("h", 0),
             })
 
+    result["layout_version"] = 2
     return result
 
 
