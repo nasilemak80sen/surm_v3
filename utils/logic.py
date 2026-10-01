@@ -394,9 +394,9 @@ def build_risk_register(
         unique_resolutions = list(dict.fromkeys(all_resolutions))
         existing_row = existing.get(risk, {})
 
-        # New/blank risk owners inherit the first populated owner from the
-        # linked Resolution Planner action(s). Existing Risk Register owners
-        # always win, so manual edits are never overwritten by a refresh.
+        # New risks inherit the first populated owner from the linked
+        # Resolution Planner action(s). That inheritance remains active until
+        # the user explicitly overrides the owner in Risk Register.
         planner_owner = _default_risk_owner(
             st.session_state,
             unique_resolutions,
@@ -404,7 +404,15 @@ def build_risk_register(
         existing_owner = str(
             existing_row.get("Action Owner", "") or ""
         ).strip()
-        default_owner = existing_owner or planner_owner
+        owner_source = str(
+            existing_row.get("Action Owner Source", "") or ""
+        ).strip()
+        if owner_source == "planner_default" or not existing_owner:
+            default_owner = planner_owner
+            owner_source = "planner_default" if planner_owner else "manual"
+        else:
+            default_owner = existing_owner
+            owner_source = "manual"
 
         likelihood = existing_row.get("Likelihood (H/M/L)", "")
         impact = existing_row.get("Impact (H/M/L)", "")
