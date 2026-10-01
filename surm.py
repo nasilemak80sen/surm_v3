@@ -448,7 +448,6 @@ def render_sidebar() -> None:
                     type="primary" if selected else "secondary",
                     on_click=_go_to,
                     args=(page,),
-                    help=subtitle[:180] if subtitle else None,
                 )
 
             if area_title == "Workflow":
