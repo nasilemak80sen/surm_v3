@@ -228,6 +228,7 @@ def load_session(project_name: str, field_name: str, phase_name: str = "") -> bo
             or meta.get("last_saved_page")
             or "📋 Overview"
         )
+        st.session_state["current_page"] = st.session_state["last_saved_page"]
         st.session_state["_saved_signature"] = study_state_signature(st.session_state)
         st.session_state["study_id"] = (
             data.get("session", {}).get("study_id")
