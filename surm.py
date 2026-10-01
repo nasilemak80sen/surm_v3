@@ -592,7 +592,7 @@ def _navigation_target(offset: int) -> str | None:
 
 
 def render_page_pager(*, location: str) -> None:
-    """Render Previous / Next controls consistently across every page."""
+    """Render consistent Previous / Next controls on every application page."""
     current = st.session_state.get("current_page", "📋 Overview")
     try:
         position = NAVIGATION_ORDER.index(current) + 1
@@ -601,47 +601,63 @@ def render_page_pager(*, location: str) -> None:
 
     previous_page = _navigation_target(-1)
     next_page = _navigation_target(1)
+    previous_text = (
+        f"← {previous_page.split(' ', 1)[-1]}"
+        if previous_page else "← Previous"
+    )
+    next_text = (
+        f"{next_page.split(' ', 1)[-1]} →"
+        if next_page else "Next →"
+    )
 
-    left, center, right = st.columns([1.15, 2.7, 1.15], gap="small")
+    container = st.container()
+    with container:
+        left, center, right = st.columns([1.35, 2.3, 1.35], gap="small")
+        with left:
+            st.button(
+                previous_text,
+                key=f"pager_previous_{location}",
+                use_container_width=True,
+                disabled=previous_page is None,
+                on_click=(
+                    (lambda page=previous_page: st.session_state.update(
+                        current_page=page
+                    ))
+                    if previous_page
+                    else None
+                ),
+            )
+        with center:
+            st.markdown(
+                f"""
+                <div class="surm-page-pager">
+                    <span class="surm-page-pager-kicker">STUDY NAVIGATION</span>
+                    <strong class="surm-page-pager-title">
+                        {html.escape(current.split(" ", 1)[-1])}
+                    </strong>
+                    <span class="surm-page-pager-meta">
+                        Page {position} of {len(NAVIGATION_ORDER)}
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with right:
+            st.button(
+                next_text,
+                key=f"pager_next_{location}",
+                use_container_width=True,
+                disabled=next_page is None,
+                type="primary" if next_page else "secondary",
+                on_click=(
+                    (lambda page=next_page: st.session_state.update(
+                        current_page=page
+                    ))
+                    if next_page
+                    else None
+                ),
+            )
 
-    with left:
-        st.button(
-            "← Previous",
-            key=f"pager_previous_{location}",
-            use_container_width=True,
-            disabled=previous_page is None,
-            on_click=(
-                (lambda page=previous_page: st.session_state.update(current_page=page))
-                if previous_page
-                else None
-            ),
-        )
-
-    with center:
-        st.markdown(
-            f"""
-            <div class="surm-page-pager">
-                <div class="surm-page-pager-kicker">STUDY NAVIGATION</div>
-                <div class="surm-page-pager-title">{html.escape(current.split(" ", 1)[-1])}</div>
-                <div class="surm-page-pager-meta">Page {position} of {len(NAVIGATION_ORDER)}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with right:
-        st.button(
-            "Next →",
-            key=f"pager_next_{location}",
-            use_container_width=True,
-            disabled=next_page is None,
-            type="primary" if next_page else "secondary",
-            on_click=(
-                (lambda page=next_page: st.session_state.update(current_page=page))
-                if next_page
-                else None
-            ),
-        )
 
 
 def render_navigation() -> None:
@@ -686,16 +702,23 @@ def render_navigation() -> None:
         "🕘 Revision History": "Inspect immutable study revisions and compare durable changes.",
     }
 
+    blocked = False
     if is_workflow_page:
         session = cast(dict[str, Any], dict(st.session_state))
         stage_key = stage_results(session)[workflow_index].key
         allowed, reason = validate_stage(session, stage_key)
         if not allowed:
-            render_page_frame(title, descriptions.get(selected_page, "SURM study workspace."), step=workflow_index + 1)
+            render_page_frame(
+                title,
+                descriptions.get(selected_page, "SURM study workspace."),
+                step=workflow_index + 1,
+            )
             st.warning(f"This stage is not ready yet. {reason}")
             current = current_stage(session)
-            st.info(f"Current study stage: **{current.label}** — {current.guidance}")
-            return
+            st.info(
+                f"Current study stage: **{current.label}** — {current.guidance}"
+            )
+            blocked = True
 
     custom_header_pages = {
         "🗂️ Study Repository",
@@ -715,16 +738,22 @@ def render_navigation() -> None:
 
     render_page_pager(location="top")
 
-    if (
-        not study_is_editable(dict(st.session_state))
-        and selected_page != "🗂️ Study Repository"
-    ):
-        edit_col, _ = st.columns([1, 5])
-        with edit_col:
-            st.button("✏️ Edit Study", key="view_page_edit_study", type="primary", on_click=_enable_edit_mode)
-        _render_read_only_page(selected_page)
-    else:
-        PAGE_DEFINITIONS[selected_page]()
+    if not blocked:
+        if (
+            not study_is_editable(dict(st.session_state))
+            and selected_page != "🗂️ Study Repository"
+        ):
+            edit_col, _ = st.columns([1, 5])
+            with edit_col:
+                st.button(
+                    "✏️ Edit Study",
+                    key="view_page_edit_study",
+                    type="primary",
+                    on_click=_enable_edit_mode,
+                )
+            _render_read_only_page(selected_page)
+        else:
+            PAGE_DEFINITIONS[selected_page]()
 
     render_page_pager(location="bottom")
 
