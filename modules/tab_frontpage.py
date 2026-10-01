@@ -185,6 +185,7 @@ def render():
             lifecycle_value = str(ss.get("study_lifecycle", "Draft") or "Draft")
             if lifecycle_value not in LIFECYCLE_ORDER:
                 lifecycle_value = "Draft"
+            ss["study_lifecycle_input"] = lifecycle_value
             st.selectbox(
                 "Study Lifecycle",
                 LIFECYCLE_ORDER,
