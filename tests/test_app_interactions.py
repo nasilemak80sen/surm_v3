@@ -552,7 +552,11 @@ def test_study_repository_resume_opens_last_saved_page():
             "last_saved_page": "6️⃣ Resolution Planner",
         }]
 
-        with patch.object(page, "list_sessions", lambda: summaries),              patch.object(page, "load_session_record", lambda summary: True):
+        def load_record(summary):
+            st.session_state["last_saved_page"] = summary["last_saved_page"]
+            return True
+
+        with patch.object(page, "list_sessions", lambda: summaries),              patch.object(page, "load_session_record", load_record):
             page.render()
 
     at = _run_app(app)
