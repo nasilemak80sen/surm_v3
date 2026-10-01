@@ -185,8 +185,10 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
 
                 # Navigate using the task-oriented sidebar journey.
                 sidebar = page.locator('[data-testid="stSidebar"]')
-                area_switcher = sidebar.locator(
-                    '[data-testid="stSegmentedControl"]'
+                area_switcher = sidebar.get_by_role(
+                    "radio",
+                    name="Study",
+                    exact=True,
                 )
                 expect(area_switcher).to_have_count(1)
                 expect(area_switcher).to_be_visible(timeout=10_000)
@@ -248,7 +250,7 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
 
                 # Workflow area: stages expose their real completion/availability state.
                 sidebar = page.locator('[data-testid="stSidebar"]')
-                sidebar.get_by_role("button", name="Workflow", exact=True).click()
+                sidebar.get_by_role("radio", name="Workflow", exact=True).click()
                 _wait_for_idle(page)
                 expect(
                     sidebar.get_by_role(
@@ -274,7 +276,7 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                 # Return to Study and verify the Overview destination remains
                 # available after workflow navigation.
                 sidebar = page.locator('[data-testid="stSidebar"]')
-                sidebar.get_by_role("button", name="Study", exact=True).click()
+                sidebar.get_by_role("radio", name="Study", exact=True).click()
                 _wait_for_idle(page)
                 sidebar.get_by_role(
                     "button",
