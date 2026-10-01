@@ -40,11 +40,26 @@ def _resume_page(session_meta: dict) -> str:
     return page if page.startswith(valid_prefixes) else "📋 Overview"
 
 
+def _load_saved_study(session_meta: dict, *, edit: bool) -> None:
+    """Load a saved study and route directly to its durable saved workspace."""
+    if not load_session_record(session_meta):
+        st.error("Unable to load this saved study.")
+        return
+
+    # persistence.load_session() has already resolved the canonical durable
+    # last_saved_page. Read it back from session state rather than trusting
+    # the repository summary/card that triggered the load.
+    target = _resume_page({
+        "resume_page": st.session_state.get("last_saved_page", "📋 Overview")
+    })
+    st.session_state["current_page"] = target
+    st.session_state["_pending_navigation_page"] = target
+    st.session_state["study_access_mode"] = "edit" if edit else "view"
+    st.rerun()
+
+
 def _load_for_view(session_meta: dict) -> None:
-    if load_session_record(session_meta):
-        st.session_state["study_access_mode"] = "view"
-        st.session_state["current_page"] = _resume_page(session_meta)
-        st.rerun()
+    _load_saved_study(session_meta, edit=False)
 
 
 def _delete_saved(project_name: str, field_name: str) -> None:
@@ -106,16 +121,13 @@ def render() -> None:
                         _load_for_view(summary)
                 with edit_col:
                     if st.button(
-                        "Resume",
+                        "Resume at saved page",
                         key=f"repository_edit_{index}",
                         use_container_width=True,
                         type="primary",
                         help=f"Continue from the last saved workspace: {_resume_page(summary).split(' ', 1)[-1]}",
                     ):
-                        if load_session_record(summary):
-                            st.session_state["study_access_mode"] = "edit"
-                            st.session_state["current_page"] = _resume_page(summary)
-                            st.rerun()
+                        _load_saved_study(summary, edit=True)
                 with delete_col:
                     if st.button("Delete", key=f"repository_delete_{index}", use_container_width=True):
                         _delete_saved(summary.get("project_name", ""), summary.get("field_name", ""))
