@@ -314,8 +314,30 @@ window.addEventListener("error", event => {
             page.wait_for_timeout(50)
             expect(rel).to_be_checked()
 
+            before_auto_preventive_count = page.locator(
+                '[data-kind="preventativeBarrier"]'
+            ).count()
+            before_auto_preventive_names = page.locator(
+                '#objects button'
+            ).all_inner_texts()
+
             page.locator("#auto").click()
             page.wait_for_timeout(50)
+
+            assert page.locator(
+                '[data-kind="preventativeBarrier"]'
+            ).count() == before_auto_preventive_count
+
+            emitted_after_auto = page.evaluate("window.__surmMessages")
+            auto_documents = [
+                item["value"]["document"]
+                for item in emitted_after_auto
+                if item["type"] == "streamlit:setComponentValue"
+                and item["value"]
+            ]
+            assert auto_documents
+            auto_document = auto_documents[-1]
+            assert len(auto_document["preventativeBarriers"]) == before_auto_preventive_count
             assert float(
                 page.locator(
                     '[data-kind="preventativeBarrier"][data-id="PREVENTIVE-PLACEMENT-1"]'
