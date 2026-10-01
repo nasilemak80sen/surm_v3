@@ -319,7 +319,7 @@ def render():
     planner_data = st.session_state.get("resolution_planner", [])
     live_planner_data = st.session_state.get("_planner_draft_rows")
     active_planner_data = (
-        live_planner_data
+        _normalize_planner_draft(live_planner_data)
         if isinstance(live_planner_data, list)
         else planner_data
     )
@@ -436,6 +436,9 @@ def render():
 
             df_in = _prepare_planner_draft(draft_seed)
             owner_options = build_owner_options(st.session_state)
+            editor_revision = int(
+                st.session_state.get("_planner_editor_revision", 0)
+            )
 
             render_save_hint(
                 "Edits are a live session draft, so the Gantt updates immediately. "
@@ -500,11 +503,15 @@ def render():
                 use_container_width=True,
                 num_rows="fixed",
                 height=min(760, max(330, len(planner_data) * 72 + 90)),
-                key=f"planner_editor_{st.session_state.get('study_id', 'new')}",
+                key=(
+                    f"planner_editor_{st.session_state.get('study_id', 'new')}"
+                    f"_{editor_revision}"
+                ),
             )
 
             draft_rows = edited.to_dict("records")
             st.session_state["_planner_draft_rows"] = draft_rows
+            live_draft_rows = _normalize_planner_draft(draft_rows)
 
             action_cols = st.columns([1, 1, 1.6, 3.4])
             with action_cols[0]:
@@ -538,6 +545,9 @@ def render():
                 for row in updated_draft:
                     row["Part of Workplan"] = target
                 st.session_state["_planner_draft_rows"] = updated_draft
+                st.session_state["_planner_editor_revision"] = (
+                    editor_revision + 1
+                )
                 st.rerun()
 
             if save_clicked:
@@ -557,12 +567,15 @@ def render():
                     return
 
                 st.session_state.pop("_planner_draft_rows", None)
+                st.session_state["_planner_editor_revision"] = editor_revision + 1
                 st.success("✅ Resolution planner saved.")
                 st.rerun()
 
             gantt_title = '<div class="surm-section-header">Live Workplan Gantt</div>'
             st.markdown(gantt_title, unsafe_allow_html=True)
-            gantt_figure, gantt_count, missing_dates = _build_live_gantt(draft_rows)
+            gantt_figure, gantt_count, missing_dates = _build_live_gantt(
+                live_draft_rows
+            )
 
             if gantt_figure is None:
                 if missing_dates:
