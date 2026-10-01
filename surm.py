@@ -339,22 +339,36 @@ def render_sidebar() -> None:
         st.progress(progress / 100, text=f"{progress}% workflow complete")
 
         # ------------------------------------------------------------------
-        # Primary navigation — one source of truth.
+        # Primary navigation — one compact Navigate control.
         # ------------------------------------------------------------------
-        st.markdown(
-            '<div class="surm-sidebar-nav-label">Navigate</div>',
-            unsafe_allow_html=True,
-        )
         navigation = _build_sidebar_navigation()
 
-        _render_sidebar_nav_group("Study", navigation["Study"])
-        _render_sidebar_nav_group("Workflow", navigation["Workflow"])
-
-        with st.expander("Insights & governance", expanded=False):
-            for page, label, state in navigation["Insights & governance"]:
+        with st.expander("Navigate", expanded=True):
+            st.markdown(
+                '<div class="surm-sidebar-nav-group-title">Study</div>',
+                unsafe_allow_html=True,
+            )
+            for page, label, state in navigation["Study"]:
                 _sidebar_nav_item(page, label, state=state)
 
-        _render_sidebar_nav_group("Support", navigation["Support"])
+            st.markdown(
+                '<div class="surm-sidebar-nav-group-title">Workflow</div>',
+                unsafe_allow_html=True,
+            )
+            for page, label, state in navigation["Workflow"]:
+                step_no = WORKFLOW_PAGES.index(page) + 1
+                _sidebar_nav_item(page, f"{step_no:02d}  {label}", state=state)
+
+            with st.expander("Insights & governance", expanded=False):
+                for page, label, state in navigation["Insights & governance"]:
+                    _sidebar_nav_item(page, label, state=state)
+
+            st.markdown(
+                '<div class="surm-sidebar-nav-group-title">Support</div>',
+                unsafe_allow_html=True,
+            )
+            for page, label, state in navigation["Support"]:
+                _sidebar_nav_item(page, label, state=state)
 
         # ------------------------------------------------------------------
         # Frequent study actions stay visible; secondary options are collapsed.
@@ -544,6 +558,92 @@ WORKFLOW_PAGES = [
 ]
 
 
+NAVIGATION_ORDER = [
+    "🗂️ Study Repository",
+    "📋 Overview",
+    "👥 Team",
+    "1️⃣ Uncertainties",
+    "2️⃣ Key Decisions",
+    "3️⃣ Impact Assessment",
+    "4️⃣ Key Uncertainties",
+    "5️⃣ Resolution List",
+    "6️⃣ Resolution Planner",
+    "7️⃣ Risk Register",
+    "📄 PRA Output",
+    "📊 Intelligence",
+    "🛡️ Barrier Management",
+    "✅ Assurance & Review",
+    "🕘 Revision History",
+    "📖 How to Use",
+]
+
+
+def _navigation_target(offset: int) -> str | None:
+    """Return the adjacent page in the consistent application sequence."""
+    current = st.session_state.get("current_page", "📋 Overview")
+    try:
+        index = NAVIGATION_ORDER.index(current)
+    except ValueError:
+        return None
+    target = index + offset
+    if target < 0 or target >= len(NAVIGATION_ORDER):
+        return None
+    return NAVIGATION_ORDER[target]
+
+
+def render_page_pager(*, location: str) -> None:
+    """Render Previous / Next controls consistently across every page."""
+    current = st.session_state.get("current_page", "📋 Overview")
+    try:
+        position = NAVIGATION_ORDER.index(current) + 1
+    except ValueError:
+        position = 1
+
+    previous_page = _navigation_target(-1)
+    next_page = _navigation_target(1)
+
+    left, center, right = st.columns([1.15, 2.7, 1.15], gap="small")
+
+    with left:
+        st.button(
+            "← Previous",
+            key=f"pager_previous_{location}",
+            use_container_width=True,
+            disabled=previous_page is None,
+            on_click=(
+                (lambda page=previous_page: st.session_state.update(current_page=page))
+                if previous_page
+                else None
+            ),
+        )
+
+    with center:
+        st.markdown(
+            f"""
+            <div class="surm-page-pager">
+                <div class="surm-page-pager-kicker">STUDY NAVIGATION</div>
+                <div class="surm-page-pager-title">{html.escape(current.split(" ", 1)[-1])}</div>
+                <div class="surm-page-pager-meta">Page {position} of {len(NAVIGATION_ORDER)}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with right:
+        st.button(
+            "Next →",
+            key=f"pager_next_{location}",
+            use_container_width=True,
+            disabled=next_page is None,
+            type="primary" if next_page else "secondary",
+            on_click=(
+                (lambda page=next_page: st.session_state.update(current_page=page))
+                if next_page
+                else None
+            ),
+        )
+
+
 def render_navigation() -> None:
     """
     Render page navigation.
@@ -613,6 +713,8 @@ def render_navigation() -> None:
             descriptions.get(selected_page, "SURM study workspace."),
         )
 
+    render_page_pager(location="top")
+
     if (
         not study_is_editable(dict(st.session_state))
         and selected_page != "🗂️ Study Repository"
@@ -623,6 +725,8 @@ def render_navigation() -> None:
         _render_read_only_page(selected_page)
     else:
         PAGE_DEFINITIONS[selected_page]()
+
+    render_page_pager(location="bottom")
 
 
 
