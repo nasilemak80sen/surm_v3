@@ -290,12 +290,6 @@ def render_sidebar() -> None:
         else:
             active_area = "Support"
 
-        area_key = {
-            "Study": "sidebar_area_study",
-            "Workflow": "sidebar_area_workflow",
-            "Insights": "sidebar_area_insights",
-            "Support": "sidebar_area_support",
-        }[active_area]
         ss["sidebar_area_selector"] = active_area
 
         stage_map = {
@@ -321,6 +315,12 @@ def render_sidebar() -> None:
             "Insights": insight_pages,
             "Support": support_pages,
         }
+
+        if area and area != active_area:
+            target_page = area_pages[area][0]
+            st.session_state["current_page"] = target_page
+            st.rerun()
+
         pages = area_pages.get(area or active_area, study_pages)
 
         def page_label(page: str) -> str:
