@@ -340,6 +340,7 @@ def _default_risk_owner(
 def build_risk_register(
     key_unc_df: pd.DataFrame,
     resolution_df: pd.DataFrame,
+    session: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
     """
     Build one row per linked risk.
@@ -350,15 +351,17 @@ def build_risk_register(
     if key_unc_df.empty:
         return pd.DataFrame()
 
-    options = st.session_state["_mapping"]["resolution_options"]
+    source = session if session is not None else dict(st.session_state)
+
+    options = source.get("_mapping", {}).get("resolution_options", [])
     uncertainty_details = {
         u["name"]: u
-        for u in st.session_state.get("uncertainties", [])
+        for u in source.get("uncertainties", [])
         if isinstance(u, dict)
     }
     existing = {
         row["Risk"]: row
-        for row in st.session_state.get("risk_register", [])
+        for row in source.get("risk_register", [])
         if isinstance(row, dict) and row.get("Risk")
     }
 
@@ -398,7 +401,7 @@ def build_risk_register(
         # Resolution Planner action(s). That inheritance remains active until
         # the user explicitly overrides the owner in Risk Register.
         planner_owner = _default_risk_owner(
-            st.session_state,
+            source,
             unique_resolutions,
         )
         existing_owner = str(
