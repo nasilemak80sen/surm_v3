@@ -266,7 +266,6 @@ def render_sidebar() -> None:
             current_page = "📋 Overview"
             st.session_state["current_page"] = current_page
 
-        workflow_set = set(WORKFLOW_PAGES)
         study_pages = [
             "🗂️ Study Repository",
             "📋 Overview",
@@ -283,7 +282,7 @@ def render_sidebar() -> None:
 
         if current_page in study_pages:
             active_area = "Study"
-        elif current_page in workflow_set:
+        elif current_page in WORKFLOW_PAGES:
             active_area = "Workflow"
         elif current_page in insight_pages:
             active_area = "Insights"
@@ -300,6 +299,13 @@ def render_sidebar() -> None:
             )
         }
 
+        area_pages = {
+            "Study": study_pages,
+            "Workflow": WORKFLOW_PAGES,
+            "Insights": insight_pages,
+            "Support": support_pages,
+        }
+
         area = st.segmented_control(
             "Workspace area",
             ["Study", "Workflow", "Insights", "Support"],
@@ -309,90 +315,167 @@ def render_sidebar() -> None:
             width="stretch",
         )
 
-        area_pages = {
-            "Study": study_pages,
-            "Workflow": WORKFLOW_PAGES,
-            "Insights": insight_pages,
-            "Support": support_pages,
-        }
-
         if area and area != active_area:
-            target_page = area_pages[area][0]
-            st.session_state["current_page"] = target_page
+            st.session_state["current_page"] = area_pages[area][0]
             st.rerun()
 
         pages = area_pages.get(area or active_area, study_pages)
 
-        def page_label(page: str) -> str:
-            stage = stage_map.get(page)
+        def _go_to(page: str) -> None:
+            st.session_state["current_page"] = page
 
-            if page in workflow_set:
-                step = WORKFLOW_PAGES.index(page) + 1
-                status = "✓" if stage and stage.complete else (
-                    "—" if stage and not stage.available else "·"
-                )
-                return f"{status}  {step:02d}  {page.split(' ', 1)[-1]}"
+        def _page_title(page: str) -> str:
+            return page.split(" ", 1)[-1]
 
-            labels = {
-                "🗂️ Study Repository": "Repository",
-                "📋 Overview": "Overview",
-                "👥 Team": "Team",
-                "📄 PRA Output": "PRA Output",
-                "📊 Intelligence": "Intelligence",
-                "🛡️ Barrier Management": "Barrier Management",
-                "✅ Assurance & Review": "Assurance & Review",
-                "🕘 Revision History": "Revision History",
-                "📖 How to Use": "How to Use",
-            }
-            return labels.get(page, page.split(" ", 1)[-1])
-
-        page_values = {
-            page: page_label(page)
-            for page in pages
-        }
-
-        # The radio is the page-level navigation surface. Unlike a dropdown,
-        # the available destinations remain visible while the user works.
-        current_area_page = (
-            current_page
-            if current_page in pages
-            else pages[0]
-        )
-        ss["sidebar_page_selector"] = current_area_page
-
+        # ------------------------------------------------------------------
+        # Journey header
+        # ------------------------------------------------------------------
         with st.container(key="sidebar-navigation", border=False):
+            area_title = area or active_area
             st.markdown(
-                f'<div class="sidebar-section-title">{html.escape(area or active_area).upper()}</div>',
+                f"""
+                <div class="sidebar-journey-header">
+                    <div>
+                        <div class="sidebar-section-title">
+                            {html.escape(area_title.upper())}
+                        </div>
+                        <div class="sidebar-journey-title">
+                            {(
+                                "Build the study"
+                                if area_title == "Study"
+                                else "Work through the gates"
+                                if area_title == "Workflow"
+                                else "Review and assure"
+                                if area_title == "Insights"
+                                else "Reference and guidance"
+                            )}
+                        </div>
+                    </div>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
-            selected_page = st.radio(
-                "Current page",
-                list(page_values),
-                index=list(page_values).index(current_area_page),
-                key="sidebar_page_selector",
-                format_func=lambda page: page_values[page],
-                label_visibility="collapsed",
-            )
 
-            if selected_page != current_page:
-                st.session_state["current_page"] = selected_page
-                st.rerun()
-
-            if area == "Workflow" or active_area == "Workflow":
-                step_no = WORKFLOW_PAGES.index(current_page) + 1
-                stage = stage_map.get(current_page)
-                state = (
-                    "Complete"
-                    if stage and stage.complete
-                    else ("Ready" if stage and stage.available else "Locked")
+            if area_title == "Workflow":
+                completed_count = sum(
+                    1 for stage in stage_map.values()
+                    if stage.complete
                 )
+                next_stage = next(
+                    (
+                        page
+                        for page in WORKFLOW_PAGES
+                        if stage_map.get(page)
+                        and not stage_map[page].complete
+                        and stage_map[page].available
+                    ),
+                    None,
+                )
+
+                st.markdown(
+                    f"""
+                    <div class="sidebar-workflow-summary">
+                        <span>WORKFLOW PROGRESS</span>
+                        <strong>{completed_count}/{len(WORKFLOW_PAGES)}</strong>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                if next_stage and next_stage != current_page:
+                    if st.button(
+                        f"Continue · {_page_title(next_stage)}  →",
+                        key="sidebar_continue_next_stage",
+                        type="primary",
+                        use_container_width=True,
+                        on_click=_go_to,
+                        args=(next_stage,),
+                    ):
+                        pass
+
+            page_labels = {
+                "🗂️ Study Repository": ("Repository", "Saved studies"),
+                "📋 Overview": ("Overview", "Study control center"),
+                "👥 Team": ("Team", "Roles and ownership"),
+                "📄 PRA Output": ("PRA Output", "Decision-ready output"),
+                "📊 Intelligence": ("Intelligence", "Signals and analytics"),
+                "🛡️ Barrier Management": ("Barrier Management", "Controls and barriers"),
+                "✅ Assurance & Review": ("Assurance & Review", "Governance checkpoints"),
+                "🕘 Revision History": ("Revision History", "Change trace"),
+                "📖 How to Use": ("How to Use", "Workflow guidance"),
+            }
+
+            for index, page in enumerate(pages):
+                stage = stage_map.get(page)
+                if stage is not None:
+                    if stage.complete:
+                        state = "COMPLETE"
+                        icon = "✓"
+                    elif stage.available:
+                        state = "READY"
+                        icon = "→"
+                    else:
+                        state = "LOCKED"
+                        icon = "—"
+                    step = f"{WORKFLOW_PAGES.index(page) + 1:02d}"
+                    title = _page_title(page)
+                    subtitle = stage.guidance
+                    disabled = not stage.available and not stage.complete
+                else:
+                    label, subtitle = page_labels.get(
+                        page,
+                        (_page_title(page), ""),
+                    )
+                    title = label
+                    state = "CURRENT" if page == current_page else "OPEN"
+                    icon = "●" if page == current_page else "○"
+                    step = f"{index + 1:02d}"
+                    disabled = False
+
+                selected = page == current_page
+                if selected:
+                    state = "CURRENT"
+
+                st.markdown(
+                    f"""
+                    <div class="sidebar-nav-row-label {'is-current' if selected else ''} {'is-locked' if disabled else ''}">
+                        <span class="sidebar-nav-step">{step}</span>
+                        <span class="sidebar-nav-icon">{icon}</span>
+                        <span class="sidebar-nav-copy">
+                            <strong>{html.escape(title)}</strong>
+                            <small>{html.escape(state)}</small>
+                        </span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                if st.button(
+                    f"{title}",
+                    key=f"sidebar_page_{index}_{page}",
+                    use_container_width=True,
+                    disabled=disabled,
+                    type="secondary",
+                    on_click=_go_to,
+                    args=(page,),
+                ):
+                    pass
+
+                # Keep the supporting description visible without adding
+                # another interactive surface.
+                if selected or (stage is not None and stage.available and not stage.complete):
+                    st.caption(subtitle[:105])
+
+            if area_title == "Workflow":
                 st.caption(
-                    f"Stage {step_no} of {len(WORKFLOW_PAGES)} · {state}"
+                    "Locked stages become available when their upstream gate is satisfied."
                 )
+            elif area_title == "Study":
+                st.caption("Set up the study, manage the team, then enter the workflow.")
+            elif area_title == "Insights":
+                st.caption("Use these pages for output, intelligence, barriers and assurance.")
             else:
-                st.caption(
-                    f"{page_values.get(current_page, current_page.split(' ', 1)[-1])}"
-                )
+                st.caption("Reference material and workflow guidance.")
 
         # ------------------------------------------------------------------
         # Primary actions
