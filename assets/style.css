@@ -3412,3 +3412,79 @@ section[data-testid="stSidebar"] [data-testid="stCheckbox"] label {
     min-height: 2.25rem !important;
     font-size: 0.69rem !important;
 }
+
+
+/* ==========================================================================
+   SURM UX 4.2 — COMPACT SIDEBAR NAVIGATOR
+   ========================================================================== */
+
+/* Keep the sidebar as a quiet control rail: one selector, two actions, one
+   secondary drawer. */
+section[data-testid="stSidebar"] .stSelectbox {
+    margin: 0.55rem 0 0.2rem;
+}
+
+section[data-testid="stSidebar"] .stSelectbox > label {
+    margin-bottom: 0.22rem;
+    color: rgba(220, 236, 226, 0.58);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    min-height: 2.45rem;
+    border: 1px solid #2A493C !important;
+    border-radius: 8px !important;
+    background: #142A20 !important;
+    box-shadow: none !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] * {
+    color: #EEF7F1 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] svg {
+    fill: #9BC7AD !important;
+}
+
+section[data-testid="stSidebar"] [data-baseweb="popover"] {
+    border: 1px solid #29473A !important;
+    border-radius: 8px !important;
+    background: #10251C !important;
+}
+
+section[data-testid="stSidebar"] [role="option"] {
+    color: #E7F1EB !important;
+    font-size: 0.72rem !important;
+}
+
+section[data-testid="stSidebar"] [role="option"][aria-selected="true"] {
+    background: #19372A !important;
+}
+
+.surm-sidebar-study-card + div {
+    margin-top: 0.25rem;
+}
+
+.surm-sidebar-section-label {
+    margin: 0.75rem 0 0.28rem;
+    color: rgba(201, 224, 211, 0.46);
+    font-size: 0.52rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+}
+
+section[data-testid="stSidebar"] .stCaption {
+    color: rgba(220, 236, 226, 0.56);
+}
+
+section[data-testid="stSidebar"] .stProgress {
+    margin-bottom: 0.15rem;
+}
+
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+    margin-top: 0.55rem;
+    margin-bottom: 0.35rem;
+}
