@@ -859,10 +859,8 @@ def test_global_page_pager_covers_all_application_pages():
     source = (project_root / "surm.py").read_text(encoding="utf-8")
 
     assert "NAVIGATION_ORDER = [" in source
-    assert 'pager_previous_top' in source
-    assert 'pager_next_top' in source
-    assert 'pager_previous_bottom' in source
-    assert 'pager_next_bottom' in source
+    assert 'key=f"pager_previous_{location}"' in source
+    assert 'key=f"pager_next_{location}"' in source
 
 
 def test_sidebar_navigation_is_single_clean_selector():
