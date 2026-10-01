@@ -281,7 +281,7 @@ def build_resolution_planner(
             "Required Completion": existing_row.get("Required Completion", ""),
             "Progress (0-1)": min(max(safe_float(existing_row.get("Progress (0-1)", 0.0), default=0.0), 0.0), 1.0),
             "Status": existing_row.get("Status", "Open"),
-            "Action Owner": existing_row.get("Action Owner", ""),
+            "Action Owner": default_owner,
             "Part of Workplan": existing_row.get("Part of Workplan", True),
             "Remarks": existing_row.get("Remarks", ""),
         })
@@ -304,6 +304,37 @@ def _all_known_risks() -> list[str]:
         if risk not in output:
             output.append(risk)
     return output
+
+
+def _resolution_planner_owners(session: dict, resolutions: list[str]) -> list[str]:
+    """Return unique owners from Resolution Planner actions in stable order."""
+    wanted = set(resolutions)
+    owners: list[str] = []
+
+    for row in session.get("resolution_planner", []) or []:
+        if not isinstance(row, dict):
+            continue
+
+        action = str(row.get("Resolution Action", "") or "").strip()
+        owner = str(row.get("Action Owner", "") or "").strip()
+
+        if (
+            action in wanted
+            and owner
+            and owner not in owners
+        ):
+            owners.append(owner)
+
+    return owners
+
+
+def _default_risk_owner(
+    session: dict,
+    resolutions: list[str],
+) -> str:
+    """Return the default owner inherited from the linked planner actions."""
+    owners = _resolution_planner_owners(session, resolutions)
+    return owners[0] if owners else ""
 
 
 def build_risk_register(
@@ -362,6 +393,18 @@ def build_risk_register(
 
         unique_resolutions = list(dict.fromkeys(all_resolutions))
         existing_row = existing.get(risk, {})
+
+        # New/blank risk owners inherit the first populated owner from the
+        # linked Resolution Planner action(s). Existing Risk Register owners
+        # always win, so manual edits are never overwritten by a refresh.
+        planner_owner = _default_risk_owner(
+            st.session_state,
+            unique_resolutions,
+        )
+        existing_owner = str(
+            existing_row.get("Action Owner", "") or ""
+        ).strip()
+        default_owner = existing_owner or planner_owner
 
         likelihood = existing_row.get("Likelihood (H/M/L)", "")
         impact = existing_row.get("Impact (H/M/L)", "")
