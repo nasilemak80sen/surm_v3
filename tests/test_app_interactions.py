@@ -14,6 +14,7 @@ def test_shell_uses_one_sidebar_navigation_surface():
     assert "render_top_navigation()" not in source
     assert 'st.selectbox(' in source
     assert 'key="sidebar_page_selector"' in source
+    assert 'ss["sidebar_page_selector"] = current_page' in source
     assert '"Navigate"' in source
     assert "_build_sidebar_navigation" not in source
     assert "_sidebar_nav_item" not in source
@@ -835,6 +836,7 @@ def test_overview_uses_equal_action_signal_columns_and_study_setup_lifecycle():
     assert 'st.columns([1, 1], gap="medium")' in source
     assert 'st.columns([1.15, 1.15, 0.8, 0.9], gap="medium")' in source
     assert 'key="study_lifecycle_input"' in source
+    assert 'ss["study_lifecycle_input"] = lifecycle_value' in source
     assert 'with st.expander("Governance & sign-off"' not in source
     assert '<div class="surm-panel-kicker">ATTENTION</div>' in source
 
