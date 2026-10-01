@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import subprocess
 import sys
@@ -63,7 +64,7 @@ def _assert_shell(page) -> None:
 def _assert_overview_ui(page) -> None:
     """Assert the Overview page contract."""
     _assert_shell(page)
-    expect(page.get_by_text("AT A GLANCE", exact=True)).to_be_visible(timeout=10_000)
+    expect(page.get_by_text("EXECUTIVE SNAPSHOT", exact=True)).to_be_visible(timeout=10_000)
     expect(page.get_by_text("Study setup", exact=True)).to_be_visible(timeout=10_000)
     expect(page.get_by_text("Workflow progress", exact=True)).to_be_visible(timeout=10_000)
     expect(page.get_by_label("Project Name")).to_be_visible(timeout=10_000)
@@ -182,49 +183,26 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     timeout=10_000,
                 )
 
-                # Navigate using real sidebar buttons.
+                # Navigate using the single sidebar workspace selector.
                 sidebar = page.locator('[data-testid="stSidebar"]')
-                team_button = sidebar.get_by_role(
-                    "button",
-                    name="• Team",
-                )
-                expect(team_button).to_have_count(1)
-                team_button.scroll_into_view_if_needed()
+                page_selector = sidebar.get_by_label("Current page")
+                expect(page_selector).to_have_count(1)
+                expect(page_selector).to_be_visible(timeout=10_000)
 
                 print(
                     "Sidebar geometry:",
                     page.evaluate(
-                        """button => {
+                        """() => {
                             const sidebar = document.querySelector('[data-testid="stSidebar"]');
-                            const rect = button.getBoundingClientRect();
-                            const hit = document.elementFromPoint(
-                                rect.left + rect.width / 2,
-                                rect.top + rect.height / 2
-                            );
-                            const chain = [];
-                            let node = button;
-                            for (let i = 0; node && i < 5; i++, node = node.parentElement) {
-                                const style = getComputedStyle(node);
-                                const r = node.getBoundingClientRect();
-                                chain.push({
-                                    tag: node.tagName,
-                                    className: node.className,
-                                    display: style.display,
-                                    position: style.position,
-                                    width: r.width,
-                                    height: r.height,
-                                    x: r.x,
-                                    y: r.y,
-                                    transform: style.transform,
-                                    overflow: style.overflow,
-                                    zIndex: style.zIndex,
-                                });
-                            }
+                            const selector = sidebar
+                                ? sidebar.querySelector('[data-testid="stSelectbox"]')
+                                : null;
+                            const rect = selector ? selector.getBoundingClientRect() : null;
                             return {
                                 viewport: {width: window.innerWidth, height: window.innerHeight},
-                                button: {
+                                selector: rect ? {
                                     x: rect.x, y: rect.y, width: rect.width, height: rect.height,
-                                },
+                                } : null,
                                 sidebar: sidebar ? (() => {
                                     const r = sidebar.getBoundingClientRect();
                                     const style = getComputedStyle(sidebar);
@@ -237,27 +215,28 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                                         zIndex: style.zIndex,
                                     };
                                 })() : null,
-                                hitTestTag: hit ? hit.tagName : null,
-                                hitTestText: hit ? (hit.innerText || "").slice(0, 80) : null,
-                                chain,
                             };
-                        }""",
-                        team_button.element_handle(),
+                        }"""
                     ),
                 )
 
-                team_button.click()
+                page_selector.click()
+                page.get_by_role(
+                    "option",
+                    name=re.compile(r"Study\s+—\s+Team"),
+                ).click()
                 _wait_for_idle(page)
                 _assert_shell(page)
                 expect(
                     page.get_by_text("Team", exact=True).first
                 ).to_be_visible(timeout=10_000)
 
-                uncertainties_button = sidebar.get_by_role(
-                    "button",
-                    name="• Uncertainties",
-                )
-                uncertainties_button.click()
+                page_selector = sidebar.get_by_label("Current page")
+                page_selector.click()
+                page.get_by_role(
+                    "option",
+                    name=re.compile(r"Workflow\s+01.*Uncertainties"),
+                ).click()
                 _wait_for_idle(page)
                 _assert_shell(page)
                 expect(
@@ -267,11 +246,12 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     page.get_by_text("Selection Summary", exact=False)
                 ).to_be_visible(timeout=10_000)
 
-                overview_button = sidebar.get_by_role(
-                    "button",
-                    name="• Overview",
-                )
-                overview_button.click()
+                page_selector = sidebar.get_by_label("Current page")
+                page_selector.click()
+                page.get_by_role(
+                    "option",
+                    name=re.compile(r"Study\s+—\s+Overview"),
+                ).click()
                 _wait_for_idle(page)
                 _assert_overview_ui(page)
 
