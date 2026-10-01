@@ -12,9 +12,12 @@ def test_shell_uses_one_sidebar_navigation_surface():
     ast.parse(source)
     assert "def render_top_navigation" not in source
     assert "render_top_navigation()" not in source
-    assert 'st.selectbox(' in source
+    assert 'st.segmented_control(' in source
+    assert 'st.radio(' in source
+    assert 'key="sidebar_area_selector"' in source
     assert 'key="sidebar_page_selector"' in source
-    assert 'ss["sidebar_page_selector"] = current_page' in source
+    assert 'ss["sidebar_page_selector"] = current_area_page' in source
+    assert 'area_pages = {' in source
     assert "_build_sidebar_navigation" not in source
     assert "_sidebar_nav_item" not in source
     assert "header_slot = st.empty()" not in source
