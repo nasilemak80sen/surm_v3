@@ -289,7 +289,10 @@ def render_sidebar() -> None:
         else:
             active_area = "Support"
 
-        ss["sidebar_area_selector"] = active_area
+        # Keep the workspace selector aligned with the page on entry, but do
+        # not overwrite a user selection before Streamlit can deliver it.
+        if ss.get("sidebar_area_selector") not in {"Study", "Workflow", "Insights", "Support"}:
+            ss["sidebar_area_selector"] = active_area
 
         stage_map = {
             page: stage
@@ -312,6 +315,7 @@ def render_sidebar() -> None:
             default=active_area,
             key="sidebar_area_selector",
             label_visibility="collapsed",
+            width="stretch",
         )
 
         if area and area != active_area:
@@ -322,6 +326,14 @@ def render_sidebar() -> None:
 
         def _go_to(page: str) -> None:
             st.session_state["current_page"] = page
+            if page in study_pages:
+                st.session_state["sidebar_area_selector"] = "Study"
+            elif page in WORKFLOW_PAGES:
+                st.session_state["sidebar_area_selector"] = "Workflow"
+            elif page in insight_pages:
+                st.session_state["sidebar_area_selector"] = "Insights"
+            else:
+                st.session_state["sidebar_area_selector"] = "Support"
 
         def _page_title(page: str) -> str:
             return page.split(" ", 1)[-1]
