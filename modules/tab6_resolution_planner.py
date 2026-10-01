@@ -95,6 +95,21 @@ def _planner_quality(rows: list[dict]) -> tuple[int, int]:
     return len(workplan), missing_owner
 
 
+def _planner_status_counts(rows: list[dict]) -> pd.DataFrame:
+    """Return counts of workplan actions grouped by execution status."""
+    counts = {status: 0 for status in _STATUS_OPTIONS}
+    for row in rows:
+        if not isinstance(row, dict) or not row.get("Part of Workplan"):
+            continue
+        status = str(row.get("Status", "Open") or "Open").strip() or "Open"
+        counts[status] = counts.get(status, 0) + 1
+
+    return pd.DataFrame(
+        {"Workplan actions": list(counts.values())},
+        index=list(counts.keys()),
+    )
+
+
 def _parse_planner_date(value: object):
     """Parse planner dates while accepting the UI's DD/MM/YYYY format."""
     text = str(value or "").strip()
