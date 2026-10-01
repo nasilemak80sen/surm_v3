@@ -15,11 +15,10 @@ def test_shell_uses_one_sidebar_navigation_surface():
     assert 'st.selectbox(' in source
     assert 'key="sidebar_page_selector"' in source
     assert 'ss["sidebar_page_selector"] = current_page' in source
-    assert '"Navigate"' in source
     assert "_build_sidebar_navigation" not in source
     assert "_sidebar_nav_item" not in source
     assert "header_slot = st.empty()" not in source
-    assert 'with st.expander("More", expanded=False)' in source
+    assert 'with st.expander("Utilities & access", expanded=False)' in source
     assert 'with st.expander("Insights & governance", expanded=False)' not in source
     assert 'with st.expander("Session & export", expanded=False)' not in source
     assert 'with st.expander("Account & access", expanded=False)' not in source
