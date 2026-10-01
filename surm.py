@@ -193,10 +193,10 @@ def _enable_edit_mode() -> None:
 # ============================================================================
 
 def render_sidebar() -> None:
-    """Render a compact engineering control rail."""
-    from utils.persistence import save_session
-    from utils.export_excel import build_excel_export
+    """Render a visual, contextual navigation rail for the study workspace."""
     from streamlit_extras.grid import grid
+    from utils.export_excel import build_excel_export
+    from utils.persistence import save_session
 
     ss = st.session_state
     stats = calculate_study_progress()
@@ -225,10 +225,11 @@ def render_sidebar() -> None:
         lifecycle = str(
             ss.get("study_lifecycle", "Draft") or "Draft"
         ).strip()
-        access_mode = "Edit" if study_is_editable(session) else "View"
+        access_mode = "EDIT" if study_is_editable(session) else "VIEW"
+        progress = stats["progress"]
 
         # ------------------------------------------------------------------
-        # Current study — only the information needed for orientation.
+        # Current study identity
         # ------------------------------------------------------------------
         with st.container(key="sidebar-study-context", border=False):
             st.markdown(
@@ -249,30 +250,53 @@ def render_sidebar() -> None:
                 """,
                 unsafe_allow_html=True,
             )
-
-            progress = stats["progress"]
             st.progress(
                 progress / 100,
-                text=f"Workflow completion · {progress}%",
+                text=f"{progress}% workflow complete",
             )
 
         # ------------------------------------------------------------------
-        # Navigation — one control with explicit section naming.
+        # Contextual navigation
         # ------------------------------------------------------------------
         current_page = st.session_state.get(
             "current_page",
             "📋 Overview",
         )
-        try:
-            current_index = NAVIGATION_ORDER.index(current_page)
-        except ValueError:
-            current_index = 0
-            current_page = NAVIGATION_ORDER[0]
+        if current_page not in NAVIGATION_ORDER:
+            current_page = "📋 Overview"
             st.session_state["current_page"] = current_page
 
-        # Pager clicks and page-level actions update current_page directly;
-        # keep the selectbox's widget state in lockstep before creation.
-        ss["sidebar_page_selector"] = current_page
+        workflow_set = set(WORKFLOW_PAGES)
+        study_pages = [
+            "🗂️ Study Repository",
+            "📋 Overview",
+            "👥 Team",
+        ]
+        insight_pages = [
+            "📄 PRA Output",
+            "📊 Intelligence",
+            "🛡️ Barrier Management",
+            "✅ Assurance & Review",
+            "🕘 Revision History",
+        ]
+        support_pages = ["📖 How to Use"]
+
+        if current_page in study_pages:
+            active_area = "Study"
+        elif current_page in workflow_set:
+            active_area = "Workflow"
+        elif current_page in insight_pages:
+            active_area = "Insights"
+        else:
+            active_area = "Support"
+
+        area_key = {
+            "Study": "sidebar_area_study",
+            "Workflow": "sidebar_area_workflow",
+            "Insights": "sidebar_area_insights",
+            "Support": "sidebar_area_support",
+        }[active_area]
+        ss["sidebar_area_selector"] = active_area
 
         stage_map = {
             page: stage
@@ -282,62 +306,71 @@ def render_sidebar() -> None:
             )
         }
 
-        study_pages = {
-            "🗂️ Study Repository",
-            "📋 Overview",
-            "👥 Team",
-        }
-        insight_pages = {
-            "📊 Intelligence",
-            "🛡️ Barrier Management",
-            "✅ Assurance & Review",
-            "🕘 Revision History",
-        }
+        area = st.segmented_control(
+            "Workspace area",
+            ["Study", "Workflow", "Insights", "Support"],
+            default=active_area,
+            key="sidebar_area_selector",
+            label_visibility="collapsed",
+            width="stretch",
+        )
 
-        def navigation_label(page: str) -> str:
+        area_pages = {
+            "Study": study_pages,
+            "Workflow": WORKFLOW_PAGES,
+            "Insights": insight_pages,
+            "Support": support_pages,
+        }
+        pages = area_pages.get(area or active_area, study_pages)
+
+        def page_label(page: str) -> str:
             stage = stage_map.get(page)
 
-            if page in study_pages:
-                group = "Study"
-            elif page in insight_pages:
-                group = "Insights"
-            elif page == "📖 How to Use":
-                group = "Support"
-            elif page == "📄 PRA Output":
-                group = "Output"
-            else:
-                group = "Workflow"
+            if page in workflow_set:
+                step = WORKFLOW_PAGES.index(page) + 1
+                status = "✓" if stage and stage.complete else (
+                    "—" if stage and not stage.available else "·"
+                )
+                return f"{status}  {step:02d}  {page.split(' ', 1)[-1]}"
 
-            if page in WORKFLOW_PAGES:
-                step_no = WORKFLOW_PAGES.index(page) + 1
-                title = page.split(" ", 1)[-1]
-                prefix = f"{step_no:02d} ·"
-            else:
-                title = page.split(" ", 1)[-1]
-                prefix = "—"
+            labels = {
+                "🗂️ Study Repository": "Repository",
+                "📋 Overview": "Overview",
+                "👥 Team": "Team",
+                "📄 PRA Output": "PRA Output",
+                "📊 Intelligence": "Intelligence",
+                "🛡️ Barrier Management": "Barrier Management",
+                "✅ Assurance & Review": "Assurance & Review",
+                "🕘 Revision History": "Revision History",
+                "📖 How to Use": "How to Use",
+            }
+            return labels.get(page, page.split(" ", 1)[-1])
 
-            if page == current_page:
-                marker = "●"
-            elif stage is not None and stage.complete:
-                marker = "✓"
-            elif stage is not None and not stage.available:
-                marker = "—"
-            else:
-                marker = "·"
+        page_values = {
+            page: page_label(page)
+            for page in pages
+        }
 
-            return f"{marker}  {group}  {prefix} {title}"
+        # The radio is the page-level navigation surface. Unlike a dropdown,
+        # the available destinations remain visible while the user works.
+        current_area_page = (
+            current_page
+            if current_page in pages
+            else pages[0]
+        )
+        ss["sidebar_page_selector"] = current_area_page
 
         with st.container(key="sidebar-navigation", border=False):
             st.markdown(
-                '<div class="sidebar-section-title">WORKSPACE</div>',
+                f'<div class="sidebar-section-title">{html.escape(area or active_area).upper()}</div>',
                 unsafe_allow_html=True,
             )
-            selected_page = st.selectbox(
+            selected_page = st.radio(
                 "Current page",
-                NAVIGATION_ORDER,
-                index=current_index,
+                list(page_values),
+                index=list(page_values).index(current_area_page),
                 key="sidebar_page_selector",
-                format_func=navigation_label,
+                format_func=lambda page: page_values[page],
                 label_visibility="collapsed",
             )
 
@@ -345,29 +378,35 @@ def render_sidebar() -> None:
                 st.session_state["current_page"] = selected_page
                 st.rerun()
 
-            if current_page in WORKFLOW_PAGES:
+            if area == "Workflow" or active_area == "Workflow":
                 step_no = WORKFLOW_PAGES.index(current_page) + 1
+                stage = stage_map.get(current_page)
+                state = (
+                    "Complete"
+                    if stage and stage.complete
+                    else ("Ready" if stage and stage.available else "Locked")
+                )
                 st.caption(
-                    f"Workflow stage {step_no} of {len(WORKFLOW_PAGES)}"
+                    f"Stage {step_no} of {len(WORKFLOW_PAGES)} · {state}"
                 )
             else:
                 st.caption(
-                    f"Workspace page {current_index + 1} of {len(NAVIGATION_ORDER)}"
+                    f"{page_values.get(current_page, current_page.split(' ', 1)[-1])}"
                 )
 
         # ------------------------------------------------------------------
-        # Primary actions — equal-width, compact.
+        # Primary actions
         # ------------------------------------------------------------------
         with st.container(key="sidebar-actions", border=False):
             action_grid = grid(2, gap="small", vertical_align="center")
             save_clicked = action_grid.button(
-                "Save study",
+                "Save",
                 key="sidebar_save_session",
                 type="primary",
                 use_container_width=True,
             )
             new_clicked = action_grid.button(
-                "＋ New study",
+                "＋ New",
                 key="sidebar_new_study",
                 use_container_width=True,
             )
@@ -385,7 +424,7 @@ def render_sidebar() -> None:
                 st.rerun()
 
         # ------------------------------------------------------------------
-        # Secondary utilities — one drawer, deliberately not nested.
+        # Secondary utilities
         # ------------------------------------------------------------------
         with st.expander("Utilities & access", expanded=False):
             st.markdown(
@@ -404,9 +443,6 @@ def render_sidebar() -> None:
                 if last_saved
                 else "No save recorded yet."
             )
-
-            if ss.get("_resume_message"):
-                st.success(ss["_resume_message"])
 
             st.markdown(
                 '<div class="surm-sidebar-section-label">EXPORT</div>',
