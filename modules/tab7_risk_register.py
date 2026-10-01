@@ -425,8 +425,25 @@ def render():
         selected_risk_id = str(selected_record.get("risk_id", "")).strip()
 
         registry = st.session_state.get("bowtie_register", {})
-        document = registry.get(selected_risk_id)
 
+        # The Risk Register is the Bowtie source-of-truth. Reconcile any
+        # upstream form changes before rendering the editor, while preserving
+        # manual Bowtie objects, relationships and positions.
+        synced_registry = ensure_bowtie_register(
+            [selected_record],
+            current=registry,
+            uncertainties=st.session_state.get("uncertainties", []),
+            resolution_list=st.session_state.get("resolution_list", {}),
+            resolution_planner=st.session_state.get("resolution_planner", []),
+        )
+        if synced_registry != registry:
+            registry = {
+                **registry,
+                selected_risk_id: synced_registry.get(selected_risk_id),
+            }
+            st.session_state["bowtie_register"] = registry
+
+        document = registry.get(selected_risk_id)
         if document is None:
             document = refresh_bowtie_document(
                 selected_record,
@@ -437,16 +454,10 @@ def render():
             registry[selected_risk_id] = document
             st.session_state["bowtie_register"] = registry
 
-        if document.get("needs_refresh"):
-            st.warning(
-                "The upstream Risk Register changed after this Bowtie was created. "
-                "Review the existing diagram or refresh it from the current risk data."
-            )
-
         action_cols = st.columns([1.4, 1.4, 1.4, 2.8])
         with action_cols[0]:
             refresh_clicked = st.button(
-                "Refresh from Risk",
+                "Sync from Risk Register",
                 key="refresh_selected_bowtie",
                 use_container_width=True,
             )
@@ -479,6 +490,7 @@ def render():
                 uncertainties=st.session_state.get("uncertainties", []),
                 resolution_list=st.session_state.get("resolution_list", {}),
                 resolution_planner=st.session_state.get("resolution_planner", []),
+                current=registry.get(selected_risk_id),
             )
             st.session_state["bowtie_register"] = registry
             st.rerun()
