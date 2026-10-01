@@ -5,6 +5,7 @@ from utils.logic import (
     is_risk_assessed,
     score_to_bin,
     build_impact_table,
+    build_risk_register,
 )
 
 
@@ -62,6 +63,77 @@ def test_assessed_risk_uses_existing_matrix():
         "Likelihood (H/M/L)": "M",
         "Impact (H/M/L)": "H",
     }) is True
+
+
+def test_new_risk_owner_is_inherited_from_linked_resolution_planner():
+    import streamlit as st
+
+    st.session_state["_mapping"] = {
+        "resolution_options": ["Option A"],
+        "risks": ["Risk A"],
+    }
+    st.session_state["uncertainties"] = [{
+        "name": "U1",
+        "selected": True,
+        "risks": ["Risk A"],
+    }]
+    st.session_state["resolution_planner"] = [{
+        "Resolution Action": "Option A",
+        "Action Owner": "Planner Owner",
+    }]
+    st.session_state["risk_register"] = []
+
+    key_unc_df = __import__("pandas").DataFrame([{
+        "Uncertainty": "U1",
+        "Combined Rating": "HH",
+    }])
+    resolution_df = __import__("pandas").DataFrame([{
+        "Uncertainty": "U1",
+        "Rating": "HH",
+        "Option A": "Y",
+    }])
+
+    result = build_risk_register(key_unc_df, resolution_df)
+
+    assert result.loc[0, "Action Owner"] == "Planner Owner"
+
+
+def test_existing_risk_owner_is_preserved_over_planner_default():
+    import streamlit as st
+
+    st.session_state["_mapping"] = {
+        "resolution_options": ["Option A"],
+        "risks": ["Risk A"],
+    }
+    st.session_state["uncertainties"] = [{
+        "name": "U1",
+        "selected": True,
+        "risks": ["Risk A"],
+    }]
+    st.session_state["resolution_planner"] = [{
+        "Resolution Action": "Option A",
+        "Action Owner": "Planner Owner",
+    }]
+    st.session_state["risk_register"] = [{
+        "Risk": "Risk A",
+        "Action Owner": "Manual Override",
+        "Likelihood (H/M/L)": "M",
+        "Impact (H/M/L)": "M",
+    }]
+
+    key_unc_df = __import__("pandas").DataFrame([{
+        "Uncertainty": "U1",
+        "Combined Rating": "HH",
+    }])
+    resolution_df = __import__("pandas").DataFrame([{
+        "Uncertainty": "U1",
+        "Rating": "HH",
+        "Option A": "Y",
+    }])
+
+    result = build_risk_register(key_unc_df, resolution_df)
+
+    assert result.loc[0, "Action Owner"] == "Manual Override"
 
 
 def test_weighted_score_accepts_numeric_string_weights():
