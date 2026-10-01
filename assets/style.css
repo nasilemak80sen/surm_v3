@@ -4315,3 +4315,146 @@ section[data-testid="stSidebar"] .stExpander summary:hover {
         font-size: 0.54rem !important;
     }
 }
+
+
+/* ==========================================================================
+   SURM UX 5.2 — SIDEBAR AS TASK NAVIGATOR
+   ========================================================================== */
+
+section[data-testid="stSidebar"] {
+    min-width: 18.5rem;
+}
+
+.sidebar-journey-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0.05rem 0 0.5rem;
+}
+
+.sidebar-journey-title {
+    margin-top: 0.08rem;
+    color: #EAF5EE;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.sidebar-workflow-summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 0 0 0.45rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #294A3B;
+    border-radius: 6px;
+    background: #132B21;
+}
+
+.sidebar-workflow-summary span {
+    color: rgba(195, 221, 205, 0.48);
+    font-size: 0.49rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+}
+
+.sidebar-workflow-summary strong {
+    color: #91D1A8;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.st-key-sidebar-navigation .stButton {
+    margin: 0 0 0.22rem;
+}
+
+.st-key-sidebar-navigation .stButton > button {
+    min-height: 2.05rem !important;
+    justify-content: flex-start !important;
+    padding: 0.38rem 0.58rem !important;
+    border: 1px solid #28483A !important;
+    border-radius: 7px !important;
+    background: #132B21 !important;
+    color: #D9E9DF !important;
+    font-size: 0.61rem !important;
+    font-weight: 680 !important;
+    line-height: 1.15 !important;
+    text-align: left !important;
+    box-shadow: none !important;
+}
+
+.st-key-sidebar-navigation .stButton > button:hover:not(:disabled) {
+    background: #1B392C !important;
+    border-color: #3D6B54 !important;
+    color: #F7FFF9 !important;
+}
+
+.st-key-sidebar-navigation .stButton > button[kind="primary"] {
+    background: #204A37 !important;
+    border-color: #5B9875 !important;
+    color: #FFFFFF !important;
+    box-shadow: inset 3px 0 0 #82D2A0 !important;
+}
+
+.st-key-sidebar-navigation .stButton > button:disabled {
+    opacity: 0.43 !important;
+    background: #10231B !important;
+    border-color: #21392D !important;
+    color: #93A79C !important;
+}
+
+.st-key-sidebar-navigation .stCaptionContainer {
+    margin: -0.03rem 0 0.28rem;
+    padding-left: 0.48rem;
+}
+
+.st-key-sidebar-navigation .stCaptionContainer p {
+    color: rgba(193, 216, 202, 0.47);
+    font-size: 0.51rem;
+    line-height: 1.3;
+}
+
+.st-key-sidebar-navigation > div:last-child {
+    margin-top: 0.35rem;
+}
+
+.st-key-sidebar-navigation > div:last-child p {
+    color: rgba(194, 218, 202, 0.45);
+    font-size: 0.52rem;
+}
+
+/* Make the Continue action unmistakable without turning the sidebar into a
+   second dashboard. */
+.st-key-sidebar_continue_next_stage {
+    margin-bottom: 0.55rem;
+}
+
+section[data-testid="stSidebar"] .stButton.st-key-sidebar_continue_next_stage > button {
+    min-height: 2.3rem !important;
+    border-color: #79C79A !important;
+    background: #EAF7EF !important;
+    color: #17412E !important;
+    font-weight: 800 !important;
+}
+
+section[data-testid="stSidebar"] .stButton.st-key-sidebar_continue_next_stage > button:hover {
+    background: #F4FBF6 !important;
+}
+
+/* Area switcher becomes a quiet workspace selector rather than the visual
+   centerpiece. */
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] {
+    margin: 0.35rem 0 0.42rem;
+}
+
+section[data-testid="stSidebar"] [data-testid="stSegmentedControl"] button {
+    min-height: 1.72rem !important;
+    font-size: 0.56rem !important;
+}
+
+/* Give the save/new row more breathing room from navigation. */
+.st-key-sidebar-actions {
+    margin-top: 0.68rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid #1F3A2E;
+}
