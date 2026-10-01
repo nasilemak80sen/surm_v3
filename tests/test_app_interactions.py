@@ -799,6 +799,45 @@ def test_excel_export_is_deferred_until_requested():
         assert calls == [True]
         assert at.download_button
 
+def test_surm_shell_integrity_is_not_truncated():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    required_symbols = [
+        "def render_header",
+        "def render_sidebar",
+        "def render_navigation",
+        "def render_footer",
+        "def main",
+    ]
+    for symbol in required_symbols:
+        assert symbol in source
+
+    # Guard against an accidental partial-file update that can leave Streamlit
+    # with an apparently blank application shell.
+    assert len(source.splitlines()) >= 500
+
+
+def test_global_page_pager_covers_all_application_pages():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    assert "NAVIGATION_ORDER = [" in source
+    assert 'pager_previous_top' in source
+    assert 'pager_next_top' in source
+    assert 'pager_previous_bottom' in source
+    assert 'pager_next_bottom' in source
+
+
+def test_sidebar_navigation_is_single_grouped_control():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+
+    assert 'with st.expander("Navigate", expanded=True):' in source
+    assert '_render_sidebar_nav_group("Study"' not in source
+    assert '_render_sidebar_nav_group("Workflow"' not in source
+
+
 def test_entrypoint_boots_as_a_streamlit_app():
     project_root = Path(__file__).resolve().parents[1]
 
