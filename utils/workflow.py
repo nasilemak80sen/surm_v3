@@ -330,9 +330,30 @@ def _risk_assessment_complete(session: dict[str, Any]) -> tuple[bool, str]:
         )
     ]
     if missing_governance:
+        missing_owner = sum(
+            not str(row.get("Action Owner", "") or "").strip()
+            for row in risks
+        )
+        missing_contingency = sum(
+            not str(row.get("Contingency Plan", "") or "").strip()
+            for row in risks
+        )
+        missing_consequence = sum(
+            not str(row.get("Impact/Consequence", "") or "").strip()
+            for row in risks
+        )
+        details = []
+        if missing_owner:
+            details.append(f"{missing_owner} owner")
+        if missing_contingency:
+            details.append(f"{missing_contingency} contingency")
+        if missing_consequence:
+            details.append(f"{missing_consequence} consequence")
         return (
             False,
-            f"{len(missing_governance)} risks still need owner, consequence, and contingency details.",
+            "Risk assessment is complete, but PRA readiness still needs "
+            + ", ".join(details)
+            + ".",
         )
 
     return True, ""
