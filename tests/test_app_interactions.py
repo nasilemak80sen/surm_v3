@@ -825,7 +825,7 @@ def test_surm_shell_integrity_is_not_truncated():
     assert len(source.splitlines()) >= 500
 
 
-def test_overview_uses_equal_action_signal_columns_and_study_setup_lifecycle():
+def test_overview_uses_disciplined_grid_ratios_and_study_setup_lifecycle():
     from pathlib import Path
 
     project_root = Path(__file__).resolve().parents[1]
@@ -833,8 +833,9 @@ def test_overview_uses_equal_action_signal_columns_and_study_setup_lifecycle():
         project_root / "modules/tab_frontpage.py"
     ).read_text(encoding="utf-8")
 
-    assert 'st.columns([1, 1], gap="medium")' in source
-    assert 'st.columns([1.15, 1.15, 0.8, 0.9], gap="medium")' in source
+    assert 'grid(4, gap="medium", vertical_align="top")' in source
+    assert 'grid(\n            [1.5, 1.4, 0.9, 1.0],' in source
+    assert 'st.columns([1.2, 1], gap="large")' in source
     assert 'key="study_lifecycle_input"' in source
     assert 'ss["study_lifecycle_input"] = lifecycle_value' in source
     assert 'with st.expander("Governance & sign-off"' not in source
@@ -865,13 +866,41 @@ def test_global_page_pager_covers_all_application_pages():
     assert 'pager_next_bottom' in source
 
 
-def test_sidebar_navigation_is_single_grouped_control():
+def test_sidebar_navigation_is_single_clean_selector():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "surm.py").read_text(encoding="utf-8")
 
-    assert 'with st.expander("Navigate", expanded=True):' in source
-    assert '_render_sidebar_nav_group("Study"' not in source
-    assert '_render_sidebar_nav_group("Workflow"' not in source
+    assert 'key="sidebar_page_selector"' in source
+    assert 'Current page' in source
+    assert 'group = "Study"' in source
+    assert 'group = "Workflow"' in source
+    assert 'with st.expander("Utilities & access", expanded=False)' in source
+    assert 'with st.expander("Navigate", expanded=True)' not in source
+
+
+def test_ui_layout_dependency_and_keyed_sections():
+    project_root = Path(__file__).resolve().parents[1]
+
+    requirements = (
+        project_root / "requirements.txt"
+    ).read_text(encoding="utf-8")
+    overview_source = (
+        project_root / "modules/tab_frontpage.py"
+    ).read_text(encoding="utf-8")
+    sidebar_source = (
+        project_root / "surm.py"
+    ).read_text(encoding="utf-8")
+
+    assert "streamlit-extras==1.6.0" in requirements
+    assert "from streamlit_extras.grid import grid" in overview_source
+    assert "from streamlit_extras.grid import grid" in sidebar_source
+    assert 'key="overview-next-action"' in overview_source
+    assert 'key="overview-current-signal"' in overview_source
+    assert 'key="overview-study-setup"' in overview_source
+    assert 'key="overview-governance"' in overview_source
+    assert 'key="sidebar-study-context"' in sidebar_source
+    assert 'key="sidebar-navigation"' in sidebar_source
+    assert 'key="sidebar-actions"' in sidebar_source
 
 
 def test_entrypoint_boots_as_a_streamlit_app():
