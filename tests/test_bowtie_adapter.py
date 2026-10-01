@@ -74,27 +74,89 @@ def test_bowtie_document_seeds_stable_risk_topology():
     assert "PREVENTIVE-PLACEMENT-2" in cause_line["stops"]
 
 
-def test_bowtie_register_preserves_existing_diagrams_and_flags_upstream_change():
+def test_bowtie_register_reconciles_risk_form_changes_without_rebuilding_layout():
     row = _risk()
     first = ensure_bowtie_register(
         [row],
         current={},
-        uncertainties=[],
-        resolution_list={},
-        resolution_planner=[],
+        uncertainties=[
+            {"uncertainty_id": "UNC-003", "name": "Reservoir continuity", "risks": ["Poor reservoir connectivity"]},
+            {"uncertainty_id": "UNC-007", "name": "Fault properties", "risks": ["Poor reservoir connectivity"]},
+        ],
+        resolution_list={
+            "Reservoir continuity": {"Fault Seal Analysis": "Y"},
+            "Fault properties": {"Fault Seal Analysis": "Y"},
+        },
+        resolution_planner=[{
+            "resolution_id": "RES-001",
+            "Resolution Action": "Fault Seal Analysis",
+            "Description": "Assess fault seal behaviour.",
+            "Action Owner": "Geology",
+        }],
     )["RSK-001"]
+
+    # Simulate a user-created Bowtie object and an intentional manual
+    # repositioning of the generated preventive barrier.
+    first["library"]["cause"].append({
+        "id": "MANUAL-1",
+        "type": "cause",
+        "name": "Manual Bowtie Threat",
+        "description": "",
+        "surm_source": {"type": "manual"},
+    })
+    first["causes"].append({
+        "id": "CAUSE-MANUAL-1",
+        "nodeId": "MANUAL-1",
+        "x": 170,
+        "y": 700,
+        "w": 240,
+        "h": 86,
+        "pageId": "PAGE_1",
+    })
+    first["lines"].append({
+        "id": "LINE-MANUAL-1",
+        "originType": "cause",
+        "originId": "CAUSE-MANUAL-1",
+        "stops": [],
+        "pageId": "PAGE_1",
+    })
+    first["preventativeBarriers"][0]["y"] = 620
 
     changed = dict(row)
-    changed["Resolution Plan"] = "- Different resolution"
+    changed["Contingency Plan"] = "Activate emergency pressure surveillance"
+    changed["Impact/Consequence"] = "Updated production consequence"
 
-    preserved = ensure_bowtie_register(
+    result = ensure_bowtie_register(
         [changed],
         current={"RSK-001": first},
-        uncertainties=[],
-        resolution_list={},
-        resolution_planner=[],
+        uncertainties=[
+            {"uncertainty_id": "UNC-003", "name": "Reservoir continuity", "risks": ["Poor reservoir connectivity"]},
+            {"uncertainty_id": "UNC-007", "name": "Fault properties", "risks": ["Poor reservoir connectivity"]},
+        ],
+        resolution_list={
+            "Reservoir continuity": {"Fault Seal Analysis": "Y"},
+            "Fault properties": {"Fault Seal Analysis": "Y"},
+        },
+        resolution_planner=[{
+            "resolution_id": "RES-001",
+            "Resolution Action": "Fault Seal Analysis",
+            "Description": "Assess fault seal behaviour.",
+            "Action Owner": "Geology",
+        }],
     )["RSK-001"]
 
-    assert preserved["risk_id"] == "RSK-001"
-    assert preserved["source_signature"] == first["source_signature"]
-    assert preserved["needs_refresh"] is True
+    assert result["source_signature"] != first["source_signature"]
+    assert result.get("needs_refresh") is False
+    assert any(
+        node["name"] == "Manual Bowtie Threat"
+        for node in result["library"]["cause"]
+    )
+    assert result["preventativeBarriers"][0]["y"] == 620
+    assert any(
+        node["name"] == "Updated production consequence"
+        for node in result["library"]["outcome"]
+    )
+    assert any(
+        node["name"] == "Activate emergency pressure surveillance"
+        for node in result["library"]["mitigativeBarrier"]
+    )
