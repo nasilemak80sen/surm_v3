@@ -3314,3 +3314,101 @@ section[data-testid="stSidebar"] [data-testid="stCheckbox"] label {
         min-height: 2.8rem;
     }
 }
+
+
+/* ==========================================================================
+   SURM UX 4.1 — BALANCED OVERVIEW + PERSISTENT PAGER
+   ========================================================================== */
+
+.surm-page-pager {
+    min-height: 3.25rem;
+    width: 100%;
+    padding: 0.45rem 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    border: 1px solid #D7E1DB;
+    border-radius: 9px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 7px rgba(17, 46, 31, 0.035);
+    text-align: center;
+}
+
+.surm-page-pager-kicker,
+.surm-page-pager-meta {
+    display: block;
+    color: #718079;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.51rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.surm-page-pager-title {
+    color: #17382A;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.surm-page-pager-kicker::after {
+    content: " · ";
+    color: #A1ADA6;
+}
+
+.surm-page-pager-meta {
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: #8A958F;
+    font-weight: 600;
+}
+
+.surm-page-pager + div {
+    margin-bottom: 0.28rem;
+}
+
+.surm-signal-list {
+    min-height: 5.55rem;
+    padding: 0.15rem 0;
+    display: grid;
+    align-content: start;
+    gap: 0.38rem;
+}
+
+.surm-signal-item {
+    padding: 0.42rem 0.55rem;
+    border-left: 2px solid #B8DCC7;
+    background: #F7FAF8;
+    border-radius: 0 6px 6px 0;
+    color: #425149;
+    font-size: 0.73rem;
+    line-height: 1.35;
+}
+
+.surm-attention-item {
+    min-height: 2.25rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #E3D6B9;
+    border-radius: 7px;
+    background: #FFF9EC;
+    color: #665334;
+    font-size: 0.68rem;
+    line-height: 1.4;
+}
+
+.surm-signoff-checkpoint {
+    min-height: 2.25rem;
+    display: flex;
+    align-items: center;
+    padding: 0.34rem 0.15rem;
+    color: #274436;
+    font-size: 0.69rem;
+    font-weight: 700;
+}
+
+.surm-page-pager + div .stButton > button {
+    min-height: 2.25rem !important;
+    font-size: 0.69rem !important;
+}
