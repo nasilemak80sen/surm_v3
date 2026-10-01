@@ -257,8 +257,18 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
 
                 # Workflow area: stages expose their real completion/availability state.
                 sidebar = page.locator('[data-testid="stSidebar"]')
-                sidebar.get_by_role("radio", name="Workflow", exact=True).click()
+                workflow_area = sidebar.get_by_role(
+                    "radio",
+                    name="Workflow",
+                    exact=True,
+                )
+                workflow_area.click()
                 _wait_for_idle(page)
+                expect(workflow_area).to_have_attribute(
+                    "aria-checked",
+                    "true",
+                    timeout=5_000,
+                )
                 expect(
                     sidebar.get_by_role(
                         "button",
