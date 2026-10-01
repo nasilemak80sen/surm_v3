@@ -415,6 +415,44 @@ def test_planner_save_does_not_invalidate_risk_on_execution_metadata():
 
 
 
+def test_risk_register_dropdowns_source_team_and_planner_and_normalize_others():
+    from modules import tab7_risk_register as page
+
+    session = {
+        "team_members": [{"Name": "Team RE", "Function / Role": "RE"}],
+        "resolution_planner": [{"Action Owner": "Planner PE"}],
+        "risk_register": [],
+    }
+
+    assert page._risk_owner_options(session) == ["", "Team RE", "Planner PE"]
+
+    rows = [{
+        "Action Owner": "Team RE",
+        "Contingency Plan": "Others",
+        "Custom Contingency": "Trigger additional history matching",
+        "Impact/Consequence": "Others",
+        "Custom Consequence": "Potential uncertainty in forecast recovery",
+        "Custom Owner": "",
+    }]
+    normalized = page._normalize_risk_rows(rows, ["", "Team RE", "Planner PE"])
+
+    assert normalized[0]["Action Owner"] == "Team RE"
+    assert normalized[0]["Contingency Plan"] == "Trigger additional history matching"
+    assert normalized[0]["Impact/Consequence"] == "Potential uncertainty in forecast recovery"
+    assert "Custom Contingency" not in normalized[0]
+    assert "Custom Consequence" not in normalized[0]
+
+
+def test_risk_register_readiness_message_is_not_assessment_only():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "modules/tab7_risk_register.py").read_text(encoding="utf-8")
+
+    assert "PRA readiness" in source
+    assert "Assessment complete." in source
+    assert "Owner, Consequence and/or Contingency details." in source
+    assert "Ready for PRA Output." in source
+
+
 def test_risk_register_form_is_explicit_save_transaction():
     def app():
         import streamlit as st
