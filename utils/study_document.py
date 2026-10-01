@@ -19,6 +19,7 @@ STUDY_KEYS = (
     "project_name",
     "field_name",
     "project_phase",
+    "last_saved_page",
     "study_owner",
     "methodology_version",
     "team_members",
