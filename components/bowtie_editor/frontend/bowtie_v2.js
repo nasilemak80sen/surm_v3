@@ -493,16 +493,16 @@
 
     const causeYs = evenlySpaced(doc.causes.length, 180, 720);
     doc.causes.forEach(function (p, i) {
+      // Auto Layout only changes placement. It must never change node values,
+      // identities, relationships or dimensions.
       p.x = LANE_X.cause;
       p.y = causeYs[i] || 450;
-      p.w = 240; p.h = 86;
     });
 
     const outcomeYs = evenlySpaced(doc.outcomes.length, 180, 720);
     doc.outcomes.forEach(function (p, i) {
       p.x = LANE_X.outcome;
       p.y = outcomeYs[i] || 450;
-      p.w = 240; p.h = 86;
     });
 
     const causeByPlacement = new Map(doc.causes.map(function (p) { return [p.id, p]; }));
@@ -530,10 +530,10 @@
     assignByTargets(doc.mitigativeBarriers, outcomeTargetYs);
 
     doc.preventativeBarriers.forEach(function (p) {
-      p.x = LANE_X.preventativeBarrier; p.w = 150; p.h = 110;
+      p.x = LANE_X.preventativeBarrier;
     });
     doc.mitigativeBarriers.forEach(function (p) {
-      p.x = LANE_X.mitigativeBarrier; p.w = 150; p.h = 110;
+      p.x = LANE_X.mitigativeBarrier;
     });
 
     syncLayoutMetadata(doc);
