@@ -163,9 +163,11 @@ def calculate_study_progress() -> dict:
     )
 
     stages = stage_results(ss)
+    completed_stages = sum(stage.complete for stage in stages)
+    total_stages = len(stages)
     progress = round(
-        (sum(stage.complete for stage in stages) / len(stages)) * 100
-    )
+        (completed_stages / total_stages) * 100
+    ) if total_stages else 0
 
     return {
         "selected_uncertainties": selected_uncertainties,
@@ -175,6 +177,8 @@ def calculate_study_progress() -> dict:
         "resolution_actions": actions,
         "risks": risks,
         "team_members": team,
+        "completed_stages": completed_stages,
+        "total_stages": total_stages,
         "progress": progress,
     }
 
@@ -227,6 +231,8 @@ def render_sidebar() -> None:
         ).strip()
         access_mode = "EDIT" if study_is_editable(session) else "VIEW"
         progress = stats["progress"]
+        completed_stages = stats["completed_stages"]
+        total_stages = stats["total_stages"]
 
         # ------------------------------------------------------------------
         # Current study identity
@@ -247,12 +253,30 @@ def render_sidebar() -> None:
                     <span>{html.escape(lifecycle)}</span>
                     <span>{html.escape(access_mode)}</span>
                 </div>
+                <div class="sidebar-stage-progress">
+                    <div class="sidebar-stage-progress-header">
+                        <span>STUDY STAGES</span>
+                        <strong>{progress}%</strong>
+                    </div>
+                    <div class="sidebar-stage-progress-summary">
+                        {completed_stages} of {total_stages} stages complete
+                    </div>
+                    <div
+                        class="sidebar-stage-progress-track"
+                        role="progressbar"
+                        aria-label="Study stage completion"
+                        aria-valuemin="0"
+                        aria-valuemax="{total_stages}"
+                        aria-valuenow="{completed_stages}"
+                    >
+                        <div
+                            class="sidebar-stage-progress-fill"
+                            style="width: {progress}%"
+                        ></div>
+                    </div>
+                </div>
                 """,
                 unsafe_allow_html=True,
-            )
-            st.progress(
-                progress / 100,
-                text=f"{progress}% workflow complete",
             )
 
         # ------------------------------------------------------------------
@@ -312,10 +336,8 @@ def render_sidebar() -> None:
         area = st.segmented_control(
             "Workspace area",
             ["Study", "Workflow", "Insights", "Support"],
-            default=active_area,
             key="sidebar_area_selector",
             label_visibility="collapsed",
-            width="stretch",
         )
 
         if area and area != active_area:
@@ -325,15 +347,7 @@ def render_sidebar() -> None:
         pages = area_pages.get(area or active_area, study_pages)
 
         def _go_to(page: str) -> None:
-            st.session_state["current_page"] = page
-            if page in study_pages:
-                st.session_state["sidebar_area_selector"] = "Study"
-            elif page in WORKFLOW_PAGES:
-                st.session_state["sidebar_area_selector"] = "Workflow"
-            elif page in insight_pages:
-                st.session_state["sidebar_area_selector"] = "Insights"
-            else:
-                st.session_state["sidebar_area_selector"] = "Support"
+            _set_current_page(page)
 
         def _page_title(page: str) -> str:
             return page.split(" ", 1)[-1]
@@ -683,6 +697,33 @@ NAVIGATION_ORDER = [
     "📖 How to Use",
 ]
 
+PAGE_AREAS = {
+    "Study": (
+        "🗂️ Study Repository",
+        "📋 Overview",
+        "👥 Team",
+    ),
+    "Workflow": tuple(WORKFLOW_PAGES),
+    "Insights": (
+        "📄 PRA Output",
+        "📊 Intelligence",
+        "🛡️ Barrier Management",
+        "✅ Assurance & Review",
+        "🕘 Revision History",
+    ),
+    "Support": ("📖 How to Use",),
+}
+
+
+def _set_current_page(page: str) -> None:
+    """Keep the sidebar workspace selector synchronized with navigation."""
+    if page not in PAGE_DEFINITIONS:
+        return
+    st.session_state["current_page"] = page
+    st.session_state["sidebar_area_selector"] = next(
+        area for area, pages in PAGE_AREAS.items() if page in pages
+    )
+
 
 def _navigation_target(offset: int) -> str | None:
     """Return the adjacent page in the consistent application sequence."""
@@ -697,8 +738,8 @@ def _navigation_target(offset: int) -> str | None:
     return NAVIGATION_ORDER[target]
 
 
-def render_page_pager(*, location: str) -> None:
-    """Render consistent Previous / Next controls on every application page."""
+def render_page_pager() -> None:
+    """Render Previous / Next controls at the top of each application page."""
     current = st.session_state.get("current_page", "📋 Overview")
     try:
         position = NAVIGATION_ORDER.index(current) + 1
@@ -716,22 +757,17 @@ def render_page_pager(*, location: str) -> None:
         if next_page else "Next →"
     )
 
-    container = st.container()
+    container = st.container(key="page-navigation")
     with container:
         left, center, right = st.columns([1.35, 2.3, 1.35], gap="small")
         with left:
             st.button(
                 previous_text,
-                key=f"pager_previous_{location}",
+                key="pager_previous",
                 use_container_width=True,
                 disabled=previous_page is None,
-                on_click=(
-                    (lambda page=previous_page: st.session_state.update(
-                        current_page=page
-                    ))
-                    if previous_page
-                    else None
-                ),
+                on_click=_set_current_page if previous_page else None,
+                args=(previous_page,) if previous_page else (),
             )
         with center:
             st.markdown(
@@ -751,17 +787,12 @@ def render_page_pager(*, location: str) -> None:
         with right:
             st.button(
                 next_text,
-                key=f"pager_next_{location}",
+                key="pager_next",
                 use_container_width=True,
                 disabled=next_page is None,
                 type="primary" if next_page else "secondary",
-                on_click=(
-                    (lambda page=next_page: st.session_state.update(
-                        current_page=page
-                    ))
-                    if next_page
-                    else None
-                ),
+                on_click=_set_current_page if next_page else None,
+                args=(next_page,) if next_page else (),
             )
 
 
@@ -809,22 +840,16 @@ def render_navigation() -> None:
     }
 
     blocked = False
+    blocked_reason = ""
+    blocked_stage = None
     if is_workflow_page:
         session = cast(dict[str, Any], dict(st.session_state))
         stage_key = stage_results(session)[workflow_index].key
         allowed, reason = validate_stage(session, stage_key)
         if not allowed:
-            render_page_frame(
-                title,
-                descriptions.get(selected_page, "SURM study workspace."),
-                step=workflow_index + 1,
-            )
-            st.warning(f"This stage is not ready yet. {reason}")
-            current = current_stage(session)
-            st.info(
-                f"Current study stage: **{current.label}** — {current.guidance}"
-            )
             blocked = True
+            blocked_reason = reason
+            blocked_stage = current_stage(session)
 
     custom_header_pages = {
         "🗂️ Study Repository",
@@ -842,7 +867,20 @@ def render_navigation() -> None:
             descriptions.get(selected_page, "SURM study workspace."),
         )
 
-    render_page_pager(location="top")
+    render_page_pager()
+
+    if blocked:
+        render_page_frame(
+            title,
+            descriptions.get(selected_page, "SURM study workspace."),
+            step=workflow_index + 1,
+        )
+        st.warning(f"This stage is not ready yet. {blocked_reason}")
+        if blocked_stage is not None:
+            st.info(
+                f"Current study stage: **{blocked_stage.label}** — "
+                f"{blocked_stage.guidance}"
+            )
 
     if not blocked:
         if (
@@ -860,10 +898,6 @@ def render_navigation() -> None:
             _render_read_only_page(selected_page)
         else:
             PAGE_DEFINITIONS[selected_page]()
-
-    render_page_pager(location="bottom")
-
-
 
 # ============================================================================
 # FOOTER

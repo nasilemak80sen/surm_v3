@@ -55,6 +55,24 @@ def test_sidebar_workflow_labels_expose_completion_and_lock_state():
     assert '"Locked stages become available when their upstream gate is satisfied."' in source
 
 
+def test_sidebar_study_card_shows_accessible_stage_progress():
+    project_root = Path(__file__).resolve().parents[1]
+    source = (project_root / "surm.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    sidebar = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "render_sidebar"
+    )
+    sidebar_source = ast.get_source_segment(source, sidebar)
+
+    assert '"completed_stages": completed_stages' in source
+    assert '"total_stages": total_stages' in source
+    assert 'aria-label="Study stage completion"' in sidebar_source
+    assert "{completed_stages} of {total_stages} stages complete" in sidebar_source
+    assert 'class="sidebar-stage-progress-track"' in sidebar_source
+    assert "st.progress(" not in sidebar_source
+
+
 def test_overview_does_not_duplicate_repository_or_export():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "modules/tab_frontpage.py").read_text(encoding="utf-8")
@@ -881,26 +899,42 @@ def test_overview_uses_disciplined_grid_ratios_and_study_setup_lifecycle():
     assert '<div class="surm-panel-kicker">ATTENTION</div>' in source
 
 
-def test_bottom_pager_is_rendered_even_when_workflow_stage_is_locked():
+def test_locked_workflow_pages_keep_top_navigation_without_bottom_pager():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "surm.py").read_text(encoding="utf-8")
+    router = source[source.index("def render_navigation()"):]
 
     assert "blocked = False" in source
     assert "blocked = True" in source
-    assert 'render_page_pager(location="bottom")' in source
-    assert "return" not in source[
-        source.index("blocked = False"):
-        source.index('render_page_pager(location="bottom")')
-    ]
+    assert router.index("render_page_pager()") < router.index("if blocked:")
+    assert router.count("render_page_pager()") == 1
+    assert 'render_page_pager(location="bottom")' not in source
 
 
-def test_global_page_pager_covers_all_application_pages():
+def test_single_top_pager_covers_all_application_pages():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "surm.py").read_text(encoding="utf-8")
 
     assert "NAVIGATION_ORDER = [" in source
-    assert 'key=f"pager_previous_{location}"' in source
-    assert 'key=f"pager_next_{location}"' in source
+    assert 'key="pager_previous"' in source
+    assert 'key="pager_next"' in source
+    assert 'st.container(key="page-navigation")' in source
+
+
+def test_page_navigation_keeps_sidebar_workspace_in_sync():
+    def app():
+        import streamlit as st
+        import surm
+
+        surm._set_current_page("1️⃣ Uncertainties")
+        st.write(st.session_state["current_page"])
+        st.write(st.session_state["sidebar_area_selector"])
+
+    at = _run_app(app)
+
+    assert not at.exception
+    assert at.session_state["current_page"] == "1️⃣ Uncertainties"
+    assert at.session_state["sidebar_area_selector"] == "Workflow"
 
 
 def test_sidebar_uses_direct_page_actions_not_legacy_selector():
