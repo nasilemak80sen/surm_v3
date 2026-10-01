@@ -96,6 +96,7 @@ def test_new_risk_owner_is_inherited_from_linked_resolution_planner():
     result = build_risk_register(key_unc_df, resolution_df)
 
     assert result.loc[0, "Action Owner"] == "Planner Owner"
+    assert result.loc[0, "Action Owner Source"] == "planner_default"
 
 
 def test_existing_risk_owner_is_preserved_over_planner_default():
@@ -117,6 +118,7 @@ def test_existing_risk_owner_is_preserved_over_planner_default():
     st.session_state["risk_register"] = [{
         "Risk": "Risk A",
         "Action Owner": "Manual Override",
+        "Action Owner Source": "manual",
         "Likelihood (H/M/L)": "M",
         "Impact (H/M/L)": "M",
     }]
@@ -134,6 +136,7 @@ def test_existing_risk_owner_is_preserved_over_planner_default():
     result = build_risk_register(key_unc_df, resolution_df)
 
     assert result.loc[0, "Action Owner"] == "Manual Override"
+    assert result.loc[0, "Action Owner Source"] == "manual"
 
 
 def test_weighted_score_accepts_numeric_string_weights():
