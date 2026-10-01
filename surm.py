@@ -436,30 +436,20 @@ def render_sidebar() -> None:
                 if selected:
                     state = "CURRENT"
 
-                st.markdown(
-                    f"""
-                    <div class="sidebar-nav-row-label {'is-current' if selected else ''} {'is-locked' if disabled else ''}">
-                        <span class="sidebar-nav-step">{step}</span>
-                        <span class="sidebar-nav-icon">{icon}</span>
-                        <span class="sidebar-nav-copy">
-                            <strong>{html.escape(title)}</strong>
-                            <small>{html.escape(state)}</small>
-                        </span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                if stage is not None:
+                    nav_label = f"{icon}  {step}  {title}  ·  {state}"
+                else:
+                    nav_label = f"{icon}  {title}  ·  {state}"
 
-                if st.button(
-                    f"{title}",
+                st.button(
+                    nav_label,
                     key=f"sidebar_page_{index}_{page}",
                     use_container_width=True,
                     disabled=disabled,
-                    type="secondary",
+                    type="primary" if selected else "secondary",
                     on_click=_go_to,
                     args=(page,),
-                ):
-                    pass
+                )
 
                 # Keep the supporting description visible without adding
                 # another interactive surface.
