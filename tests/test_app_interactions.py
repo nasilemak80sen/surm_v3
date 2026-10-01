@@ -554,6 +554,7 @@ def test_study_repository_resume_opens_last_saved_page():
 
         def load_record(summary):
             st.session_state["last_saved_page"] = summary["last_saved_page"]
+            st.session_state["_pending_navigation_page"] = summary["last_saved_page"]
             return True
 
         with patch.object(page, "list_sessions", lambda: summaries),              patch.object(page, "load_session_record", load_record):
@@ -566,6 +567,8 @@ def test_study_repository_resume_opens_last_saved_page():
 
     assert not at.exception
     assert at.session_state["study_access_mode"] == "edit"
+    assert at.session_state["last_saved_page"] == "6️⃣ Resolution Planner"
+    assert at.session_state["_pending_navigation_page"] == "6️⃣ Resolution Planner"
     assert at.session_state["current_page"] == "6️⃣ Resolution Planner"
 
 
