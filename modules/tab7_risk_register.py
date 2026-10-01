@@ -90,16 +90,17 @@ def _normalize_risk_rows(rows: list[dict], owner_options: list[str]) -> list[dic
     """Resolve controlled inputs and preserve planner-vs-manual owner lineage."""
     normalized: list[dict] = []
     previous_rows = st.session_state.get("risk_register", []) or []
+    previous_by_id = {
+        str(row.get("risk_id", "") or "").strip(): row
+        for row in previous_rows
+        if isinstance(row, dict) and str(row.get("risk_id", "") or "").strip()
+    }
 
-    for index, row in enumerate(rows):
+    for row in rows:
         next_row = dict(row)
         owner = str(next_row.get("Action Owner", "") or "").strip()
-        previous = (
-            previous_rows[index]
-            if index < len(previous_rows)
-            and isinstance(previous_rows[index], dict)
-            else {}
-        )
+        risk_id = str(next_row.get("risk_id", "") or "").strip()
+        previous = previous_by_id.get(risk_id, {})
         previous_owner = str(previous.get("Action Owner", "") or "").strip()
         previous_source = str(
             previous.get("Action Owner Source", "") or ""
