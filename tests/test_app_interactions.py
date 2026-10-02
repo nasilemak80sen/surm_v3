@@ -1107,3 +1107,53 @@ def test_markdown_adapter_remains_idempotent_across_module_reload():
     assert st._surm_original_markdown is original
     assert st.markdown is not wrapped_once
     assert getattr(st._surm_original_markdown, "__name__", "") == "markdown"
+
+
+def test_uncertainty_summary_lists_linked_risks_and_handles_empty_risk_lists():
+    def app():
+        import streamlit as st
+        from modules import tab1_uncertainties as page
+        from utils.session import init_session
+
+        init_session()
+        discipline = st.session_state["_mapping"]["disciplines"][0]
+        st.session_state["uncertainties"] = [
+            {
+                "id": 1,
+                "uncertainty_id": "UNC-1",
+                "name": "Uncertainty with linked risks",
+                "discipline": discipline,
+                "selected": True,
+                "risks": ["Risk Alpha", "Risk Beta", "<script>alert(1)</script>"],
+            },
+            {
+                "id": 2,
+                "uncertainty_id": "UNC-2",
+                "name": "Uncertainty without linked risks",
+                "discipline": discipline,
+                "selected": True,
+                "risks": [],
+            },
+            {
+                "id": 3,
+                "uncertainty_id": "UNC-3",
+                "name": "Unselected uncertainty",
+                "discipline": discipline,
+                "selected": False,
+                "risks": ["Hidden risk"],
+            },
+        ]
+        page.render()
+
+    at = _run_app(app)
+    assert not at.exception
+    summary = next(
+        element.value
+        for element in at.markdown
+        if "uncertainty-selection-list" in element.value
+    )
+    assert "Risk Alpha" in summary
+    assert "Risk Beta" in summary
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in summary
+    assert "No linked risks" in summary
+    assert "Hidden risk" not in summary
