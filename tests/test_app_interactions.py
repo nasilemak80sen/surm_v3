@@ -55,6 +55,38 @@ def test_sidebar_workflow_labels_expose_completion_and_lock_state():
     assert '"Locked stages become available when their upstream gate is satisfied."' in source
 
 
+def test_non_workflow_sidebar_pages_remain_navigable():
+    from surm import _sidebar_stage_state
+
+    for page in (
+        "🗂️ Study Repository",
+        "📋 Overview",
+        "👥 Team",
+        "📊 Intelligence",
+        "🛡️ Barrier Management",
+        "✅ Assurance & Review",
+        "🕘 Revision History",
+        "📖 How to Use",
+    ):
+        assert _sidebar_stage_state(page, {}, "📋 Overview") in {"READY", "CURRENT"}
+
+
+def test_sidebar_page_action_keeps_navigation_area_in_sync():
+    def app():
+        import surm
+        from utils.session import init_session
+
+        init_session()
+        surm.render_sidebar()
+
+    at = _run_app(app)
+    at.button(key="sidebar_page_2_👥 Team").click().run()
+
+    assert not at.exception, f"sidebar navigation failed: {at.exception}"
+    assert at.session_state["current_page"] == "👥 Team"
+    assert at.session_state["sidebar_area_selector"] == "Study"
+
+
 def test_sidebar_study_card_shows_accessible_stage_progress():
     project_root = Path(__file__).resolve().parents[1]
     source = (project_root / "surm.py").read_text(encoding="utf-8")
@@ -224,18 +256,34 @@ def _run_app(script):
 
 def test_team_editor_submit_captures_active_editor_state():
     def app():
+        from datetime import date
         import streamlit as st
         from modules import tab_documentation as page
         from utils.session import init_session
 
         init_session()
         st.session_state["project_name"] = "Interaction Test"
+        if not st.session_state.get("_team_date_test_initialized"):
+            st.session_state["team_members"] = [{
+                "Name": "",
+                "Function / Role": "",
+                "Date": "19/08/2026",
+            }]
+            st.session_state["_team_date_test_initialized"] = True
 
         def fake_editor(df, **kwargs):
+            assert isinstance(df.loc[0, "Date (DD/MM/YYYY)"], date)
+            assert df.loc[0, "Date (DD/MM/YYYY)"] in {
+                date(2026, 8, 19),
+                date(2026, 9, 22),
+            }
+            date_config = kwargs["column_config"]["Date (DD/MM/YYYY)"]
+            assert date_config["type_config"]["type"] == "date"
+            assert date_config["type_config"]["format"] == "DD/MM/YYYY"
             edited = df.copy()
             edited.loc[0, "Name"] = "Active Cell User"
             edited.loc[0, "Function / Role"] = "RE"
-            edited.loc[0, "Date (DD/MM/YYYY)"] = "22/09/2026"
+            edited.loc[0, "Date (DD/MM/YYYY)"] = date(2026, 9, 22)
             return edited
 
         from unittest.mock import patch
@@ -245,10 +293,11 @@ def test_team_editor_submit_captures_active_editor_state():
 
     at = _run_app(app)
     at.button(key="save_team").click().run()
-
+    assert not at.exception
     assert not at.exception
     assert at.session_state["team_members"][0]["Name"] == "Active Cell User"
     assert at.session_state["team_members"][0]["Function / Role"] == "RE"
+    assert at.session_state["team_members"][0]["Date"] == "22/09/2026"
 
 
 
@@ -916,9 +965,39 @@ def test_single_top_pager_covers_all_application_pages():
     source = (project_root / "surm.py").read_text(encoding="utf-8")
 
     assert "NAVIGATION_ORDER = [" in source
+    assert '"← Previous"' in source
+    assert '"Next →"' in source
     assert 'key="pager_previous"' in source
     assert 'key="pager_next"' in source
     assert 'st.container(key="page-navigation")' in source
+
+
+def test_page_pager_keeps_adjacent_navigation_working():
+    def app():
+        import streamlit as st
+        import surm
+        from utils.session import init_session
+
+        init_session()
+        if not st.session_state.get("_pager_test_initialized"):
+            surm._set_current_page("👥 Team")
+            st.session_state["_pager_test_initialized"] = True
+        surm.render_page_pager()
+
+    at = _run_app(app)
+
+    assert not at.exception
+    assert at.button(key="pager_previous").label == "← Previous"
+    assert at.button(key="pager_next").label == "Next →"
+    assert any("03" in element.value and "16" in element.value for element in at.markdown)
+
+    at.button(key="pager_next").click().run()
+    assert not at.exception
+    assert at.session_state["current_page"] == "1️⃣ Uncertainties"
+
+    at.button(key="pager_previous").click().run()
+    assert not at.exception
+    assert at.session_state["current_page"] == "👥 Team"
 
 
 def test_page_navigation_keeps_sidebar_workspace_in_sync():

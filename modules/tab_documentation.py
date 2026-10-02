@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
 import pandas as pd
 import streamlit as st
 
@@ -24,6 +26,26 @@ TEAM_ROLE_OPTIONS = [
 ]
 
 
+def _team_date_value(value: object) -> date | None:
+    """Convert stored roster dates to values accepted by DateColumn."""
+    if value is None or pd.isna(value):
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+
+    text = str(value).strip()
+    if not text:
+        return None
+    for date_format in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, date_format).date()
+        except ValueError:
+            continue
+    raise ValueError(f"Invalid team date {text!r}; expected DD/MM/YYYY.")
+
+
 def render():
     render_form_header(
         "STUDY GOVERNANCE",
@@ -37,8 +59,21 @@ def render():
         [{"Name": "", "Function / Role": "", "Date": ""}],
     )
     df = pd.DataFrame(rows)
-    if "Date (DD/MM/YYYY)" not in df.columns:
-        df["Date (DD/MM/YYYY)"] = df.pop("Date") if "Date" in df.columns else ""
+    date_column = "Date (DD/MM/YYYY)"
+    if date_column in df.columns:
+        date_values = df[date_column]
+    else:
+        date_values = (
+            df["Date"]
+            if "Date" in df.columns
+            else pd.Series(index=df.index, dtype=object)
+        )
+    df[date_column] = pd.Series(
+        [_team_date_value(value) for value in date_values],
+        index=df.index,
+        dtype=object,
+    )
+    df = df.drop(columns=["Date"], errors="ignore")
 
     render_save_hint(
         "Edits are staged in this form until you submit them. "
@@ -59,9 +94,10 @@ def render():
                     width="medium",
                     options=TEAM_ROLE_OPTIONS,
                 ),
-                "Date (DD/MM/YYYY)": st.column_config.TextColumn(
-                    "Date (DD/MM/YYYY)",
+                date_column: st.column_config.DateColumn(
+                    date_column,
                     width="small",
+                    format="DD/MM/YYYY",
                 ),
             },
             hide_index=True,
@@ -82,7 +118,11 @@ def render():
             {
                 "Name": str(row.get("Name") or "").strip(),
                 "Function / Role": str(row.get("Function / Role") or "").strip(),
-                "Date": str(row.get("Date (DD/MM/YYYY)") or "").strip(),
+                "Date": (
+                    row[date_column].strftime("%d/%m/%Y")
+                    if row.get(date_column) is not None and not pd.isna(row[date_column])
+                    else ""
+                ),
             }
             for row in raw
         ] or [{"Name": "", "Function / Role": "", "Date": ""}]

@@ -7,18 +7,18 @@
 [theme]
 base = "light"
 primaryColor = "#006B67"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F4F7F7"
-textColor = "#0A0E27"
+backgroundColor = "#F7FAF8"
+secondaryBackgroundColor = "#EFF4F1"
+textColor = "#17332C"
 font = "sans serif"
 linkColor = "#006B67"
-codeTextColor = "#0A0E27"
-codeBackgroundColor = "#EEF3F3"
-borderColor = "#D8E1E1"
-dataframeBorderColor = "#D8E1E1"
-dataframeHeaderBackgroundColor = "#EDF3F3"
-chartCategoricalColors = ["#006B67", "#145DA0", "#D97706", "#A83232", "#6B4EFF", "#4F6D3A", "#606B75"]
-baseRadius = "medium"
+codeTextColor = "#17332C"
+codeBackgroundColor = "#EAF1ED"
+borderColor = "#D7E2DC"
+dataframeBorderColor = "#D7E2DC"
+dataframeHeaderBackgroundColor = "#EAF1ED"
+chartCategoricalColors = ["#006B67", "#2563EB", "#C77716", "#B54747", "#7656C9", "#547A4B", "#66736D"]
+baseRadius = "small"
 showWidgetBorder = true
 showSidebarBorder = true
 
@@ -29,7 +29,7 @@ textColor = "#F4FAF6"
 primaryColor = "#006B67"
 
 [client]
-toolbarMode = "minimal"
+toolbarMode = "developer"
 showErrorDetails = true
 
 [server]

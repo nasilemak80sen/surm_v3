@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import html
+
 import streamlit as st
 
 from utils.form_ui import render_form_header
 from utils.persistence import delete_session, list_sessions, load_session_record
 from utils.session import create_new_study
+
+
+_GALLERY_COLUMNS = 5
+_GALLERY_PAGE_SIZE = 25
 
 
 def _last_edit(session: dict) -> tuple[str, str]:
@@ -97,72 +103,169 @@ def render() -> None:
         f"{len(sessions)} saved "
         f"{'study' if len(sessions) == 1 else 'studies'}"
     )
-    for index, summary in enumerate(sessions):
-        project_name = str(summary.get("project_name", ""))
-        field_name = str(summary.get("field_name", ""))
-        study_key = (project_name, field_name)
-        with st.container(border=True):
-            title_col, status_col = st.columns([3, 1])
-            with title_col:
-                st.subheader(
+    page_count = (len(sessions) + _GALLERY_PAGE_SIZE - 1) // _GALLERY_PAGE_SIZE
+    page = min(
+        max(int(st.session_state.get("repository_gallery_page", 0)), 0),
+        page_count - 1,
+    )
+    st.session_state["repository_gallery_page"] = page
+    page_start = page * _GALLERY_PAGE_SIZE
+    page_sessions = sessions[page_start:page_start + _GALLERY_PAGE_SIZE]
+
+    with st.container(key="study-repository-gallery"):
+        for row_start in range(0, len(page_sessions), _GALLERY_COLUMNS):
+            columns = st.columns(_GALLERY_COLUMNS, gap="small")
+            for card_offset, (column, summary) in enumerate(zip(
+                columns,
+                page_sessions[row_start:row_start + _GALLERY_COLUMNS],
+            )):
+                index = page_start + row_start + card_offset
+                project_name = str(summary.get("project_name", ""))
+                field_name = str(summary.get("field_name", ""))
+                study_key = (project_name, field_name)
+                resume_page = _resume_page(summary).split(" ", 1)[-1]
+                lifecycle = str(summary.get("study_lifecycle", "Draft") or "Draft")
+                actor = str(summary.get("last_edited_by", "local-user") or "local-user")
+                edited_at = str(
+                    summary.get("last_edited_at", summary.get("saved_at", "—")) or "—"
+                ).replace("T", " ")[:19]
+                pending_delete = (
+                    st.session_state.get("_repository_pending_delete") == study_key
+                )
+                title = (
                     f"{project_name or 'Unnamed study'} · "
                     f"{field_name or 'Unknown field'}"
                 )
-                st.caption(f"Phase: {summary.get('phase', '—')}  ·  Completion: {summary.get('completion', 0)}%")
-            with status_col:
-                st.metric("Lifecycle", summary.get("study_lifecycle", "Draft"))
 
-            meta_col, action_col = st.columns([3, 1])
-            with meta_col:
-                actor = summary.get("last_edited_by", "local-user")
-                edited_at = summary.get("last_edited_at", summary.get("saved_at", "—"))
-                st.caption(
-                    f"Revision {summary.get('study_revision', 0)} · "
-                    f"Last edited by {actor} · {str(edited_at).replace('T', ' ')[:19]}"
-                )
-                st.caption(
-                    f"Resume point: **{_resume_page(summary).split(' ', 1)[-1]}**"
-                )
-            with action_col:
-                if st.button(
-                    "View",
-                    key=f"repository_view_{index}",
-                    use_container_width=True,
-                    help=f"Open the saved study at {_resume_page(summary).split(' ', 1)[-1]} in read-only mode.",
-                ):
-                    _load_for_view(summary)
-                if st.button(
-                    "Resume",
-                    key=f"repository_edit_{index}",
-                    use_container_width=True,
-                    type="primary",
-                    help=f"Continue from the last saved workspace: {_resume_page(summary).split(' ', 1)[-1]}",
-                ):
-                    _load_saved_study(summary, edit=True)
-                if st.button(
-                    "Delete",
-                    key=f"repository_delete_{index}",
-                    use_container_width=True,
-                ):
-                    st.session_state["_repository_pending_delete"] = study_key
-                    st.rerun()
+                with column:
+                    with st.container(
+                        key=f"repository-gallery-card-{index}",
+                        border=True,
+                    ):
+                        st.markdown(
+                            f"""
+                            <div class="repository-gallery-heading">
+                                <span class="repository-gallery-lifecycle">
+                                    {html.escape(lifecycle)}
+                                </span>
+                                <strong>{html.escape(title)}</strong>
+                                <span class="repository-gallery-hint">
+                                    Hover or focus for study details
+                                </span>
+                            </div>
+                            <div class="repository-gallery-details">
+                                <div class="repository-gallery-detail-grid">
+                                    <div class="repository-gallery-detail-item">
+                                        <span>Field</span>
+                                        <strong>{html.escape(field_name or "Unknown field")}</strong>
+                                    </div>
+                                    <div class="repository-gallery-detail-item">
+                                        <span>Phase</span>
+                                        <strong>{html.escape(str(summary.get("phase", "—") or "—"))}</strong>
+                                    </div>
+                                    <div class="repository-gallery-detail-item">
+                                        <span>Complete</span>
+                                        <strong>{int(summary.get("completion", 0) or 0)}%</strong>
+                                    </div>
+                                    <div class="repository-gallery-detail-item">
+                                        <span>Revision</span>
+                                        <strong>{int(summary.get("study_revision", 0) or 0)}</strong>
+                                    </div>
+                                </div>
+                                <div class="repository-gallery-detail-meta">
+                                    <div>
+                                        <span>Last edited</span>
+                                        <strong>{html.escape(actor)} · {html.escape(edited_at)}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Resume at</span>
+                                        <strong>{html.escape(resume_page)}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        with st.container(key=f"repository-gallery-actions-{index}"):
+                            action_cols = st.columns(3, gap="small")
+                            with action_cols[0]:
+                                if st.button(
+                                    "👁 View",
+                                    key=f"repository_view_{index}",
+                                    width="stretch",
+                                    help=f"Open {title} in read-only mode.",
+                                ):
+                                    _load_for_view(summary)
+                            with action_cols[1]:
+                                if st.button(
+                                    "✏️ Edit",
+                                    key=f"repository_edit_{index}",
+                                    width="stretch",
+                                    type="primary",
+                                    help=f"Continue editing from {resume_page}.",
+                                ):
+                                    _load_saved_study(summary, edit=True)
+                            with action_cols[2]:
+                                if st.button(
+                                    "🗑 Delete",
+                                    key=f"repository_delete_{index}",
+                                    width="stretch",
+                                    help=f"Delete {title}.",
+                                ):
+                                    st.session_state["_repository_pending_delete"] = study_key
+                                    st.rerun()
 
-            if st.session_state.get("_repository_pending_delete") == study_key:
-                st.warning(
-                    "Deleting this saved study is permanent and cannot be undone."
-                )
-                confirm_col, cancel_col = st.columns(2)
-                with confirm_col:
-                    if st.button(
-                        "Confirm deletion",
-                        key=f"repository_confirm_delete_{index}",
-                        type="primary",
-                    ):
-                        _delete_saved(*study_key)
-                with cancel_col:
-                    if st.button(
-                        "Keep study",
-                        key=f"repository_cancel_delete_{index}",
-                    ):
-                        st.session_state.pop("_repository_pending_delete", None)
-                        st.rerun()
+                        if pending_delete:
+                            with st.container(
+                                key=f"repository-delete-confirmation-{index}"
+                            ):
+                                st.warning(
+                                    "Delete this study permanently?",
+                                    icon=":material/warning:",
+                                )
+                                confirm_col, cancel_col = st.columns(2, gap="small")
+                                with confirm_col:
+                                    if st.button(
+                                        "Confirm",
+                                        key=f"repository_confirm_delete_{index}",
+                                        type="primary",
+                                        width="stretch",
+                                    ):
+                                        _delete_saved(*study_key)
+                                with cancel_col:
+                                    if st.button(
+                                        "Keep",
+                                        key=f"repository_cancel_delete_{index}",
+                                        width="stretch",
+                                    ):
+                                        st.session_state.pop(
+                                            "_repository_pending_delete", None
+                                        )
+                                        st.rerun()
+
+    if page_count > 1:
+        previous_col, page_col, next_col = st.columns([1, 1, 1], gap="small")
+        with previous_col:
+            if st.button(
+                "← Previous",
+                key="repository_gallery_previous",
+                disabled=page == 0,
+                width="stretch",
+            ):
+                st.session_state["repository_gallery_page"] = page - 1
+                st.rerun()
+        with page_col:
+            st.markdown(
+                f'<div class="repository-gallery-pagination" aria-label="Page {page + 1} of {page_count}">'
+                f"{page + 1} / {page_count}</div>",
+                unsafe_allow_html=True,
+            )
+        with next_col:
+            if st.button(
+                "Next →",
+                key="repository_gallery_next",
+                disabled=page >= page_count - 1,
+                width="stretch",
+            ):
+                st.session_state["repository_gallery_page"] = page + 1
+                st.rerun()
