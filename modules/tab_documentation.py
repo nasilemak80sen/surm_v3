@@ -46,6 +46,11 @@ def _team_date_value(value: object) -> date | None:
     raise ValueError(f"Invalid team date {text!r}; expected DD/MM/YYYY.")
 
 
+def _team_date_text(value: object) -> str:
+    parsed = _team_date_value(value)
+    return parsed.strftime("%d/%m/%Y") if parsed is not None else ""
+
+
 def render():
     render_form_header(
         "STUDY GOVERNANCE",
@@ -118,11 +123,7 @@ def render():
             {
                 "Name": str(row.get("Name") or "").strip(),
                 "Function / Role": str(row.get("Function / Role") or "").strip(),
-                "Date": (
-                    row[date_column].strftime("%d/%m/%Y")
-                    if row.get(date_column) is not None and not pd.isna(row[date_column])
-                    else ""
-                ),
+                "Date": _team_date_text(row.get(date_column)),
             }
             for row in raw
         ] or [{"Name": "", "Function / Role": "", "Date": ""}]

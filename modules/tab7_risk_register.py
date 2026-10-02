@@ -501,15 +501,7 @@ def render():
                 use_container_width=True,
             )
         with action_cols[2]:
-            json_payload = json.dumps(document, indent=2, ensure_ascii=False)
-            st.download_button(
-                "Download JSON",
-                data=json_payload,
-                file_name=f"SURM_{selected_risk_id}_Bowtie.json",
-                mime="application/json",
-                use_container_width=True,
-                key="download_selected_bowtie_json",
-            )
+            json_download_placeholder = st.empty()
         with action_cols[3]:
             st.caption(
                 "Bowtie edits are session drafts. Saving the study persists the diagram "
@@ -539,6 +531,20 @@ def render():
             ):
                 registry[selected_risk_id] = incoming
                 st.session_state["bowtie_register"] = registry
+
+        with json_download_placeholder:
+            st.download_button(
+                "Download JSON",
+                data=json.dumps(
+                    registry[selected_risk_id],
+                    indent=2,
+                    ensure_ascii=False,
+                ),
+                file_name=f"SURM_{selected_risk_id}_Bowtie.json",
+                mime="application/json",
+                use_container_width=True,
+                key="download_selected_bowtie_json",
+            )
 
         if save_bowtie:
             if not st.session_state.get("project_name", "").strip():

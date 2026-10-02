@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 from uuid import uuid4
 
 import streamlit as st
@@ -94,13 +95,34 @@ def render():
     )
 
     if selected_items:
-        selected_html = "".join(
-            (
-                f'<li><strong>{item["name"]}</strong>'
-                f'<span>{item["discipline"]}</span></li>'
+        selected_entries = []
+        for item in selected_items:
+            risk_names = [
+                str(risk).strip()
+                for risk in (item.get("risks") or [])
+                if str(risk).strip()
+            ]
+            risk_chips = "".join(
+                f'<span class="uncertainty-risk-chip">{html.escape(risk)}</span>'
+                for risk in risk_names
+            ) or '<span class="uncertainty-risk-empty">No linked risks</span>'
+            selected_entries.append(
+                f"""
+                <li class="uncertainty-selection-entry">
+                    <div class="uncertainty-selection-identity">
+                        <strong>{html.escape(str(item.get("name", "Unnamed uncertainty")))}</strong>
+                        <span class="uncertainty-selection-discipline">
+                            {html.escape(str(item.get("discipline", "Unassigned")))}
+                        </span>
+                    </div>
+                    <div class="uncertainty-selection-risks">
+                        <span class="uncertainty-risk-label">Related risks</span>
+                        <div class="uncertainty-risk-chips">{risk_chips}</div>
+                    </div>
+                </li>
+                """
             )
-            for item in selected_items
-        )
+        selected_html = "".join(selected_entries)
         st.markdown(
             '<div class="uncertainty-selection-list">'
             '<div class="uncertainty-selection-title">Currently selected uncertainties</div>'

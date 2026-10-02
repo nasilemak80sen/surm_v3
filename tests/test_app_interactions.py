@@ -300,6 +300,40 @@ def test_team_editor_submit_captures_active_editor_state():
     assert at.session_state["team_members"][0]["Date"] == "22/09/2026"
 
 
+def test_team_editor_submit_normalizes_string_dates():
+    def app():
+        import streamlit as st
+        from modules import tab_documentation as page
+        from utils.session import init_session
+
+        init_session()
+        st.session_state["project_name"] = "Interaction Test"
+        if not st.session_state.get("_team_string_date_test_initialized"):
+            st.session_state["team_members"] = [{
+                "Name": "String Date User",
+                "Function / Role": "RE",
+                "Date": "19/08/2026",
+            }]
+            st.session_state["_team_string_date_test_initialized"] = True
+
+        def fake_editor(df, **kwargs):
+            edited = df.copy()
+            edited.loc[0, "Date (DD/MM/YYYY)"] = "02/10/2026"
+            return edited
+
+        from unittest.mock import patch
+
+        with patch.object(st, "data_editor", fake_editor), \
+                patch.object(page, "save_session", lambda auto=False: True):
+            page.render()
+
+    at = _run_app(app)
+    at.button(key="save_team").click().run()
+
+    assert not at.exception
+    assert at.session_state["team_members"][0]["Date"] == "02/10/2026"
+
+
 
 def test_key_decision_duplicate_is_rejected_on_save():
     def app():
@@ -845,6 +879,161 @@ def test_risk_register_form_is_explicit_save_transaction():
     assert not at.exception
 
 
+def test_bowtie_risk_register_actions_sync_save_and_offer_json_download():
+    def app():
+        import streamlit as st
+        from unittest.mock import patch
+        from modules import tab7_risk_register as page
+        from utils.bowtie_adapter import refresh_bowtie_document
+        from utils.session import init_session
+
+        init_session()
+        st.session_state.setdefault("_bowtie_test_save_calls", [])
+        st.session_state.setdefault("_bowtie_test_refresh_calls", [])
+        st.session_state["project_name"] = "Interaction Test"
+        uncertainty = st.session_state["uncertainties"][0]
+        uncertainty["selected"] = True
+        st.session_state["key_uncertainties"] = [{
+            "uncertainty_id": uncertainty["uncertainty_id"],
+            "Uncertainty": uncertainty["name"],
+            "Combined Rating": "HH",
+            "Include in Plan": True,
+        }]
+        st.session_state["resolution_list"] = {
+            uncertainty["name"]: {"Option A": "Y"}
+        }
+        risk = {
+            "risk_id": "RSK-001",
+            "#": 1,
+            "Risk": "Risk A",
+            "Uncertainty/Causes": uncertainty["name"],
+            "Resolution Plan": "Option A",
+            "Action Owner": "Owner",
+            "Contingency Plan": "Contingency",
+            "Impact/Consequence": "Consequence",
+            "Likelihood (H/M/L)": "H",
+            "Impact (H/M/L)": "H",
+            "Risk Rating": "Extreme",
+            "Risk Status": "Open",
+            "Remarks": "",
+        }
+        st.session_state["risk_register"] = [risk]
+        st.session_state["bowtie_register"] = {
+            "RSK-001": refresh_bowtie_document(
+                risk,
+                uncertainties=st.session_state["uncertainties"],
+                resolution_list=st.session_state["resolution_list"],
+                resolution_planner=st.session_state["resolution_planner"],
+            )
+        }
+
+        def save_session(auto=False):
+            st.session_state["_bowtie_test_save_calls"].append(auto)
+            return True
+
+        def render_bowtie(*args, **kwargs):
+            return None
+
+        def refresh_document(*args, **kwargs):
+            st.session_state["_bowtie_test_refresh_calls"].append(True)
+            return refresh_bowtie_document(*args, **kwargs)
+
+        with patch.object(page, "render_bowtie_editor", render_bowtie), \
+                patch.object(page, "save_session", save_session), \
+                patch.object(page, "refresh_bowtie_document", refresh_document):
+            page.render()
+
+    at = _run_app(app)
+    assert not at.exception
+    assert at.button(key="refresh_selected_bowtie")
+    assert at.button(key="save_selected_bowtie")
+    assert at.download_button(key="download_selected_bowtie_json")
+
+    refresh_count = len(at.session_state["_bowtie_test_refresh_calls"])
+    at.button(key="refresh_selected_bowtie").click().run()
+    assert not at.exception
+    assert len(at.session_state["_bowtie_test_refresh_calls"]) > refresh_count
+    assert at.session_state["bowtie_register"]["RSK-001"]["risk_id"] == "RSK-001"
+
+    at.button(key="save_selected_bowtie").click().run()
+    assert not at.exception
+    assert at.session_state["_bowtie_test_save_calls"] == [False]
+    assert any("saved with the study" in item.value for item in at.success)
+
+    at.download_button(key="download_selected_bowtie_json").click().run()
+    assert not at.exception
+
+
+def test_bowtie_json_download_uses_latest_component_draft():
+    import json
+
+    def app():
+        import json
+        from copy import deepcopy
+        from unittest.mock import patch
+        import streamlit as st
+        from modules import tab7_risk_register as page
+        from utils.bowtie_adapter import refresh_bowtie_document
+        from utils.session import init_session
+
+        init_session()
+        st.session_state["project_name"] = "Interaction Test"
+        uncertainty = st.session_state["uncertainties"][0]
+        uncertainty["selected"] = True
+        st.session_state["key_uncertainties"] = [{
+            "uncertainty_id": uncertainty["uncertainty_id"],
+            "Uncertainty": uncertainty["name"],
+            "Combined Rating": "HH",
+            "Include in Plan": True,
+        }]
+        st.session_state["resolution_list"] = {
+            uncertainty["name"]: {"Option A": "Y"}
+        }
+        risk = {
+            "risk_id": "RSK-001",
+            "#": 1,
+            "Risk": "Risk A",
+            "Uncertainty/Causes": uncertainty["name"],
+            "Resolution Plan": "Option A",
+            "Action Owner": "Owner",
+            "Contingency Plan": "Contingency",
+            "Impact/Consequence": "Consequence",
+            "Likelihood (H/M/L)": "H",
+            "Impact (H/M/L)": "H",
+            "Risk Rating": "Extreme",
+            "Risk Status": "Open",
+            "Remarks": "",
+        }
+        st.session_state["risk_register"] = [risk]
+        st.session_state["bowtie_register"] = {
+            "RSK-001": refresh_bowtie_document(
+                risk,
+                uncertainties=st.session_state["uncertainties"],
+                resolution_list=st.session_state["resolution_list"],
+                resolution_planner=st.session_state["resolution_planner"],
+            )
+        }
+
+        def render_bowtie(document, **kwargs):
+            latest = deepcopy(document)
+            latest["name"] = "Latest component draft"
+            latest["editor_revision"] = int(latest.get("editor_revision", 0)) + 1
+            return {"document": latest}
+
+        def capture_download(label, *, data, **kwargs):
+            st.session_state["_captured_bowtie_json"] = data
+
+        with patch.object(page, "render_bowtie_editor", render_bowtie), \
+                patch.object(st, "download_button", capture_download):
+            page.render()
+
+    at = _run_app(app)
+    assert not at.exception
+    assert json.loads(at.session_state["_captured_bowtie_json"])["name"] == (
+        "Latest component draft"
+    )
+
+
 @pytest.mark.parametrize("page_path", TARGET_FORM_FILES)
 def test_form_modules_import(page_path):
     module_name = page_path[:-3].replace("/", ".")
@@ -1107,3 +1296,53 @@ def test_markdown_adapter_remains_idempotent_across_module_reload():
     assert st._surm_original_markdown is original
     assert st.markdown is not wrapped_once
     assert getattr(st._surm_original_markdown, "__name__", "") == "markdown"
+
+
+def test_uncertainty_summary_lists_linked_risks_and_handles_empty_risk_lists():
+    def app():
+        import streamlit as st
+        from modules import tab1_uncertainties as page
+        from utils.session import init_session
+
+        init_session()
+        discipline = st.session_state["_mapping"]["disciplines"][0]
+        st.session_state["uncertainties"] = [
+            {
+                "id": 1,
+                "uncertainty_id": "UNC-1",
+                "name": "Uncertainty with linked risks",
+                "discipline": discipline,
+                "selected": True,
+                "risks": ["Risk Alpha", "Risk Beta", "<script>alert(1)</script>"],
+            },
+            {
+                "id": 2,
+                "uncertainty_id": "UNC-2",
+                "name": "Uncertainty without linked risks",
+                "discipline": discipline,
+                "selected": True,
+                "risks": [],
+            },
+            {
+                "id": 3,
+                "uncertainty_id": "UNC-3",
+                "name": "Unselected uncertainty",
+                "discipline": discipline,
+                "selected": False,
+                "risks": ["Hidden risk"],
+            },
+        ]
+        page.render()
+
+    at = _run_app(app)
+    assert not at.exception
+    summary = next(
+        element.value
+        for element in at.markdown
+        if "uncertainty-selection-list" in element.value
+    )
+    assert "Risk Alpha" in summary
+    assert "Risk Beta" in summary
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in summary
+    assert "No linked risks" in summary
+    assert "Hidden risk" not in summary
