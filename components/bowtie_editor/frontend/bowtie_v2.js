@@ -5,9 +5,9 @@
   const NS = "http://www.w3.org/2000/svg";
   const GRID = 20;
   const VIEW_W = 1600;
-  const VIEW_H = 900;
+  let VIEW_H = 900;
   const MIN_Y = 130;
-  const MAX_Y = 770;
+  let MAX_Y = 770;
   const LANE_X = {
     cause: 170,
     preventativeBarrier: 500,
@@ -141,6 +141,24 @@
     }) || null;
   }
 
+  function updateSceneExtent(targetDoc) {
+    const cardCount = Math.max(
+      (targetDoc.causes || []).length,
+      (targetDoc.outcomes || []).length
+    );
+    const barrierCount = Math.max(
+      (targetDoc.preventativeBarriers || []).length,
+      (targetDoc.mitigativeBarriers || []).length
+    );
+    VIEW_H = Math.max(
+      VIEW_H,
+      900,
+      360 + Math.max(0, cardCount - 1) * 100,
+      360 + Math.max(0, barrierCount - 1) * 150
+    );
+    MAX_Y = VIEW_H - 130;
+  }
+
   function normalizeDocument(raw) {
     const value = clone(raw || {});
     value.name = String(value.name || "SURM Bowtie");
@@ -160,12 +178,14 @@
     value.library.outcome = Array.isArray(value.library.outcome) ? value.library.outcome : [];
     value.layout = value.layout || {};
 
+    updateSceneExtent(value);
+
     value.causes.forEach(function (p, i) {
       p.type = "cause";
       p.w = Math.max(finite(p.w, 240), 220);
       p.h = Math.max(finite(p.h, 86), 76);
       p.x = LANE_X.cause;
-      p.y = clamp(finite(p.y, 180 + i * 110), MIN_Y, MAX_Y);
+      p.y = clamp(finite(p.y, defaultY(i, "cause")), MIN_Y, MAX_Y);
       p.pageId = p.pageId || "PAGE_1";
     });
 
@@ -174,7 +194,7 @@
       p.w = Math.max(finite(p.w, 150), 140);
       p.h = Math.max(finite(p.h, 110), 100);
       if (!Number.isFinite(Number(p.y))) {
-        p.y = 180 + i * 110;
+        p.y = defaultY(i, "preventativeBarrier");
       }
       p.x = LANE_X.preventativeBarrier;
       p.y = clamp(Number(p.y), MIN_Y, MAX_Y);
@@ -186,7 +206,7 @@
       p.w = Math.max(finite(p.w, 150), 140);
       p.h = Math.max(finite(p.h, 110), 100);
       if (!Number.isFinite(Number(p.y))) {
-        p.y = 180 + i * 110;
+        p.y = defaultY(i, "mitigativeBarrier");
       }
       p.x = LANE_X.mitigativeBarrier;
       p.y = clamp(Number(p.y), MIN_Y, MAX_Y);
@@ -198,7 +218,7 @@
       p.w = Math.max(finite(p.w, 240), 220);
       p.h = Math.max(finite(p.h, 86), 76);
       p.x = LANE_X.outcome;
-      p.y = clamp(finite(p.y, 180 + i * 110), MIN_Y, MAX_Y);
+      p.y = clamp(finite(p.y, defaultY(i, "outcome")), MIN_Y, MAX_Y);
       p.pageId = p.pageId || "PAGE_1";
     });
 
@@ -246,8 +266,8 @@
   }
 
   function updateHistoryButtons() {
-    document.getElementById("undo").disabled = undoStack.length === 0;
-    document.getElementById("redo").disabled = redoStack.length === 0;
+    document.getElementById("undo").disabled = !editable || undoStack.length === 0;
+    document.getElementById("redo").disabled = !editable || redoStack.length === 0;
   }
 
   function rememberBeforeMutation() {
@@ -304,13 +324,17 @@
     return id;
   }
 
-  function defaultY(listLength) {
-    return clamp(170 + listLength * 110, MIN_Y, MAX_Y);
+  function defaultY(listLength, type) {
+    const gap = type === "preventativeBarrier" || type === "mitigativeBarrier"
+      ? 140
+      : 100;
+    return clamp(180 + listLength * gap, MIN_Y, MAX_Y);
   }
 
   function addObject(type) {
     flushInspectorDraft(false);
     rememberBeforeMutation();
+    const previousViewHeight = VIEW_H;
 
     const nodeId = makeNodeId(type);
     const name = type === "cause" ? "New Threat" :
@@ -347,12 +371,14 @@
       type: type,
       nodeId: nodeId,
       x: LANE_X[type],
-      y: defaultY(list.length),
+      y: defaultY(list.length, type),
       w: (type === "cause" || type === "outcome") ? 240 : 150,
       h: (type === "cause" || type === "outcome") ? 86 : 110,
       pageId: "PAGE_1",
     };
     list.push(placement);
+    updateSceneExtent(doc);
+    placement.y = defaultY(list.length - 1, type);
 
     if (type === "cause") {
       doc.lines.push({
@@ -394,6 +420,7 @@
     selected = {id: placement.id};
     emitChange();
     render();
+    if (VIEW_H > previousViewHeight) fitToContent(80, false);
     setStatus(
       "Added " + name + (linkedTo ? " and linked it to the selected relationship" : "")
     );
@@ -491,7 +518,11 @@
     flushInspectorDraft(false);
     rememberBeforeMutation();
 
-    const causeYs = evenlySpaced(doc.causes.length, 180, 720);
+    const causeYs = evenlySpaced(
+      doc.causes.length,
+      180,
+      Math.max(720, 180 + (doc.causes.length - 1) * 100)
+    );
     doc.causes.forEach(function (p, i) {
       // Auto Layout only changes placement. It must never change node values,
       // identities, relationships or dimensions.
@@ -499,7 +530,11 @@
       p.y = causeYs[i] || 450;
     });
 
-    const outcomeYs = evenlySpaced(doc.outcomes.length, 180, 720);
+    const outcomeYs = evenlySpaced(
+      doc.outcomes.length,
+      180,
+      Math.max(720, 180 + (doc.outcomes.length - 1) * 100)
+    );
     doc.outcomes.forEach(function (p, i) {
       p.x = LANE_X.outcome;
       p.y = outcomeYs[i] || 450;
@@ -698,15 +733,16 @@
     const event = doc.pages && doc.pages[0] && doc.pages[0].topLevelEvent
       ? doc.pages[0].topLevelEvent
       : {name:doc.name};
+    const centerY = VIEW_H / 2;
 
     const g = createEl("g", {"data-kind":"topLevelEvent", "data-id":"TLE_1"});
     const rect = createEl("rect", {
-      x:665, y:375, width:270, height:150, rx:14, class:"event"
+      x:665, y:centerY - 75, width:270, height:150, rx:14, class:"event"
     });
     g.appendChild(rect);
 
     const kicker = createEl("text", {
-      x:800, y:407, "text-anchor":"middle", class:"event-kicker"
+      x:800, y:centerY - 43, "text-anchor":"middle", class:"event-kicker"
     });
     kicker.textContent = "TOP EVENT";
     g.appendChild(kicker);
@@ -715,7 +751,7 @@
     lines.forEach(function (line, i) {
       const t = createEl("text", {
         x:800,
-        y:447 + (i - (lines.length - 1) / 2) * 20,
+        y:centerY - 3 + (i - (lines.length - 1) / 2) * 20,
         "text-anchor":"middle",
         class:"event-text",
       });
@@ -731,7 +767,7 @@
       x:x - 130,
       y:44,
       width:260,
-      height:792,
+      height:VIEW_H - 108,
       rx:14,
       class:"lane",
       fill:fill,
@@ -780,7 +816,7 @@
       if (!stops.length) {
         drawConnector(layer,
           {x:origin.x + origin.w / 2, y:origin.y},
-          {x:665, y:450},
+          {x:665, y:VIEW_H / 2},
           "direct",
           lineIndex
         );
@@ -800,7 +836,7 @@
           drawConnector(
             layer,
             {x:barrier.x + barrier.w / 2, y:barrier.y},
-            {x:665, y:450},
+            {x:665, y:VIEW_H / 2},
             "cause secondary",
             stopIndex + 31
           );
@@ -820,7 +856,7 @@
 
       if (!stops.length) {
         drawConnector(layer,
-          {x:935, y:450},
+          {x:935, y:VIEW_H / 2},
           {x:origin.x - origin.w / 2, y:origin.y},
           "direct",
           lineIndex
@@ -833,7 +869,7 @@
           drawnEventToBarrier.add(barrier.id);
           drawConnector(
             layer,
-            {x:935, y:450},
+            {x:935, y:VIEW_H / 2},
             {x:barrier.x - barrier.w / 2, y:barrier.y},
             "mitigate secondary",
             stopIndex + 51
@@ -914,7 +950,7 @@
     svg.appendChild(nodes);
 
     const focus = createEl("rect", {
-      x:649, y:365, width:302, height:170, rx:16, class:"focus-ring"
+      x:649, y:VIEW_H / 2 - 85, width:302, height:170, rx:16, class:"focus-ring"
     });
     svg.appendChild(focus);
 
@@ -927,7 +963,9 @@
     document.getElementById("title").textContent = doc.name || "SURM Bowtie";
     document.getElementById("riskInfo").innerHTML =
       '<span class="badge">' + esc(doc.risk_id || "NEW") + "</span> " + esc(doc.name || "");
+    document.getElementById("auto").disabled = !editable;
     document.getElementById("delete").disabled = !selected || !editable;
+    updateHistoryButtons();
     zoomResetEl.textContent = Math.round((VIEW_W / camera.w) * 100) + "%";
     applyCamera();
   }
@@ -1033,8 +1071,9 @@
     return true;
   }
 
-  function scheduleInspectorCommit() {
+  function scheduleInspectorCommit(event) {
     if (!inspectorDirty || !editable) return;
+    if (event && event.relatedTarget && event.relatedTarget.id === "cancelChanges") return;
     const targetId = inspectorTargetId;
     const values = readInspectorValues();
     window.setTimeout(function () {
@@ -1062,35 +1101,6 @@
 
   function markInspectorDirty() {
     inspectorDirty = true;
-  }
-
-  function captureInspectorFieldChange() {
-    const targetId = inspectorTargetId;
-    const p = targetId ? placementForId(targetId) : null;
-    const current = p ? nodeFor(p) : null;
-    if (!p || !current || !editable) return;
-
-    const values = readInspectorValues();
-    if (!inspectorHistoryRecorded) {
-      rememberBeforeMutation();
-      inspectorHistoryRecorded = true;
-    }
-
-    current.name = values.name;
-    current.description = values.description;
-
-    if (p.type === "preventativeBarrier" || p.type === "mitigativeBarrier") {
-      current.owner = values.owner;
-      current.effectiveness = values.effectiveness;
-      current.degradation_factors = values.degradation_factors;
-      current.controls = values.controls;
-    }
-
-    inspectorDirty = true;
-    renderObjects();
-    renderHealth();
-    renderRelationships();
-    setStatus("Inspector edit captured locally");
   }
 
   function renderEditor() {
@@ -1144,7 +1154,6 @@
       const field = document.getElementById(id);
       if (!field) return;
       field.addEventListener("input", markInspectorDirty);
-      field.addEventListener("change", captureInspectorFieldChange);
     });
     inspectorHistoryRecorded = false;
 
@@ -1158,6 +1167,9 @@
 
     const cancel = document.getElementById("cancelChanges");
     if (cancel) {
+      cancel.addEventListener("pointerdown", function () {
+        inspectorDirty = false;
+      });
       cancel.addEventListener("click", function () {
         inspectorDirty = false;
         inspectorHistoryRecorded = false;
@@ -1228,6 +1240,7 @@
 
     relationshipsEl.querySelectorAll("input[data-rel]").forEach(function (cb) {
       cb.addEventListener("change", function () {
+        flushInspectorDraft(false);
         rememberBeforeMutation();
         const id = cb.getAttribute("data-rel");
         line.stops = Array.isArray(line.stops) ? line.stops : [];
@@ -1446,7 +1459,7 @@
   }
 
   function fitToContent(padding, announce) {
-    const points = [{x:800, y:450, w:270, h:150}]
+    const points = [{x:800, y:VIEW_H / 2, w:270, h:150}]
       .concat(allPlacements().map(function (p) {
         return {x:p.x, y:p.y, w:p.w, h:p.h};
       }));
@@ -1478,7 +1491,6 @@
   }
 
   svg.addEventListener("pointerdown", function (event) {
-    if (!editable) return;
     if (event.target.closest && event.target.closest(".node")) return;
     flushInspectorDraft(false);
 
@@ -1637,6 +1649,7 @@
     if (data.type !== "streamlit:render") return;
 
     args = data.args || {};
+    const editableChanged = editable !== (args.editable !== false);
     editable = args.editable !== false;
 
     ["addCause","addPrevent","addMitigate","addOutcome","delete"].forEach(function (id) {
@@ -1646,6 +1659,7 @@
 
     const incoming = args.document;
     if (incoming) {
+      const previousViewHeight = VIEW_H;
       const normalized = normalizeDocument(incoming);
       const incomingFingerprint = fingerprint(normalized);
 
@@ -1655,6 +1669,7 @@
         undoStack = [];
         redoStack = [];
         selected = null;
+        if (VIEW_H > previousViewHeight) fitToContent(80, false);
         render();
       } else if (incomingFingerprint !== currentFingerprint) {
         const previousSelection = selected ? selected.id : null;
@@ -1668,6 +1683,9 @@
         } else {
           selected = null;
         }
+        if (VIEW_H > previousViewHeight) fitToContent(80, false);
+        render();
+      } else if (editableChanged) {
         render();
       }
     }

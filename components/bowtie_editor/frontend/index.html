@@ -102,6 +102,17 @@ svg .grid-dot{fill:var(--grid);opacity:.5}
 svg .focus-ring{fill:none;stroke:#72a488;stroke-width:2;stroke-dasharray:6 4;opacity:.7}
 svg .health-dot{stroke:#fff;stroke-width:1.5}
 svg .empty-hint{font-size:12px;fill:#788880}
+@media(max-width:1090px){
+  body{overflow:auto}
+  .toolbar{position:relative}
+  .layout{
+    height:auto;min-height:0;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(360px,55vh) minmax(300px,auto)
+  }
+  .canvas-wrap{min-height:360px}
+  .side{border-left:0;border-top:1px solid var(--border)}
+}
 </style>
 </head>
 <body>

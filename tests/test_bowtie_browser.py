@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+import os
 from pathlib import Path
+import shutil
 from threading import Thread
 
 import pytest
@@ -30,6 +32,29 @@ def _serve_frontend():
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
     return server, thread
+
+
+def _launch_browser(playwright):
+    chromium_path = Path(playwright.chromium.executable_path)
+    if chromium_path.exists():
+        return playwright.chromium.launch(headless=True)
+
+    configured = os.environ.get("SURM_BROWSER_EXECUTABLE")
+    candidates = [
+        configured,
+        shutil.which("msedge"),
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        shutil.which("chrome"),
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    ]
+    executable = next(
+        (candidate for candidate in candidates if candidate and Path(candidate).is_file()),
+        None,
+    )
+    if executable:
+        return playwright.chromium.launch(headless=True, executable_path=executable)
+    return playwright.chromium.launch(headless=True)
 
 
 def _fixture_document() -> dict:
@@ -194,11 +219,27 @@ def _fixture_document() -> dict:
     }
 
 
+def _render_component(page, document: dict, *, editable: bool = True) -> None:
+    page.evaluate(
+        """payload => window.dispatchEvent(
+            new MessageEvent("message", {data: payload})
+        )""",
+        {
+            "type": "streamlit:render",
+            "args": {
+                "document": document,
+                "editable": editable,
+                "height": 820,
+            },
+        },
+    )
+
+
 def test_bowtie_v2_browser_layout_interaction_and_round_trip():
     server, thread = _serve_frontend()
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = _launch_browser(playwright)
             page = browser.new_page(accept_downloads=True)
             page_errors = []
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
@@ -382,8 +423,7 @@ window.addEventListener("error", event => {
             expect(page.locator("#editName")).to_have_value("New Threat")
 
             page.locator("#editName").fill("Edited Threat")
-            page.locator("#editName").press("Tab")
-            page.wait_for_timeout(80)
+            page.locator("#applyChanges").click()
             assert not page_errors, page_errors
             expect(page.locator("#objects")).to_contain_text("Edited Threat")
 
@@ -421,11 +461,272 @@ window.addEventListener("error", event => {
         thread.join(timeout=5)
 
 
+def test_bowtie_all_toolbar_controls_exports_and_responsive_layout():
+    server, thread = _serve_frontend()
+    try:
+        with sync_playwright() as playwright:
+            browser = _launch_browser(playwright)
+            page = browser.new_page(
+                viewport={"width": 1440, "height": 900},
+                accept_downloads=True,
+            )
+            page_errors = []
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(
+                f"http://127.0.0.1:{server.server_port}/index.html",
+                wait_until="load",
+            )
+            page.evaluate(
+                """() => {
+                    window.__surmMessages = [];
+                    window.addEventListener("message", event => {
+                        if (event.data && event.data.isStreamlitMessage) {
+                            window.__surmMessages.push(event.data);
+                        }
+                    });
+                }"""
+            )
+            _render_component(page, _fixture_document())
+
+            for selector in (
+                "#auto", "#fit", "#zoomOut", "#zoomReset", "#zoomIn",
+                "#undo", "#redo", "#addCause", "#addPrevent", "#addMitigate",
+                "#addOutcome", "#exportSvg", "#exportPng", "#delete",
+            ):
+                expect(page.locator(selector)).to_be_visible()
+            expect(page.locator("#undo")).to_be_disabled()
+            expect(page.locator("#redo")).to_be_disabled()
+            expect(page.locator("#delete")).to_be_disabled()
+
+            page.locator('[data-kind="cause"][data-id="CAUSE-PLACEMENT-1"]').click()
+            page.locator("#editName").fill("Cancelled edit")
+            page.locator("#cancelChanges").click()
+            expect(page.locator("#editName")).to_have_value("Existing Threat")
+            expect(page.locator("#status")).to_have_text("Inspector changes cancelled")
+
+            page.locator("#selectConnections").click()
+            rel = page.locator(
+                '#relationships input[data-rel="PREVENTIVE-PLACEMENT-1"]'
+            )
+            expect(rel).to_be_checked()
+            page.locator("#editName").fill("Threat saved with relationship edit")
+            page.locator("#selectConnections").click()
+            rel.uncheck()
+            expect(rel).not_to_be_checked()
+            expect(page.locator("#editName")).to_have_value(
+                "Threat saved with relationship edit"
+            )
+            latest_document = page.evaluate(
+                """() => window.__surmMessages
+                    .filter(message => message.type === "streamlit:setComponentValue")
+                    .at(-1).value.document"""
+            )
+            assert latest_document["library"]["cause"][0]["name"] == (
+                "Threat saved with relationship edit"
+            )
+            rel.check()
+            expect(rel).to_be_checked()
+
+            initial_viewbox = page.locator("#svg").get_attribute("viewBox")
+            page.locator("#zoomIn").click()
+            expect(page.locator("#zoomReset")).not_to_have_text("100%")
+            page.locator("#zoomOut").click()
+            expect(page.locator("#zoomReset")).to_have_text("100%")
+            page.locator("#zoomReset").click()
+            expect(page.locator("#zoomReset")).to_have_text("100%")
+            page.locator("#fit").click()
+            expect(page.locator("#status")).to_have_text("Fit to content")
+            assert page.locator("#svg").get_attribute("viewBox") != ""
+            assert initial_viewbox
+            page.locator("#zoomReset").click()
+            page.locator("#zoomIn").click()
+            before_pan = page.locator("#svg").get_attribute("viewBox")
+            canvas = page.locator("#svg").bounding_box()
+            assert canvas is not None
+            page.mouse.move(
+                canvas["x"] + canvas["width"] * 0.12,
+                canvas["y"] + canvas["height"] * 0.88,
+            )
+            page.mouse.down()
+            page.mouse.move(
+                canvas["x"] + canvas["width"] * 0.16,
+                canvas["y"] + canvas["height"] * 0.84,
+            )
+            page.mouse.up()
+            assert page.locator("#svg").get_attribute("viewBox") != before_pan
+
+            page.locator("#addCause").click()
+            expect(page.locator("#undo")).to_be_enabled()
+            expect(page.locator("#delete")).to_be_enabled()
+            page.locator("#undo").click()
+            expect(page.locator("#objects")).not_to_contain_text("New Threat")
+            expect(page.locator("#redo")).to_be_enabled()
+            page.locator("#redo").click()
+            expect(page.locator("#objects")).to_contain_text("New Threat")
+
+            with page.expect_download(timeout=5000) as svg_download:
+                page.locator("#exportSvg").click()
+            assert svg_download.value.suggested_filename.endswith("_Bowtie_V2.svg")
+            with page.expect_download(timeout=10000) as png_download:
+                page.locator("#exportPng").click()
+            assert png_download.value.suggested_filename.endswith("_Bowtie_V2.png")
+
+            page.set_viewport_size({"width": 900, "height": 900})
+            layout = page.evaluate(
+                """() => {
+                    const layout = document.querySelector(".layout").getBoundingClientRect();
+                    const side = document.querySelector(".side").getBoundingClientRect();
+                    const toolbar = document.querySelector(".toolbar");
+                    return {
+                        viewportWidth: window.innerWidth,
+                        documentWidth: document.documentElement.scrollWidth,
+                        layoutRight: layout.right,
+                        sideRight: side.right,
+                        sideTop: side.top,
+                        canvasBottom: document.querySelector(".canvas-wrap").getBoundingClientRect().bottom,
+                        toolbarWidth: toolbar.clientWidth,
+                        toolbarScrollWidth: toolbar.scrollWidth
+                    };
+                }"""
+            )
+            assert layout["documentWidth"] <= layout["viewportWidth"]
+            assert layout["layoutRight"] <= layout["viewportWidth"]
+            assert layout["sideRight"] <= layout["viewportWidth"]
+            assert layout["sideTop"] >= layout["canvasBottom"] - 1
+            assert layout["toolbarScrollWidth"] <= layout["toolbarWidth"]
+            assert not page_errors, page_errors
+            browser.close()
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+
+def test_bowtie_readonly_mode_disables_mutating_controls_and_tracks_mode_changes():
+    server, thread = _serve_frontend()
+    try:
+        with sync_playwright() as playwright:
+            browser = _launch_browser(playwright)
+            page = browser.new_page()
+            page_errors = []
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(
+                f"http://127.0.0.1:{server.server_port}/index.html",
+                wait_until="load",
+            )
+            document = _fixture_document()
+            _render_component(page, document, editable=False)
+
+            expect(page.locator("#auto")).to_be_disabled()
+            for selector in ("#addCause", "#addPrevent", "#addMitigate", "#addOutcome", "#delete"):
+                expect(page.locator(selector)).to_be_hidden()
+            page.locator('[data-kind="cause"][data-id="CAUSE-PLACEMENT-1"]').click()
+            expect(page.locator("#editor")).to_contain_text("Read-only reporting view")
+            assert page.locator('[data-kind="cause"].node').count() == 2
+
+            _render_component(page, document, editable=True)
+            expect(page.locator("#auto")).to_be_enabled()
+            expect(page.locator("#addCause")).to_be_visible()
+            expect(page.locator("#editName")).to_have_value("Existing Threat")
+            assert not page_errors, page_errors
+            browser.close()
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+
+def test_bowtie_stress_layout_keeps_dense_lanes_spaced_and_data_integral():
+    server, thread = _serve_frontend()
+    try:
+        with sync_playwright() as playwright:
+            browser = _launch_browser(playwright)
+            page = browser.new_page(viewport={"width": 1600, "height": 1000})
+            page_errors = []
+            page.on("pageerror", lambda exc: page_errors.append(str(exc)))
+            page.goto(
+                f"http://127.0.0.1:{server.server_port}/index.html",
+                wait_until="load",
+            )
+            page.evaluate(
+                """() => {
+                    window.__surmMessages = [];
+                    window.addEventListener("message", event => {
+                        if (event.data && event.data.isStreamlitMessage) {
+                            window.__surmMessages.push(event.data);
+                        }
+                    });
+                }"""
+            )
+            _render_component(page, _fixture_document())
+
+            for _ in range(8):
+                page.locator("#addCause").click()
+                page.locator("#addOutcome").click()
+            page.locator('[data-kind="cause"][data-id="CAUSE-PLACEMENT-1"]').click()
+            for _ in range(5):
+                page.locator("#addPrevent").click()
+            page.locator('[data-kind="outcome"][data-id="OUTCOME-PLACEMENT-1"]').click()
+            for _ in range(5):
+                page.locator("#addMitigate").click()
+
+            page.locator("#auto").click()
+            expect(page.locator("#status")).to_have_text(
+                "Auto layout applied: relationships drive vertical placement"
+            )
+
+            lane_layout = page.evaluate(
+                """() => ["cause", "outcome", "preventativeBarrier", "mitigativeBarrier"]
+                    .map(kind => {
+                        const nodes = Array.from(
+                            document.querySelectorAll('[data-kind="' + kind + '"].node')
+                        ).map(node => ({
+                            y: Number(node.getAttribute("data-y")),
+                            h: Number(node.querySelector("rect").getAttribute("height"))
+                        })).sort((a, b) => a.y - b.y);
+                        return {kind, nodes};
+                    })"""
+            )
+            for lane in lane_layout:
+                for first, second in zip(lane["nodes"], lane["nodes"][1:]):
+                    assert second["y"] - first["y"] >= (first["h"] + second["h"]) / 2, lane
+
+            final_message = page.evaluate(
+                """() => window.__surmMessages
+                    .filter(message => message.type === "streamlit:setComponentValue")
+                    .at(-1)"""
+            )
+            document = final_message["value"]["document"]
+            assert len(document["causes"]) == 10
+            assert len(document["outcomes"]) == 10
+            assert len(document["preventativeBarriers"]) == 6
+            assert len(document["mitigativeBarriers"]) == 6
+            assert len(document["library"]["cause"]) == len(document["causes"])
+            assert len(document["library"]["outcome"]) == len(document["outcomes"])
+            assert len(document["library"]["preventativeBarrier"]) == len(document["preventativeBarriers"])
+            assert len(document["library"]["mitigativeBarrier"]) == len(document["mitigativeBarriers"])
+            placement_ids = [
+                item["id"]
+                for key in ("causes", "preventativeBarriers", "mitigativeBarriers", "outcomes")
+                for item in document[key]
+            ]
+            assert len(placement_ids) == len(set(placement_ids))
+            assert all(
+                line["originId"] in placement_ids
+                and all(stop in placement_ids for stop in line["stops"])
+                for line in document["lines"]
+            )
+            assert page.locator('[data-layer="connectors"] .connector').count() >= 26
+            assert not page_errors, page_errors
+            browser.close()
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+
+
 def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
     server, thread = _serve_frontend()
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = _launch_browser(playwright)
             page = browser.new_page()
             page_errors = []
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
@@ -610,6 +911,23 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             expect(page.locator("#objects")).not_to_contain_text(
                 "Updated Preventive Barrier"
             )
+            after_prevent_delete = [
+                item["value"]["document"]
+                for item in page.evaluate("window.__surmMessages")
+                if item["type"] == "streamlit:setComponentValue" and item["value"]
+            ][-1]
+            assert all(
+                placement["id"] != new_prevent_id
+                for placement in after_prevent_delete["preventativeBarriers"]
+            )
+            assert all(
+                node["id"] != prevent_doc["preventativeBarriers"][-1]["nodeId"]
+                for node in after_prevent_delete["library"]["preventativeBarrier"]
+            )
+            assert all(
+                new_prevent_id not in line["stops"]
+                for line in after_prevent_delete["lines"]
+            )
 
             # CREATE + DELETE: mitigative barrier.
             page.locator("#objects button", has_text="Existing Consequence").click()
@@ -643,6 +961,19 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             page.wait_for_timeout(100)
             expect(page.locator("#objects")).not_to_contain_text(
                 "New Mitigative Barrier"
+            )
+            after_mitigate_delete = [
+                item["value"]["document"]
+                for item in page.evaluate("window.__surmMessages")
+                if item["type"] == "streamlit:setComponentValue" and item["value"]
+            ][-1]
+            assert all(
+                placement["id"] != new_mitigate_id
+                for placement in after_mitigate_delete["mitigativeBarriers"]
+            )
+            assert all(
+                new_mitigate_id not in line["stops"]
+                for line in after_mitigate_delete["lines"]
             )
 
             # CREATE + DELETE: second threat must receive a unique origin line ID.
@@ -680,6 +1011,11 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             page.locator("#addOutcome").click()
             page.wait_for_timeout(40)
             expect(page.locator("#objects")).to_contain_text("New Consequence")
+            new_outcome_id = [
+                item["value"]["document"]
+                for item in page.evaluate("window.__surmMessages")
+                if item["type"] == "streamlit:setComponentValue" and item["value"]
+            ][-1]["outcomes"][-1]["id"]
             page.locator(
                 "#objects button", has_text="New Consequence"
             ).click()
@@ -687,6 +1023,15 @@ def test_bowtie_v2_crud_cycle_preserves_selection_and_relationships():
             page.wait_for_timeout(100)
             expect(page.locator("#objects")).not_to_contain_text(
                 "New Consequence"
+            )
+            after_outcome_delete = [
+                item["value"]["document"]
+                for item in page.evaluate("window.__surmMessages")
+                if item["type"] == "streamlit:setComponentValue" and item["value"]
+            ][-1]
+            assert all(
+                line["originId"] != new_outcome_id
+                for line in after_outcome_delete["lines"]
             )
 
             # DELETE: the updated threat and its origin line.
