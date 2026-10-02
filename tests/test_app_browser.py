@@ -255,6 +255,45 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                     page.get_by_text("Team", exact=True).first
                 ).to_be_visible(timeout=10_000)
 
+                pager = page.locator(".st-key-page-navigation")
+                previous_button = pager.get_by_role("button", name="← Previous")
+                next_button = pager.get_by_role("button", name="Next →")
+                expect(previous_button).to_be_visible()
+                expect(next_button).to_be_visible()
+                expect(pager.get_by_text("03 / 16", exact=True)).to_be_visible()
+
+                previous_box = previous_button.bounding_box()
+                next_box = next_button.bounding_box()
+                assert previous_box is not None and next_box is not None
+                assert abs(previous_box["height"] - next_box["height"]) <= 1
+                assert abs(previous_box["width"] - next_box["width"]) <= 2
+                nav_box = pager.bounding_box()
+                main_box = page.locator(
+                    '[data-testid="stMainBlockContainer"]'
+                ).bounding_box()
+                assert nav_box is not None and main_box is not None
+                nav_center = nav_box["x"] + nav_box["width"] / 2
+                main_center = main_box["x"] + main_box["width"] / 2
+                assert abs(nav_center - main_center) <= 2, (nav_box, main_box)
+
+                next_button.click()
+                _wait_for_idle(page)
+                expect(
+                    page.get_by_text("Uncertainties", exact=True).first
+                ).to_be_visible(timeout=10_000)
+                expect(
+                    pager.get_by_text("04 / 16", exact=True)
+                ).to_be_visible()
+
+                pager.get_by_role("button", name="← Previous").click()
+                _wait_for_idle(page)
+                expect(
+                    page.get_by_text("Team", exact=True).first
+                ).to_be_visible(timeout=10_000)
+                expect(
+                    pager.get_by_text("03 / 16", exact=True)
+                ).to_be_visible()
+
                 # Workflow area: stages expose their real completion/availability state.
                 sidebar = page.locator('[data-testid="stSidebar"]')
                 workflow_area = sidebar.get_by_role(
@@ -302,6 +341,22 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                 _wait_for_idle(page)
                 _assert_overview_ui(page)
 
+                pager = page.locator(".st-key-page-navigation")
+                pager.get_by_role("button", name="← Previous").click()
+                _wait_for_idle(page)
+                expect(
+                    pager.get_by_text("01 / 16", exact=True)
+                ).to_be_visible()
+                expect(
+                    pager.get_by_role("button", name="← Previous")
+                ).to_be_disabled()
+
+                pager.get_by_role("button", name="Next →").click()
+                _wait_for_idle(page)
+                expect(
+                    pager.get_by_text("02 / 16", exact=True)
+                ).to_be_visible()
+
                 diagnostics = _browser_diagnostics(page)
                 assert diagnostics["app"] is not None, diagnostics
                 assert diagnostics["app"]["connection"] == "CONNECTED", diagnostics
@@ -309,6 +364,38 @@ def test_full_streamlit_entrypoint_is_visible_in_browser():
                 assert diagnostics["main"] is not None, diagnostics
                 assert diagnostics["main"]["width"] > 0, diagnostics
                 assert diagnostics["main"]["height"] > 0, diagnostics
+
+                page.set_viewport_size({"width": 375, "height": 812})
+                pager.scroll_into_view_if_needed()
+                mobile_geometry = page.evaluate(
+                    """() => {
+                        const nav = document.querySelector('.st-key-page-navigation');
+                        const rect = nav.getBoundingClientRect();
+                        const buttons = [...nav.querySelectorAll('button')].map(button => {
+                            const box = button.getBoundingClientRect();
+                            return {x: box.x, right: box.right, width: box.width, height: box.height};
+                        });
+                        return {
+                            viewportWidth: window.innerWidth,
+                            documentWidth: document.documentElement.scrollWidth,
+                            navLeft: rect.left,
+                            navRight: rect.right,
+                            buttons,
+                        };
+                    }"""
+                )
+                assert mobile_geometry["documentWidth"] <= mobile_geometry["viewportWidth"]
+                assert mobile_geometry["navLeft"] >= 0
+                assert mobile_geometry["navRight"] <= mobile_geometry["viewportWidth"]
+                assert len(mobile_geometry["buttons"]) == 2
+                assert abs(
+                    mobile_geometry["buttons"][0]["width"]
+                    - mobile_geometry["buttons"][1]["width"]
+                ) <= 2
+                assert abs(
+                    mobile_geometry["buttons"][0]["height"]
+                    - mobile_geometry["buttons"][1]["height"]
+                ) <= 1
 
                 assert not page_errors, page_errors
                 assert not console_errors, console_errors
